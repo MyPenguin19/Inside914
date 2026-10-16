@@ -31,32 +31,150 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_slots: {
+        Row: {
+          booking_id: string
+          released_at: string | null
+          slot_id: string
+        }
+        Insert: {
+          booking_id: string
+          released_at?: string | null
+          slot_id: string
+        }
+        Update: {
+          booking_id?: string
+          released_at?: string | null
+          slot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_slots_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_slots_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slot_availability"
+            referencedColumns: ["slot_id"]
+          },
+          {
+            foreignKeyName: "booking_slots_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slot_pairs"
+            referencedColumns: ["left_slot_id"]
+          },
+          {
+            foreignKeyName: "booking_slots_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slot_pairs"
+            referencedColumns: ["right_slot_id"]
+          },
+          {
+            foreignKeyName: "booking_slots_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          created_at: string
+          edition_id: string
+          hold_expires_at: string | null
+          hold_token_hash: string
+          id: string
+          price_cents: number
+          size: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          edition_id: string
+          hold_expires_at?: string | null
+          hold_token_hash: string
+          id?: string
+          price_cents: number
+          size: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          edition_id?: string
+          hold_expires_at?: string | null
+          hold_token_hash?: string
+          id?: string
+          price_cents?: number
+          size?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "slot_availability"
+            referencedColumns: ["edition_id"]
+          },
+          {
+            foreignKeyName: "bookings_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "slot_pairs"
+            referencedColumns: ["edition_id"]
+          },
+        ]
+      }
       editions: {
         Row: {
           artwork_deadline: string
           created_at: string
+          double_unit_price_cents: number | null
           id: string
           issue_month: string
           mail_date: string | null
           status: string
+          unit_price_cents: number
           zone_id: string
         }
         Insert: {
           artwork_deadline: string
           created_at?: string
+          double_unit_price_cents?: number | null
           id?: string
           issue_month: string
           mail_date?: string | null
           status?: string
+          unit_price_cents?: number
           zone_id: string
         }
         Update: {
           artwork_deadline?: string
           created_at?: string
+          double_unit_price_cents?: number | null
           id?: string
           issue_month?: string
           mail_date?: string | null
           status?: string
+          unit_price_cents?: number
           zone_id?: string
         }
         Relationships: [
@@ -69,51 +187,6 @@ export type Database = {
           },
         ]
       }
-      reservations: {
-        Row: {
-          created_at: string
-          hold_expires_at: string | null
-          hold_token_hash: string
-          id: string
-          slot_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          hold_expires_at?: string | null
-          hold_token_hash: string
-          id?: string
-          slot_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          hold_expires_at?: string | null
-          hold_token_hash?: string
-          id?: string
-          slot_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reservations_slot_id_fkey"
-            columns: ["slot_id"]
-            isOneToOne: false
-            referencedRelation: "slot_availability"
-            referencedColumns: ["slot_id"]
-          },
-          {
-            foreignKeyName: "reservations_slot_id_fkey"
-            columns: ["slot_id"]
-            isOneToOne: false
-            referencedRelation: "slots"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       slots: {
         Row: {
           created_at: string
@@ -121,7 +194,6 @@ export type Database = {
           height_in: number
           id: string
           label: string
-          price_cents: number
           side: string
           width_in: number
           x_in: number
@@ -133,7 +205,6 @@ export type Database = {
           height_in: number
           id?: string
           label: string
-          price_cents: number
           side: string
           width_in: number
           x_in: number
@@ -145,7 +216,6 @@ export type Database = {
           height_in?: number
           id?: string
           label?: string
-          price_cents?: number
           side?: string
           width_in?: number
           x_in?: number
@@ -164,6 +234,13 @@ export type Database = {
             columns: ["edition_id"]
             isOneToOne: false
             referencedRelation: "slot_availability"
+            referencedColumns: ["edition_id"]
+          },
+          {
+            foreignKeyName: "slots_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "slot_pairs"
             referencedColumns: ["edition_id"]
           },
         ]
@@ -200,11 +277,12 @@ export type Database = {
           available: boolean | null
           edition_id: string | null
           height_in: number | null
+          household_count: number | null
           issue_month: string | null
           label: string | null
-          price_cents: number | null
           side: string | null
           slot_id: string | null
+          unit_price_cents: number | null
           width_in: number | null
           x_in: number | null
           y_in: number | null
@@ -213,13 +291,26 @@ export type Database = {
         }
         Relationships: []
       }
+      slot_pairs: {
+        Row: {
+          available: boolean | null
+          double_unit_price_cents: number | null
+          edition_id: string | null
+          left_slot_id: string | null
+          right_slot_id: string | null
+          side: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      hold_slot: {
-        Args: { p_slot_id: string; p_token_hash: string }
+      hold_slots: {
+        Args: { p_slot_ids: string[]; p_token_hash: string }
         Returns: {
+          booking_id: string
           hold_expires_at: string
-          reservation_id: string
+          price_cents: number
+          size: string
         }[]
       }
     }

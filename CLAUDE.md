@@ -11,6 +11,8 @@ Node 24 lives in `~/.local/node/bin`. Prefix commands with `PATH="$HOME/.local/n
 - Remote dev DB: Supabase project `Inside914` (ref `uobiwanrxifqwdnouzxj`, us-west-2). Integration tests: `SUPABASE_URL=https://uobiwanrxifqwdnouzxj.supabase.co SUPABASE_ANON_KEY=<publishable key> npm run test:integration`. After applying a migration via MCP, rename the local file to the version `list_migrations` reports.
 - Supabase clients: `@/lib/supabase/browser` (Client Components), `@/lib/supabase/server` (per-request, user/anon, RLS applies), `@/lib/supabase/admin` (secret key, bypasses RLS; server-only, only after authorization). Env is validated lazily in `@/lib/env/*`; see `.env.example`.
 - `npm run db:types` regenerates `src/lib/supabase/database.types.ts` after a migration (needs `npx supabase login`; or use the Supabase MCP `generate_typescript_types`).
+- Booking model: `bookings` (one customer hold: size, price, status, token hash) + `booking_slots` (live claims, unique per slot). Holds only via `hold_slots()`; double-compatibility is defined only by the `slot_pairs` view. Slot geometry is provisional data, never hardcoded.
+- Dev catalog changes that aren't schema go in `supabase/dev-data/` and need approval before running.
 - `npx supabase migration new <name>` for schema changes; `npx supabase db reset` (local only) reapplies migrations + seed
 - `npm run build`
 - Done means `npm run typecheck && npm run lint && npm test` all pass.

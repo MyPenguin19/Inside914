@@ -39,6 +39,12 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Files: `supabase/migrations/20261016043850_reservations_hold.sql`, `src/lib/booking/{hold-token,place-hold}.ts`, `src/app/(public)/actions/hold-slot.ts`, `tests/place-hold.test.ts`, `tests/integration/hold-slot.test.ts`
   - Deps: 2, 3
   - Status 2026-10-16: migration applied to Inside914 dev; advisors clean; SQL smoke test (rolled back) confirms hold, INS01/02/03, expiry re-hold and unique-index backstop. **Open:** the 10-way concurrency integration test needs `SUPABASE_SECRET_KEY` in `.env.local`. It is skipped until then.
+  - Status 2026-10-16: superseded by the Task 6 booking redesign below (`bookings` + `booking_slots`, `hold_slots()`).
+
+- [x] **Task 6 (revised): Interactive postcard booking + atomic 1-or-2-slot holds** (L)
+  - Done 2026-10-16 on `task-5/slot-hold`: landing (`/`), edition booking page (`/editions/[id]`), hold page (`/book/hold`), artwork next-step placeholder (`/book/artwork`); migration `20261016045929_bookings_multi_slot_hold` + dev data `supabase/dev-data/20261016_central_westchester.sql` applied to Inside914 dev.
+  - Verified: typecheck, lint, build; 37 unit/component tests; 11 integration tests (anon); 6 Playwright e2e (incl. keyboard + mobile); rolled-back SQL smoke test of standard/double holds, rollback, adjacency, expiry.
+  - **Open:** 7 `hold_slots` integration tests (incl. 10-way and double-vs-single races) are skipped until `SUPABASE_SECRET_KEY` is in `.env.local`; live holds from the page need the same key. Concurrency is NOT verified under real parallel load yet.
 
 - [ ] **Task 6: Contact details step** (S)
   - Acceptance: form (business name, contact name, email, phone) validated by zod on client and server; saved against the held reservation; rejects an expired hold token.

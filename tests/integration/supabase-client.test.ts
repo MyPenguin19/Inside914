@@ -10,8 +10,8 @@ test("typed publishable-key client reads the public catalog", async () => {
 
   const { data, error } = await supabase
     .from("slot_availability")
-    .select("slot_id, side, label, width_in, height_in, price_cents, available")
-    .eq("zone_slug", "southern-westchester");
+    .select("slot_id, side, label, width_in, height_in, unit_price_cents, available")
+    .eq("zone_slug", "central-westchester");
 
   expect(error).toBeNull();
   expect(data?.length).toBeGreaterThan(0);
