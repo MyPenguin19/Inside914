@@ -24,8 +24,12 @@ Node 24 lives in `~/.local/node/bin`. Prefix commands with `PATH="$HOME/.local/n
 - Validate all input at trust boundaries (server actions, route handlers, webhooks) with zod.
 - Stripe: test mode only. Verify webhook signatures, use idempotency keys, store money as integer cents.
 
+## Deploys
+- GitHub: `MyPenguin19/Inside914` (private). Push with `~/.local/bin/gh` as credential helper: `git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push`.
+- Vercel project `inside914` (team `mypenguin19s-projects`, Hobby) is Git-connected: **every push to `main` is a production deploy**; other branches get previews. Vercel CLI: `npx vercel` (logged in locally; the Vercel MCP connector lacks team access).
+
 ## Requires my explicit approval in chat
-- Deploying (Vercel CLI or MCP), pushing to a remote, running migrations against a remote Supabase project, any Stripe write.
+- Deploying (Vercel CLI or MCP), pushing to a remote (a push to `main` deploys production), running migrations against a remote Supabase project, any Stripe write.
 - Destructive commands: `rm -rf`, `git reset --hard`, force push, `supabase db reset`, dropping tables or data.
 - Changing model provider or OmniRoute routing; installing plugins, hooks or MCP servers; editing global (`~/.claude`) config.
 - Unattended / auto-run modes or scheduled tasks.
