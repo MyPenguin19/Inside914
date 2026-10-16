@@ -12,10 +12,11 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Files: `package.json`, `tsconfig.json`, `vitest.config.ts`, `playwright.config.ts`, `src/app/page.tsx`, `CLAUDE.md`
   - Deps: none. **Ask first:** dependency list (next, react, zod, vitest, @playwright/test) and putting `~/.local/node/bin` on PATH.
 
-- [ ] **Task 2: Catalog schema, RLS, availability view, seed** (M)
+- [x] **Task 2: Catalog schema, RLS, availability view, seed** (M)
   - Acceptance: migration creates `zones`, `editions`, `slots` (side, x/y/w/h inches, price_cents), `admins`, all with RLS; `slot_availability` view exposes only slot + available flag; anon can read the view and cannot read `admins`; placeholder seed of 1 zone, 1 edition and a sample grid.
   - Verify: `supabase start`; integration test using the anon client; standard verify.
-  - Files: `supabase/config.toml`, `supabase/migrations/0001_catalog.sql`, `supabase/seed.sql`, `tests/integration/catalog-rls.test.ts`
+  - Done 2026-10-16: verified against the remote dev project Inside914, not a local stack (Docker unavailable). 7/7 integration tests pass; security and performance advisors are clean.
+  - Files: `supabase/config.toml`, `supabase/migrations/20261016040006_catalog.sql`, `supabase/migrations/20261016040245_catalog_public_read.sql`, `supabase/seed.sql`, `tests/integration/catalog-rls.test.ts`
   - Deps: 1. **Ask first:** installing the Supabase CLI.
 
 - [ ] **Task 3: Supabase clients and env validation** (S)

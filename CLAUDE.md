@@ -7,6 +7,9 @@ Node 24 lives in `~/.local/node/bin`. Prefix commands with `PATH="$HOME/.local/n
 - `npm run dev`: dev server on :3000
 - `npm run typecheck`: `next typegen && tsc --noEmit`
 - `npm run lint` · `npm test` (Vitest, `tests/`) · `npm run test:e2e` (Playwright, `e2e/`)
+- `npx supabase start` (needs OrbStack/Docker) · `npm run test:integration` (`tests/integration/`, against local stack)
+- Remote dev DB: Supabase project `Inside914` (ref `uobiwanrxifqwdnouzxj`, us-west-2). Integration tests: `SUPABASE_URL=https://uobiwanrxifqwdnouzxj.supabase.co SUPABASE_ANON_KEY=<publishable key> npm run test:integration`. After applying a migration via MCP, rename the local file to the version `list_migrations` reports.
+- `npx supabase migration new <name>` for schema changes; `npx supabase db reset` (local only) reapplies migrations + seed
 - `npm run build`
 - Done means `npm run typecheck && npm run lint && npm test` all pass.
 
