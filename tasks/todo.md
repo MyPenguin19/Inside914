@@ -19,7 +19,7 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Files: `supabase/config.toml`, `supabase/migrations/20261016040006_catalog.sql`, `supabase/migrations/20261016040245_catalog_public_read.sql`, `supabase/seed.sql`, `tests/integration/catalog-rls.test.ts`
   - Deps: 1. **Ask first:** installing the Supabase CLI.
 
-- [ ] **Task 3: Supabase clients and env validation** (S)
+- [x] **Task 3: Supabase clients and env validation** (S)
   - Acceptance: `env.ts` parses env with zod and fails fast; service-role client lives in a `server-only` module; browser client uses the anon key only; a client import of the server module fails the build.
   - Verify: unit test for env parsing; standard verify; `npm run build`.
   - Files: `src/lib/env.ts`, `src/lib/supabase/server.ts`, `src/lib/supabase/browser.ts`, `.env.example`

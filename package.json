@@ -10,9 +10,12 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.mts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:types": "supabase gen types typescript --project-id uobiwanrxifqwdnouzxj --schema public > src/lib/supabase/database.types.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.3",
     "next": "16.4.2",
     "react": "19.3.1",
     "react-dom": "19.3.1",
