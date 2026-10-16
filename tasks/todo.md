@@ -19,7 +19,7 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Files: `supabase/config.toml`, `supabase/migrations/20261016040006_catalog.sql`, `supabase/migrations/20261016040245_catalog_public_read.sql`, `supabase/seed.sql`, `tests/integration/catalog-rls.test.ts`
   - Deps: 1. **Ask first:** installing the Supabase CLI.
 
-- [ ] **Task 3: Supabase clients and env validation** (S)
+- [x] **Task 3: Supabase clients and env validation** (S)
   - Acceptance: `env.ts` parses env with zod and fails fast; service-role client lives in a `server-only` module; browser client uses the anon key only; a client import of the server module fails the build.
   - Verify: unit test for env parsing; standard verify; `npm run build`.
   - Files: `src/lib/env.ts`, `src/lib/supabase/server.ts`, `src/lib/supabase/browser.ts`, `.env.example`
@@ -36,8 +36,9 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
 - [ ] **Task 5: Slot hold with double-booking protection** (M)
   - Acceptance: `reservations` table + unique partial index on active statuses; `hold_slot(slot_id)` SQL function expires stale pending holds and inserts a 15-minute hold atomically; server action returns a signed hold token; no holds after the artwork deadline.
   - Verify: integration test fires 10 concurrent holds and exactly 1 succeeds; expired hold can be re-taken; standard verify.
-  - Files: `supabase/migrations/0002_reservations.sql`, `src/app/(public)/actions/hold-slot.ts`, `tests/integration/hold-slot.test.ts`
+  - Files: `supabase/migrations/20261016043850_reservations_hold.sql`, `src/lib/booking/{hold-token,place-hold}.ts`, `src/app/(public)/actions/hold-slot.ts`, `tests/place-hold.test.ts`, `tests/integration/hold-slot.test.ts`
   - Deps: 2, 3
+  - Status 2026-10-16: migration applied to Inside914 dev; advisors clean; SQL smoke test (rolled back) confirms hold, INS01/02/03, expiry re-hold and unique-index backstop. **Open:** the 10-way concurrency integration test needs `SUPABASE_SECRET_KEY` in `.env.local`. It is skipped until then.
 
 - [ ] **Task 6: Contact details step** (S)
   - Acceptance: form (business name, contact name, email, phone) validated by zod on client and server; saved against the held reservation; rejects an expired hold token.

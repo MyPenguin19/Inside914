@@ -38,7 +38,7 @@ Build order: catalog → booking → payments → notify → admin (review/expor
 
 ### Slot hold and reservation (`booking`)
 - Picking a slot creates a **15-minute pending hold** so two people can't book the same slot. The hold is released if checkout isn't finished.
-- A database constraint enforces at most one active reservation per slot: a unique partial index on `reservations(slot_id)` where status is pending, reserved, submitted, approved, charge_failed or charged.
+- A database constraint enforces at most one active reservation per slot: a unique partial index on `reservations(slot_id)` where status is pending, reserved, submitted, approved, rejected (keeps the slot for one resubmission), charge_failed or charged.
 - Reservation statuses: `pending` → `reserved` (card saved) → `submitted` → `approved` | `rejected` → (`submitted` again, once) → `charged` | `charge_failed` → `released`. `cancelled` applies when an edition is cancelled.
 - No new bookings or uploads after the edition's artwork deadline.
 
