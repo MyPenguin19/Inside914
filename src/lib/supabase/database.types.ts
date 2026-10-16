@@ -69,6 +69,51 @@ export type Database = {
           },
         ]
       }
+      reservations: {
+        Row: {
+          created_at: string
+          hold_expires_at: string | null
+          hold_token_hash: string
+          id: string
+          slot_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hold_expires_at?: string | null
+          hold_token_hash: string
+          id?: string
+          slot_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hold_expires_at?: string | null
+          hold_token_hash?: string
+          id?: string
+          slot_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slot_availability"
+            referencedColumns: ["slot_id"]
+          },
+          {
+            foreignKeyName: "reservations_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       slots: {
         Row: {
           created_at: string
@@ -170,7 +215,13 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      hold_slot: {
+        Args: { p_slot_id: string; p_token_hash: string }
+        Returns: {
+          hold_expires_at: string
+          reservation_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -10,6 +10,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/integration/**/*.test.ts"],
-    globalSetup: ["tests/integration/global-setup.ts"],
+    setupFiles: ["tests/integration/setup-env.ts"],
   },
 });

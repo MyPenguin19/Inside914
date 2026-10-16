@@ -34,6 +34,7 @@ Parallel-safe once Task 3 is done: Task 4 (grid UI) and Task 9 (editor math + UI
 | Off-session charge declines or needs 3DS weeks after booking | High | Mandate text at booking; pay-link recovery (Task 18); e2e with Stripe test cards 4000…0341 and 4000…3155 |
 | Saved card expires before edition prints | Med | Same recovery path; admin sees failed count before export |
 | Two advertisers book the same slot | High | DB-level unique partial index + `hold_slot()` function; concurrency test in Task 5 |
+| Bots hold every slot repeatedly (15-min holds) | Med | Per-IP / per-session rate limit or bot check on `holdSlot` before launch |
 | Low-quality uploads print badly | Med | DPI block < 150 and warning < 300; render at 300 DPI; admin review |
 | Vercel limits on large image rendering / ZIP | Med | Render per ad at approval time, store result, stream ZIP; Node runtime |
 | Edition never fills | Med | Admin choice: print with house ads or cancel (no charges) |
