@@ -44,7 +44,7 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
 - [x] **Task 6 (revised): Interactive postcard booking + atomic 1-or-2-slot holds** (L)
   - Done 2026-10-16 on `task-5/slot-hold`: landing (`/`), edition booking page (`/editions/[id]`), hold page (`/book/hold`), artwork next-step placeholder (`/book/artwork`); migration `20261016045929_bookings_multi_slot_hold` + dev data `supabase/dev-data/20261016_central_westchester.sql` applied to Inside914 dev.
   - Verified: typecheck, lint, build; 37 unit/component tests; 11 integration tests (anon); 6 Playwright e2e (incl. keyboard + mobile); rolled-back SQL smoke test of standard/double holds, rollback, adjacency, expiry.
-  - **Open:** 7 `hold_slots` integration tests (incl. 10-way and double-vs-single races) are skipped until `SUPABASE_SECRET_KEY` is in `.env.local`; live holds from the page need the same key. Concurrency is NOT verified under real parallel load yet.
+  - Secret key added 2026-10-16: all 18 integration tests pass against dev, including the 10-way race (exactly 1 of 10 wins) and doubles-vs-singles racing on overlapping slots (no slot ever claimed twice); 6 e2e pass with real holds, incl. two visitors on the same position and hold → artwork → change selection.
 
 - [ ] **Task 6: Contact details step** (S)
   - Acceptance: form (business name, contact name, email, phone) validated by zod on client and server; saved against the held reservation; rejects an expired hold token.

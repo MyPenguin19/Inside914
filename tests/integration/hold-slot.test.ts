@@ -38,7 +38,7 @@ describe.skipIf(!secretKey)("hold_slots", () => {
     expect(results.filter((r) => !r.ok && r.reason === "slot_unavailable")).toHaveLength(9);
   });
 
-  test("a double and a single racing for an overlapping slot: exactly one succeeds", async () => {
+  test("doubles and singles racing for overlapping slots never claim a slot twice", async () => {
     const results = await Promise.all([
       placeHold(admin, { slotIds: [ids.B7, ids.B8] }),
       placeHold(admin, { slotIds: [ids.B8] }),

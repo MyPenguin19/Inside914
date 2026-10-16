@@ -5,6 +5,8 @@ const EDITION_URL = "/editions/00000000-0000-4000-8000-000000000101";
 const position = (page: Page, side: "Front" | "Back", label: string) =>
   page.getByRole("button", { name: new RegExp(`^${side} position ${label}:`) });
 const totalPrice = (page: Page) => page.getByTestId("total-price");
+// Our error messages live in <main>; Next's route announcer (also role=alert) does not.
+const errorAlert = (page: Page) => page.locator("main").getByRole("alert");
 
 test.beforeEach(async ({ page }) => {
   await page.goto(EDITION_URL);
@@ -44,23 +46,52 @@ test("keyboard: choose a standard position, then switch to a double", async ({ p
   await expect(totalPrice(page)).toHaveText("$900");
 });
 
-test("reserved positions are shown as reserved and can't be selected", async ({ page }) => {
-  const reserved = page.getByRole("button", { name: /: Reserved/ });
-  test.skip((await reserved.count()) === 0, "no reserved positions in the current data");
-  await expect(reserved.first()).toBeDisabled();
+test("two visitors want the same position: the second is told and sees it reserved", async ({ browser }) => {
+  const first = await (await browser.newContext()).newPage();
+  const second = await (await browser.newContext()).newPage();
+  for (const page of [first, second]) {
+    await page.goto(EDITION_URL);
+    await position(page, "Back", "B1").click(); // both select B1 while it's open
+  }
+
+  await first.getByRole("button", { name: /hold this position/i }).click();
+  const held = first.getByRole("heading", { name: "Your position is on hold" });
+  const firstError = errorAlert(first);
+  await expect(held.or(firstError)).toBeVisible({ timeout: 15_000 });
+  test.skip(await firstError.isVisible(), "holds need SUPABASE_SECRET_KEY on the server");
+
+  try {
+    await second.getByRole("button", { name: /hold this position/i }).click();
+    await expect(errorAlert(second)).toContainText(/another business just reserved/i);
+    await expect(position(second, "Back", "B1")).toBeDisabled();
+    await expect(position(second, "Back", "B1")).toHaveAccessibleName(/Reserved/);
+    await expect(second).toHaveURL(new RegExp(`${EDITION_URL}$`));
+  } finally {
+    await first.getByRole("button", { name: "Change selection" }).click(); // release B1
+    await expect(first).toHaveURL(new RegExp(`${EDITION_URL}$`));
+  }
 });
 
 test("holding never fakes success: it either reaches the hold page or explains why not", async ({ page }) => {
-  await position(page, "Back", "B3").click();
+  // Any open back position, so a hold left by an interrupted run can't block this test.
+  await page.getByRole("button", { name: /^Back position B\d+: Open/ }).first().click();
   await page.getByRole("button", { name: /hold this position/i }).click();
 
   const holdPage = page.getByRole("heading", { name: "Your position is on hold" });
-  const failure = page.getByRole("alert").filter({ hasText: /\S/ }); // skip Next's empty route announcer
+  const failure = errorAlert(page);
   await expect(holdPage.or(failure)).toBeVisible({ timeout: 15_000 });
   if (await failure.isVisible()) {
     await expect(page).toHaveURL(new RegExp(`${EDITION_URL}$`));
     await expect(failure).toContainText(/nothing was reserved|another business/i);
-  } else {
+    return;
+  }
+  try {
+    await expect(page.getByText(/left/)).toBeVisible(); // live countdown
+    await expect(page.locator("dd", { hasText: "$500" })).toBeVisible(); // hold summary price
+    await page.getByRole("link", { name: "Continue to artwork upload" }).click();
+    await expect(page.getByRole("heading", { name: "Artwork upload isn't open yet" })).toBeVisible();
+    await page.getByRole("link", { name: "Back to your hold" }).click();
+  } finally {
     // Release the hold so the test leaves no reservation behind.
     await page.getByRole("button", { name: "Change selection" }).click();
     await expect(page).toHaveURL(new RegExp(`${EDITION_URL}$`));
