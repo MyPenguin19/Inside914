@@ -9,6 +9,7 @@ import { checkoutMessage, START_OVER } from "@/lib/checkout/messages";
 
 type Actions = {
   beginPayment: () => Promise<BeginPaymentResult>;
+  simulateCardSetup?: () => Promise<{ ok: boolean; reason?: string }>; // development TEST mode only
   giveConsent: (input: { accepted: boolean; termsVersion: string }) => Promise<{ ok: boolean; reason?: string }>;
   confirmReservation: () => Promise<{ outcome: string }>;
 };
@@ -18,6 +19,7 @@ type Props = {
   consentText: string;
   termsVersion: string;
   actions: Actions;
+  testMode?: boolean; // development-only simulated card (decided on the server)
   loadStripeJs?: typeof loadStripe; // injectable for tests
 };
 
@@ -25,13 +27,13 @@ type Phase = "loading" | "ready" | "saved" | "submitting" | "processing" | "unav
 
 // Saves a card with Stripe's own secure form (card details never touch our servers) after an
 // explicit, unticked-by-default consent. Then asks the server to confirm the reservation.
-export function PaymentStep({ publishableKey, consentText, termsVersion, actions, loadStripeJs = loadStripe }: Props) {
+export function PaymentStep({ publishableKey, consentText, termsVersion, actions, testMode = false, loadStripeJs = loadStripe }: Props) {
   const router = useRouter();
   const mountRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
   const stripeRef = useRef<{ stripe: Stripe; elements: StripeElements } | null>(null);
   const inFlight = useRef(false); // blocks a second submit even within the same frame
-  const [phase, setPhase] = useState<Phase>(publishableKey ? "loading" : "unavailable");
+  const [phase, setPhase] = useState<Phase>(publishableKey || testMode ? "loading" : "unavailable");
   const [cardComplete, setCardComplete] = useState(false);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<{ text: string; startOver: boolean } | null>(null);
@@ -39,7 +41,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
   const fail = (reason: string) => setError({ text: checkoutMessage(reason), startOver: START_OVER.has(reason) });
 
   useEffect(() => {
-    if (!publishableKey || started.current) return;
+    if ((!publishableKey && !testMode) || started.current) return;
     started.current = true;
     (async () => {
       const result = await actions.beginPayment();
@@ -48,7 +50,11 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
         return fail(result.reason);
       }
       if (result.status === "succeeded") return setPhase("saved"); // card already saved earlier
-      const stripe = await loadStripeJs(publishableKey);
+      if (testMode) {
+        setCardComplete(true); // the simulated card needs no input
+        return setPhase("ready");
+      }
+      const stripe = await loadStripeJs(publishableKey!);
       if (!stripe || !mountRef.current) {
         setPhase("unavailable");
         return fail("payment_not_started");
@@ -66,7 +72,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
       setPhase("unavailable");
       fail("error");
     });
-  }, [publishableKey, actions, loadStripeJs]);
+  }, [publishableKey, testMode, actions, loadStripeJs]);
 
   async function finish() {
     setPhase("submitting");
@@ -98,7 +104,17 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
       return fail(consentResult.reason ?? "error");
     }
 
-    if (phase === "saved" || !stripeRef.current) return finish();
+    if (phase === "saved") return finish();
+
+    if (testMode) {
+      const simulated = await actions.simulateCardSetup?.();
+      if (!simulated?.ok) {
+        setPhase("ready");
+        return fail(simulated?.reason ?? "test_mode_unavailable");
+      }
+      return finish();
+    }
+    if (!stripeRef.current) return finish();
 
     const { stripe, elements } = stripeRef.current;
     const { error: stripeError, setupIntent } = await stripe.confirmSetup({
@@ -136,8 +152,19 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
   const busy = phase === "submitting" || phase === "loading";
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" aria-busy={busy}>
+      {testMode && (
+        <p role="note" className="rounded-xl border-2 border-dashed border-[#c47f00] bg-[#fdf4e3] px-4 py-3 text-sm font-medium text-[#8a5a00]">
+          TEST MODE (development only): no card is saved and no payment is authorized. This creates a TEST
+          reservation, not a real booking.
+        </p>
+      )}
       {phase === "saved" ? (
         <p className="rounded-xl bg-accent-soft px-4 py-3 text-sm text-accent">Your card is already saved. Just confirm below.</p>
+      ) : testMode ? (
+        <div className="rounded-xl border border-line bg-surface p-4 text-sm">
+          <p className="font-medium">Simulated card</p>
+          <p className="mt-1 text-muted">Stands in for Stripe&apos;s card form while testing. Nothing is sent to Stripe.</p>
+        </div>
       ) : (
         <div>
           <p className="mb-2 text-sm font-medium">Card details</p>
@@ -186,7 +213,13 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
         disabled={busy || phase === "processing" || !consent || (phase === "ready" && !cardComplete)}
         className="rounded-full bg-foreground px-6 py-3.5 text-base font-medium text-background hover:bg-accent disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
       >
-        {phase === "submitting" ? "Saving your card…" : "Save card and reserve my space"}
+        {phase === "submitting"
+          ? testMode
+            ? "Creating test reservation…"
+            : "Saving your card…"
+          : testMode
+            ? "Simulate card and create TEST reservation"
+            : "Save card and reserve my space"}
       </button>
       <p className="text-center text-xs text-muted">You won&apos;t be charged today.</p>
     </form>

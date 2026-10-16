@@ -17,6 +17,9 @@ export const CHECKOUT_MESSAGES: Record<string, string> = {
   setup_not_succeeded: "Your card hasn't been confirmed yet. Please try again.",
   setup_mismatch: "Something didn't match up with your card details. Please refresh the page and try again.",
   wrong_setup_intent: "Your card form is out of date. Please refresh the page and try again.",
+  test_booking: "This is a TEST reservation from development mode and can't be completed with a real card.",
+  real_booking: "This booking was started with a real card form and can't be finished in test mode.",
+  test_mode_unavailable: "Test mode isn't available here.",
   payments_unavailable: "Card payments aren't set up on this site yet, so bookings can't be completed right now.",
   error: "Something went wrong on our side. Nothing was charged; please try again in a moment.",
 };

@@ -4,7 +4,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { HOLD_COOKIE } from "@/lib/booking/place-hold";
 import type { ContactErrors } from "@/lib/checkout/contact";
+import { fakeStripe } from "@/lib/dev/fake-stripe";
+import { isDevTestModeActive, isTestStripeId } from "@/lib/dev/test-mode";
 import {
+  checkoutGate,
   completeReservation,
   getBookingByHoldToken,
   recordConsent,
@@ -74,5 +77,21 @@ export async function confirmReservation(): Promise<{ outcome: ConfirmOutcome | 
   } catch (error) {
     console.error("confirmReservation failed", error instanceof Error ? error.message : "unknown");
     return { outcome: "error" };
+  }
+}
+
+// DEVELOPMENT ONLY: stands in for Stripe's card form in a TEST reservation. Re-checks the
+// fail-closed guard on every call; saves no card and authorizes nothing.
+export async function simulateCardSetup(): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!isDevTestModeActive()) return { ok: false, reason: "test_mode_unavailable" };
+  try {
+    const booking = await getBookingByHoldToken(createAdminClient(), await holdToken());
+    const gate = checkoutGate(booking, { contact: true });
+    if (gate) return { ok: false, reason: gate };
+    if (!isTestStripeId(booking!.stripeSetupIntentId)) return { ok: false, reason: "real_booking" };
+    return fakeStripe.simulateSuccess(booking!.stripeSetupIntentId!) ? { ok: true } : { ok: false, reason: "payment_not_started" };
+  } catch (error) {
+    console.error("simulateCardSetup failed", error instanceof Error ? error.message : "unknown");
+    return { ok: false, reason: "error" };
   }
 }

@@ -17,6 +17,7 @@ export type ReservationEmailData = {
   priceCents: number;
   reservationUrl: string;
   supportEmail: string;
+  test?: boolean; // development TEST reservation: preview only, never delivered
 };
 
 const escape = (value: string) =>
@@ -34,8 +35,10 @@ export function reservationConfirmedEmail(d: ReservationEmailData) {
     ["Charged today", "Nothing"],
   ];
 
-  const subject = `Your Inside914 ad space is reserved (${d.reference})`;
+  const subject = `${d.test ? "[TEST] " : ""}Your Inside914 ad space is reserved (${d.reference})`;
+  const testNote = "TEST RESERVATION (development only): not a real booking. No card saved, no payment authorized.";
   const text = [
+    ...(d.test ? [testNote, ""] : []),
     `Hi ${d.contactName},`,
     "",
     `Your advertising space for ${d.businessName} is reserved. No payment has been collected.`,
@@ -53,6 +56,7 @@ export function reservationConfirmedEmail(d: ReservationEmailData) {
   const html = `<!doctype html><html><body style="margin:0;background:#fbfaf7;font-family:Helvetica,Arial,sans-serif;color:#1c1b19">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border:1px solid #e4e0d7;border-radius:16px">
+${d.test ? `<tr><td style="padding:16px 32px 0"><p style="margin:0;padding:12px;border:2px dashed #c47f00;background:#fdf4e3;color:#8a5a00;font-weight:600;font-size:14px">${testNote}</p></td></tr>` : ""}
 <tr><td style="padding:28px 32px 8px;font-size:18px;font-weight:600">Inside<span style="color:#1f5c4a">914</span></td></tr>
 <tr><td style="padding:8px 32px 0"><h1 style="margin:0;font-size:24px">Your advertising space is reserved!</h1>
 <p style="color:#5f5b53;font-size:15px;line-height:22px">Hi ${escape(d.contactName)}, the space for <strong>${escape(d.businessName)}</strong> is reserved. <strong>No payment has been collected.</strong></p></td></tr>

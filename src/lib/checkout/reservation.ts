@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getArtwork, type ArtworkView } from "@/lib/artwork/service";
 import { adArea, type SlotGeometry } from "@/lib/artwork/rules";
 import { getEditionCatalog } from "@/lib/catalog/queries";
+import { isTestStripeId } from "@/lib/dev/test-mode";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Everything shown about one booking on the summary, confirmation and reservation pages and in
@@ -13,6 +14,7 @@ type Admin = SupabaseClient<Database>;
 export type ReservationView = {
   bookingId: string;
   status: string;
+  isTest: boolean; // development TEST reservation (simulated card, no payment method, no authorization)
   reference: string | null;
   confirmedAt: string | null;
   businessName: string | null;
@@ -38,6 +40,7 @@ type Row = {
   size: string;
   price_cents: number;
   edition_id: string;
+  stripe_customer_id: string | null;
   booking_contacts: { business_name: string; contact_name: string; email: string } | null;
   booking_slots: { released_at: string | null; slots: { label: string; side: string; x_in: number; y_in: number; width_in: number; height_in: number } | null }[];
 };
@@ -46,7 +49,7 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id, status, reference, confirmed_at, size, price_cents, edition_id, booking_contacts(business_name, contact_name, email), booking_slots(released_at, slots(label, side, x_in, y_in, width_in, height_in))",
+      "id, status, reference, confirmed_at, size, price_cents, edition_id, stripe_customer_id, booking_contacts(business_name, contact_name, email), booking_slots(released_at, slots(label, side, x_in, y_in, width_in, height_in))",
     )
     .eq("id", bookingId)
     .returns<Row[]>()
@@ -66,6 +69,7 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
   return {
     bookingId: data.id,
     status: data.status,
+    isTest: isTestStripeId(data.stripe_customer_id),
     reference: data.reference,
     confirmedAt: data.confirmed_at,
     businessName: data.booking_contacts?.business_name ?? null,

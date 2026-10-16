@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { issueAccessToken, revokeAccessToken } from "@/lib/access/tokens";
 import { getReservationView } from "@/lib/checkout/reservation";
+import { isDevTestModeActive } from "@/lib/dev/test-mode";
 import { getAppUrl, getEmailEnv } from "@/lib/env/checkout";
 import type { Database } from "@/lib/supabase/database.types";
 import { reservationConfirmedEmail } from "./reservation-confirmed";
@@ -14,6 +15,17 @@ type Admin = SupabaseClient<Database>;
 
 export type EmailMessage = { to: string; subject: string; html: string; text: string; idempotencyKey: string };
 export type SendEmail = (message: EmailMessage) => Promise<{ id: string }>;
+
+export const TEST_NOT_DELIVERED = "not-delivered:test-reservation";
+
+// Development TEST reservations are never emailed. In dev, the email is written to .dev-emails/
+// for review instead (labeled [TEST]).
+async function writeTestPreview(rowId: string, message: EmailMessage) {
+  if (!isDevTestModeActive()) return;
+  const { mkdir, writeFile } = await import("node:fs/promises");
+  await mkdir(".dev-emails", { recursive: true });
+  await writeFile(`.dev-emails/${rowId}.html`, message.html);
+}
 
 const MAX_ATTEMPTS = 8;
 const backoffMinutes = (attempts: number) => Math.min(2 ** attempts, 360); // 2, 4, 8 ... up to 6 h
@@ -80,9 +92,13 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
       priceCents: view.priceCents,
       reservationUrl: `${getAppUrl()}/r/${access.token}`,
       supportEmail,
+      test: view.isTest,
     });
 
-    const sent = await send({ to: view.email, ...email, idempotencyKey: `${row.id}:${row.attempts + 1}` });
+    const message = { to: view.email, ...email, idempotencyKey: `${row.id}:${row.attempts + 1}` };
+    // Checked on the reservation itself (not the current mode), so a test reservation can never
+    // reach Resend, even if it's processed later somewhere test mode is off.
+    const sent = view.isTest ? (await writeTestPreview(row.id, message), { id: TEST_NOT_DELIVERED }) : await send(message);
     await admin
       .from("email_outbox")
       .update({ status: "sent", attempts: row.attempts + 1, provider_message_id: sent.id, sent_at: new Date().toISOString(), last_error: null })

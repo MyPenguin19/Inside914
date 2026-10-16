@@ -3,6 +3,8 @@ import { randomInt } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { hashHoldToken } from "@/lib/booking/hold-token";
+import { isFakeStripe } from "@/lib/dev/fake-stripe";
+import { isTestStripeId } from "@/lib/dev/test-mode";
 import type { Database } from "@/lib/supabase/database.types";
 import { parseContact, type ContactErrors } from "./contact";
 import type { StripeClient } from "./stripe";
@@ -76,6 +78,15 @@ export function checkoutGate(booking: CheckoutBooking | null, needs: { contact?:
   return null;
 }
 
+// Test (simulated-card) bookings and real ones never mix: real Stripe refuses a booking that
+// already has dev-test ids, and the dev fake refuses one with real Stripe ids.
+export function stripeModeConflict(booking: CheckoutBooking, stripe: StripeClient): "test_booking" | "real_booking" | null {
+  const ids = [booking.stripeCustomerId, booking.stripeSetupIntentId].filter(Boolean);
+  if (!isFakeStripe(stripe) && ids.some(isTestStripeId)) return "test_booking";
+  if (isFakeStripe(stripe) && ids.some((id) => !isTestStripeId(id))) return "real_booking";
+  return null;
+}
+
 // Step 1: business and contact details (validated + normalized on the server).
 export async function saveContact(admin: Admin, token: string | undefined, raw: Record<string, unknown>) {
   const booking = await getBookingByHoldToken(admin, token);
@@ -109,6 +120,8 @@ export async function startPayment(admin: Admin, stripe: StripeClient, token: st
   if (gate) return { ok: false as const, reason: gate };
   const b = booking!;
   const contact = b.contact!;
+  const conflict = stripeModeConflict(b, stripe);
+  if (conflict) return { ok: false as const, reason: conflict };
 
   let customerId = b.stripeCustomerId;
   if (customerId) {
@@ -183,7 +196,9 @@ export type ConfirmOutcome =
   | "consent_missing"
   | "wrong_setup_intent"
   | "setup_not_succeeded"
-  | "setup_mismatch";
+  | "setup_mismatch"
+  | "test_booking"
+  | "real_booking";
 
 const REFERENCE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export function newReference() {
@@ -200,6 +215,8 @@ export async function completeReservation(admin: Admin, stripe: StripeClient, bo
   const booking = await getBookingById(admin, bookingId);
   if (!booking?.stripeSetupIntentId) return "not_pending";
   if (booking.status === "reserved") return "already_confirmed";
+  const conflict = stripeModeConflict(booking, stripe);
+  if (conflict) return conflict;
 
   const intent = await stripe.setupIntents.retrieve(booking.stripeSetupIntentId);
   if (intent.status !== "succeeded") return "setup_not_succeeded";

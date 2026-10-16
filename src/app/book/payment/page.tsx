@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { beginPayment, confirmReservation, giveConsent } from "@/app/(public)/actions/checkout";
+import { beginPayment, confirmReservation, giveConsent, simulateCardSetup } from "@/app/(public)/actions/checkout";
 import { BookingSteps } from "@/components/booking/booking-steps";
 import { HoldCountdown } from "@/components/booking/hold-countdown";
 import { CheckoutBlocked } from "@/components/checkout/checkout-blocked";
@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 import { loadCheckoutContext } from "@/lib/checkout/context";
 import { checkoutMessage } from "@/lib/checkout/messages";
 import { consentText, TERMS_VERSION } from "@/lib/checkout/terms";
+import { isDevTestModeActive } from "@/lib/dev/test-mode";
 import { getStripePublishableKey } from "@/lib/env/public";
 
 export const metadata = { title: "Save your card · Inside914" };
@@ -35,6 +36,7 @@ async function Payment({ searchParams }: { searchParams: PageProps<"/book/paymen
   const context = await loadCheckoutContext({ contact: true });
   if (context.kind !== "ok") return <CheckoutBlocked reason={context.reason} editionId={context.editionId} />;
   const { booking, view } = context;
+  const testMode = isDevTestModeActive(); // server-side decision; never on Vercel or production builds
 
   return (
     <div className="mt-8 grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
@@ -58,10 +60,11 @@ async function Payment({ searchParams }: { searchParams: PageProps<"/book/paymen
         )}
         <div className="mt-6">
           <PaymentStep
-            publishableKey={getStripePublishableKey()}
+            publishableKey={testMode ? null : getStripePublishableKey()}
             consentText={consentText(booking.priceCents)}
             termsVersion={TERMS_VERSION}
-            actions={{ beginPayment, giveConsent, confirmReservation }}
+            testMode={testMode}
+            actions={{ beginPayment, giveConsent, confirmReservation, simulateCardSetup }}
           />
         </div>
         <Link href="/book/details" className="mt-6 inline-block text-sm text-muted underline">

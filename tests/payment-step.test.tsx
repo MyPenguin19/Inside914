@@ -138,3 +138,41 @@ describe("PaymentStep", () => {
     expect((await screen.findByRole("alert")).textContent).toMatch(/hold ran out/);
   });
 });
+
+describe("PaymentStep in development TEST mode", () => {
+  test("shows a simulated card under a TEST banner, never loads Stripe, and confirms via simulation", async () => {
+    const loadStripeJs = vi.fn();
+    const actions = {
+      beginPayment: vi.fn(async () => ({ ok: true as const, clientSecret: "seti_devtest_x_secret_test", status: "requires_payment_method" })),
+      giveConsent: vi.fn(async () => ({ ok: true })),
+      simulateCardSetup: vi.fn(async () => ({ ok: true })),
+      confirmReservation: vi.fn(async () => ({ outcome: "confirmed" })),
+    };
+    render(
+      <PaymentStep publishableKey={null} consentText="consent" termsVersion="v1" testMode actions={actions} loadStripeJs={loadStripeJs as never} />,
+    );
+    expect(screen.getByRole("note").textContent).toMatch(/TEST MODE.*no card is saved and no payment is authorized/);
+    const button = await screen.findByRole("button", { name: /simulate card and create TEST reservation/i });
+    expect(button.hasAttribute("disabled")).toBe(true); // consent still required
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(button);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/book/confirmed"));
+    expect(actions.giveConsent).toHaveBeenCalledTimes(1);
+    expect(actions.simulateCardSetup).toHaveBeenCalledTimes(1);
+    expect(loadStripeJs).not.toHaveBeenCalled();
+  });
+
+  test("if the server refuses test mode, it says so and confirms nothing", async () => {
+    const actions = {
+      beginPayment: vi.fn(async () => ({ ok: true as const, clientSecret: "x", status: "requires_payment_method" })),
+      giveConsent: vi.fn(async () => ({ ok: true })),
+      simulateCardSetup: vi.fn(async () => ({ ok: false, reason: "test_mode_unavailable" })),
+      confirmReservation: vi.fn(async () => ({ outcome: "confirmed" })),
+    };
+    render(<PaymentStep publishableKey={null} consentText="consent" termsVersion="v1" testMode actions={actions} />);
+    fireEvent.click(await screen.findByRole("checkbox"));
+    fireEvent.click(await screen.findByRole("button", { name: /simulate card/i }));
+    expect((await screen.findByRole("alert")).textContent).toMatch(/Test mode isn't available/);
+    expect(actions.confirmReservation).not.toHaveBeenCalled();
+  });
+});

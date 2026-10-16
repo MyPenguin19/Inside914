@@ -5,7 +5,8 @@ import sharp from "sharp";
 // only when a Stripe TEST publishable key is configured; otherwise that test is skipped.
 
 const EDITION_URL = "/editions/00000000-0000-4000-8000-000000000101";
-const hasStripe = /^pk_test_/.test(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "");
+const devTestMode = process.env.INSIDE914_DEV_TEST_RESERVATIONS === "true";
+const hasStripe = !devTestMode && /^pk_test_/.test(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "");
 const errorAlert = (page: Page) => page.locator("main").getByRole("alert");
 
 async function toDetails(page: Page) {
@@ -56,7 +57,7 @@ test("details: inline errors, kept values, then the payment step with an unticke
   await expect(summary).toContainText("Central Westchester");
   await expect(summary).toContainText("5,000 homes");
   await expect(summary).toContainText("$500");
-  if (hasStripe) {
+  if (hasStripe || devTestMode) {
     await expect(page.getByRole("checkbox")).not.toBeChecked();
     await expect(page.getByRole("checkbox").locator("..")).toContainText("charge $500");
   } else {
@@ -95,4 +96,23 @@ test("full checkout with a Stripe test card", async ({ page }) => {
   await page.getByRole("button", { name: /save card and reserve/i }).click();
   await expect(page.getByRole("heading", { name: "Your advertising space is reserved!" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("No payment has been collected.")).toBeVisible();
+});
+
+test("development TEST mode: the whole booking completes as a clearly labeled TEST reservation", async ({ page }) => {
+  test.skip(!devTestMode, "run with INSIDE914_DEV_TEST_RESERVATIONS=true");
+  test.setTimeout(90_000);
+  await toDetails(page);
+  await fillDetails(page);
+  await page.getByRole("button", { name: "Continue to payment details" }).click();
+
+  await expect(page.getByText(/TEST MODE \(development only\): no card is saved and no payment is authorized/)).toBeVisible();
+  await expect(page.locator('iframe[title*="Secure payment input"]')).toHaveCount(0); // Stripe never loads
+  const submit = page.getByRole("button", { name: /simulate card and create TEST reservation/i });
+  await expect(submit).toBeDisabled(); // consent still required
+  await page.getByRole("checkbox").check();
+  await submit.click();
+
+  await expect(page.getByRole("heading", { name: "Test reservation complete" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/TEST RESERVATION \(development only\): this is not a real booking/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your advertising space is reserved!" })).toHaveCount(0);
 });

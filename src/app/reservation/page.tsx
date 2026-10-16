@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { Panel } from "@/components/booking/hold-state-panel";
 import { ReservationSummary } from "@/components/checkout/reservation-summary";
+import { TestReservationBanner } from "@/components/checkout/test-reservation-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ACCESS_COOKIE, resolveAccessToken } from "@/lib/access/tokens";
@@ -46,10 +47,11 @@ async function Reservation() {
   }
   return (
     <div className="flex flex-col gap-6">
+      {view.isTest && <TestReservationBanner />}
       <section className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Reservation {view.reference}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{view.businessName}</h1>
-        <p className="mt-3 font-medium">{STATUS_TEXT[view.status] ?? "In progress."}</p>
+        <p className="mt-3 font-medium">{view.isTest ? "TEST reservation: nothing saved or authorized." : (STATUS_TEXT[view.status] ?? "In progress.")}</p>
       </section>
       <ReservationSummary view={view} amountLabel="Authorized future charge" />
       <section className="rounded-2xl border border-dashed border-line p-6 text-sm text-muted">

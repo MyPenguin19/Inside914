@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { CheckoutBlocked } from "@/components/checkout/checkout-blocked";
 import { ReservationSummary } from "@/components/checkout/reservation-summary";
+import { TestReservationBanner } from "@/components/checkout/test-reservation-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { loadCheckoutContext } from "@/lib/checkout/context";
@@ -31,6 +32,23 @@ async function Confirmed() {
 
   // Retry the confirmation email if an earlier attempt failed (no-op once sent).
   await processOutboxForBooking(createAdminClient(), booking.id).catch(() => {});
+
+  if (view.isTest) {
+    return (
+      <div className="flex flex-col gap-6">
+        <TestReservationBanner />
+        <section className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Test reference {view.reference}</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Test reservation complete</h1>
+          <p className="mt-3 text-muted">
+            The full booking flow ran end to end for {view.businessName}. The position is held in the development
+            database only. Clear test reservations with <code>npm run dev:clear-test-reservations</code>.
+          </p>
+        </section>
+        <ReservationSummary view={view} amountLabel="Amount (TEST, not authorized)" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 import { makeImage } from "../fixtures/images";
@@ -63,8 +64,10 @@ describe.skipIf(!enabled)("Stripe test mode: saved cards, no charges", () => {
     await stripe.setupIntents.confirm(ctx.setupIntentId, { payment_method: "pm_card_visa" });
     expect(await checkout.completeReservation(admin, stripe, ctx.bookingId)).toBe("confirmed");
 
-    const payments = await stripe.paymentIntents.list({ customer: ctx.customerId, limit: 5 });
-    const subscriptions = await stripe.subscriptions.list({ customer: ctx.customerId, limit: 5 });
+    // Read-only checks with a full client: the app's client can't even list payments.
+    const full = new Stripe(stripeKey);
+    const payments = await full.paymentIntents.list({ customer: ctx.customerId, limit: 5 });
+    const subscriptions = await full.subscriptions.list({ customer: ctx.customerId, limit: 5 });
     const cards = await stripe.paymentMethods.list({ customer: ctx.customerId, type: "card" });
     expect(payments.data).toEqual([]);
     expect(subscriptions.data).toEqual([]);
