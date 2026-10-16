@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git clean -f:*)",
+      "Bash(supabase db reset:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(vercel deploy --prod:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__buy_domain",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__create_or_transfer_domain",
+      "mcp__1bf8ec33-b94b-472f-82be-9e41d5c887b9__atlas_company_formation",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__delete_branch",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__reset_branch",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__pause_project"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(vercel:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase migration repair:*)",
+      "Bash(stripe:*)",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__create_deployment",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__request_promote",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__request_rollback",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__create_project",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__update_project",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__create_project_env",
+      "mcp__1a89778e-4e8c-4ee9-b101-f398531639d3__edit_project_env",
+      "mcp__1bf8ec33-b94b-472f-82be-9e41d5c887b9__stripe_api_write",
+      "mcp__1bf8ec33-b94b-472f-82be-9e41d5c887b9__manage_stripe_accounts",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__execute_sql",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__apply_migration",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__create_project",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__create_branch",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__merge_branch",
+      "mcp__de3d7c25-6c4a-4759-8217-6dc72022cb1e__deploy_edge_function"
+    ]
+  }
+}
