@@ -31,6 +31,68 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_artwork: {
+        Row: {
+          booking_id: string
+          byte_size: number | null
+          content_type: string | null
+          created_at: string
+          crop_height: number | null
+          crop_width: number | null
+          crop_x: number | null
+          crop_y: number | null
+          height_px: number | null
+          id: string
+          status: string
+          storage_path: string
+          updated_at: string
+          width_px: number | null
+          zoom: number | null
+        }
+        Insert: {
+          booking_id: string
+          byte_size?: number | null
+          content_type?: string | null
+          created_at?: string
+          crop_height?: number | null
+          crop_width?: number | null
+          crop_x?: number | null
+          crop_y?: number | null
+          height_px?: number | null
+          id?: string
+          status?: string
+          storage_path: string
+          updated_at?: string
+          width_px?: number | null
+          zoom?: number | null
+        }
+        Update: {
+          booking_id?: string
+          byte_size?: number | null
+          content_type?: string | null
+          created_at?: string
+          crop_height?: number | null
+          crop_width?: number | null
+          crop_x?: number | null
+          crop_y?: number | null
+          height_px?: number | null
+          id?: string
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          width_px?: number | null
+          zoom?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_artwork_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_slots: {
         Row: {
           booking_id: string
@@ -90,6 +152,7 @@ export type Database = {
           created_at: string
           edition_id: string
           hold_expires_at: string | null
+          hold_extensions: number
           hold_token_hash: string
           id: string
           price_cents: number
@@ -101,6 +164,7 @@ export type Database = {
           created_at?: string
           edition_id: string
           hold_expires_at?: string | null
+          hold_extensions?: number
           hold_token_hash: string
           id?: string
           price_cents: number
@@ -112,6 +176,7 @@ export type Database = {
           created_at?: string
           edition_id?: string
           hold_expires_at?: string | null
+          hold_extensions?: number
           hold_token_hash?: string
           id?: string
           price_cents?: number
@@ -304,6 +369,7 @@ export type Database = {
       }
     }
     Functions: {
+      extend_hold: { Args: { p_token_hash: string }; Returns: string }
       hold_slots: {
         Args: { p_slot_ids: string[]; p_token_hash: string }
         Returns: {

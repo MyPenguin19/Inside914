@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { removeArtwork } from "@/lib/artwork/service";
 import { releaseHold } from "@/lib/booking/held-booking";
 import { HOLD_COOKIE, placeHold, type HoldFailure } from "@/lib/booking/place-hold";
 import { isSelectionAvailable, type Availability } from "@/lib/booking/selection";
@@ -32,7 +33,10 @@ export async function holdSelection(raw: unknown): Promise<HoldSelectionResult> 
     const admin = createAdminClient();
     const cookieStore = await cookies();
     const previous = cookieStore.get(HOLD_COOKIE)?.value;
-    if (previous) await releaseHold(admin, previous);
+    if (previous) {
+      await removeArtwork(admin, previous); // a new hold starts with no artwork
+      await releaseHold(admin, previous);
+    }
 
     const result = await placeHold(admin, { slotIds });
     if (!result.ok) {
@@ -61,7 +65,9 @@ export async function releaseCurrentHold(formData: FormData) {
   const token = cookieStore.get(HOLD_COOKIE)?.value;
   if (token) {
     try {
-      await releaseHold(createAdminClient(), token);
+      const admin = createAdminClient();
+      await removeArtwork(admin, token);
+      await releaseHold(admin, token);
     } catch (error) {
       // The hold still expires on its own within 15 minutes.
       console.error("releaseCurrentHold failed", error);

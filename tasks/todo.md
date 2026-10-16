@@ -65,6 +65,11 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
 
 ## Phase 3: Artwork
 
+- [x] **Task 7 (revised): Artwork upload, editing and postcard preview** (L), done 2026-10-16 on `task-5/slot-hold`
+  - Covers the original Tasks 8 (storage), 9 (fit-to-slot editor + resolution check); print rendering (Task 10) is still open.
+  - Migration `20261016053626_artwork_storage_and_hold_extension` applied to Inside914 dev: private `artwork` bucket (20 MB, JPEG/PNG, no browser policies), `booking_artwork`, `bookings.hold_extensions`, `extend_hold()`.
+  - Verified: 70 unit/component, 28 integration (real Storage + DB), 11 Playwright e2e (real uploads, keyboard, mobile, interruption).
+
 - [ ] **Task 8: Artwork upload to private storage** (M)
   - Acceptance: private `artwork` bucket with RLS; signed upload URL scoped to the hold; JPG/PNG/PDF only, ≤ 25 MB, checked server-side by magic bytes, not just extension; `artworks` row linked to reservation.
   - Verify: integration test rejects wrong type, oversize and another hold's path; standard verify.

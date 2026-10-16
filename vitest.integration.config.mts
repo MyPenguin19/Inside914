@@ -11,5 +11,7 @@ export default defineConfig({
     environment: "node",
     include: ["tests/integration/**/*.test.ts"],
     setupFiles: ["tests/integration/setup-env.ts"],
+    testTimeout: 30_000, // real network calls to Supabase
+    fileParallelism: false, // files share one database and clean it up; run them one at a time
   },
 });

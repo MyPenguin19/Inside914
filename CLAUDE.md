@@ -12,6 +12,8 @@ Node 24 lives in `~/.local/node/bin`. Prefix commands with `PATH="$HOME/.local/n
 - Supabase clients: `@/lib/supabase/browser` (Client Components), `@/lib/supabase/server` (per-request, user/anon, RLS applies), `@/lib/supabase/admin` (secret key, bypasses RLS; server-only, only after authorization). Env is validated lazily in `@/lib/env/*`; see `.env.example`.
 - `npm run db:types` regenerates `src/lib/supabase/database.types.ts` after a migration (needs `npx supabase login`; or use the Supabase MCP `generate_typescript_types`).
 - Booking model: `bookings` (one customer hold: size, price, status, token hash) + `booking_slots` (live claims, unique per slot). Holds only via `hold_slots()`; double-compatibility is defined only by the `slot_pairs` view. Slot geometry is provisional data, never hardcoded.
+- Artwork: private `artwork` bucket, no storage policies; all access via `src/lib/artwork/service.ts` (hold-token authorized). Print geometry/thresholds live only in `src/lib/print/spec.ts` and are PROVISIONAL until the printer's template arrives.
+- Integration and e2e tests use the shared dev database: they run one file/worker at a time and clean up their own holds.
 - Dev catalog changes that aren't schema go in `supabase/dev-data/` and need approval before running.
 - `npx supabase migration new <name>` for schema changes; `npx supabase db reset` (local only) reapplies migrations + seed
 - `npm run build`

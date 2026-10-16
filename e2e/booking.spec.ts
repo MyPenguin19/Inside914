@@ -89,9 +89,9 @@ test("holding never fakes success: it either reaches the hold page or explains w
     await expect(page.getByText(/left/)).toBeVisible(); // live countdown
     await expect(page.locator("dd", { hasText: "$500" })).toBeVisible(); // hold summary price
     await page.getByRole("link", { name: "Continue to artwork upload" }).click();
-    await expect(page.getByRole("heading", { name: "Artwork upload isn't open yet" })).toBeVisible();
-    await page.getByRole("link", { name: "Back to your hold" }).click();
+    await expect(page.getByRole("heading", { name: "Add your artwork" })).toBeVisible();
   } finally {
+    await page.goto("/book/hold");
     // Release the hold so the test leaves no reservation behind.
     await page.getByRole("button", { name: "Change selection" }).click();
     await expect(page).toHaveURL(new RegExp(`${EDITION_URL}$`));

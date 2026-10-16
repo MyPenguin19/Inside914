@@ -18,7 +18,7 @@ export default function HoldPage() {
     <>
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <BookingSteps current={3} />
+        <BookingSteps current={2} />
         <Suspense fallback={<div className="mt-8 h-72 animate-pulse rounded-2xl border border-line bg-surface" />}>
           <HoldDetails />
         </Suspense>

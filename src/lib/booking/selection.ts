@@ -1,5 +1,6 @@
 // Pure booking-selection rules shared by the postcard UI and the hold server action.
 // Which units can form a double is decided by the database (public.slot_pairs), not here.
+import { PRINT_SPEC } from "@/lib/print/spec";
 
 export type Side = "front" | "back";
 export type SizeMode = "standard" | "double";
@@ -21,8 +22,8 @@ export type Availability = { slots: Record<string, boolean>; pairs: SlotPair[] }
 
 export type Pricing = { unitPriceCents: number; doublePriceCents: number | null };
 
-// Trim size of the provisional piece. Slot geometry comes from the database.
-export const POSTCARD_INCHES = { width: 6.5, height: 12 } as const;
+// Trim size from the (provisional) print spec. Slot geometry comes from the database.
+export const POSTCARD_INCHES = PRINT_SPEC.trimInches;
 
 export function isDoubleOffered(pricing: Pricing, pairs: SlotPair[]) {
   return pricing.doublePriceCents !== null && pairs.length > 0;

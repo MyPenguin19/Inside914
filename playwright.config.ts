@@ -5,6 +5,7 @@ const baseURL = "http://localhost:3000";
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
+  workers: 1, // specs place real holds on one shared dev database; run them one at a time
   retries: process.env.CI ? 2 : 0,
   use: { baseURL, trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

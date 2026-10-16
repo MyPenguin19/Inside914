@@ -11,7 +11,8 @@ export type HeldBooking = {
   size: "standard" | "double";
   priceCents: number;
   expiresAt: string;
-  positions: { label: string; side: string }[];
+  positions: { label: string; side: "front" | "back"; x: number; y: number; width: number; height: number }[];
+  holdExtensions: number;
   state: "active" | "expired";
 };
 
@@ -22,8 +23,11 @@ type Row = {
   price_cents: number;
   status: string;
   hold_expires_at: string | null;
+  hold_extensions: number;
   editions: { issue_month: string; zones: { name: string } | null } | null;
-  booking_slots: { slots: { label: string; side: string } | null }[];
+  booking_slots: {
+    slots: { label: string; side: string; x_in: number; y_in: number; width_in: number; height_in: number } | null;
+  }[];
 };
 
 // The pending hold behind a browser's hold token, or null if there is none.
@@ -31,7 +35,7 @@ export async function getHeldBooking(admin: SupabaseClient<Database>, token: str
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id, edition_id, size, price_cents, status, hold_expires_at, editions(issue_month, zones(name)), booking_slots(slots(label, side))",
+      "id, edition_id, size, price_cents, status, hold_expires_at, hold_extensions, editions(issue_month, zones(name)), booking_slots(slots(label, side, x_in, y_in, width_in, height_in))",
     )
     .eq("hold_token_hash", hashHoldToken(token))
     .returns<Row[]>()
@@ -50,7 +54,16 @@ export async function getHeldBooking(admin: SupabaseClient<Database>, token: str
     expiresAt: data.hold_expires_at,
     positions: data.booking_slots
       .flatMap((bs) => (bs.slots ? [bs.slots] : []))
+      .map((s) => ({
+        label: s.label,
+        side: s.side as "front" | "back",
+        x: Number(s.x_in),
+        y: Number(s.y_in),
+        width: Number(s.width_in),
+        height: Number(s.height_in),
+      }))
       .sort((a, b) => a.label.localeCompare(b.label, "en", { numeric: true })),
+    holdExtensions: data.hold_extensions,
     state: active ? "active" : "expired",
   };
 }

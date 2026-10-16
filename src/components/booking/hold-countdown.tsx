@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { holdSecondsLeft } from "@/lib/booking/selection";
 
-// Live "14:32 left" for a hold; refreshes the page once it runs out so the expired state shows.
-export function HoldCountdown({ expiresAt }: { expiresAt: string }) {
+// Seconds left on a hold, ticking every second; refreshes the page once it runs out so the
+// server renders the expired state.
+export function useHoldSecondsLeft(expiresAt: string) {
   const router = useRouter();
   const [secondsLeft, setSecondsLeft] = useState(() => holdSecondsLeft(expiresAt));
 
@@ -21,12 +22,21 @@ export function HoldCountdown({ expiresAt }: { expiresAt: string }) {
     return () => clearInterval(timer);
   }, [expiresAt, router]);
 
-  const minutes = Math.floor(secondsLeft / 60);
-  const seconds = String(secondsLeft % 60).padStart(2, "0");
+  return secondsLeft;
+}
+
+export function formatCountdown(secondsLeft: number) {
+  return `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`;
+}
+
+// Live "14:32 left" for a hold.
+export function HoldCountdown({ expiresAt }: { expiresAt: string }) {
+  const secondsLeft = useHoldSecondsLeft(expiresAt);
   return (
     <span>
-      <span className="font-mono tabular-nums">
-        {minutes}:{seconds}
+      {/* The server and browser render a second or two apart; the timer corrects itself. */}
+      <span className="font-mono tabular-nums" suppressHydrationWarning>
+        {formatCountdown(secondsLeft)}
       </span>{" "}
       left
     </span>

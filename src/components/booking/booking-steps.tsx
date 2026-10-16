@@ -1,7 +1,7 @@
-const STEPS = ["Choose edition", "Pick your position", "Review price", "Upload artwork"] as const;
+const STEPS = ["Choose edition", "Pick your position", "Add your artwork", "Review", "Your details"] as const;
 
 // current: 1-based index of the step the visitor is on.
-export function BookingSteps({ current }: { current: 1 | 2 | 3 | 4 }) {
+export function BookingSteps({ current }: { current: 1 | 2 | 3 | 4 | 5 }) {
   return (
     <nav aria-label="Booking progress">
       <ol className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
