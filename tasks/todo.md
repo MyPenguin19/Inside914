@@ -70,6 +70,10 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Migration `20261016053626_artwork_storage_and_hold_extension` applied to Inside914 dev: private `artwork` bucket (20 MB, JPEG/PNG, no browser policies), `booking_artwork`, `bookings.hold_extensions`, `extend_hold()`.
   - Verified: 70 unit/component, 28 integration (real Storage + DB), 11 Playwright e2e (real uploads, keyboard, mobile, interruption).
 
+- [x] **Task 8 (revised): Customer details, Stripe saved card, consent, confirmation, email, reservation link** (L), built 2026-10-16 on `task-5/slot-hold`
+  - Migration `20261016184224_checkout_and_confirmation` applied to Inside914 dev.
+  - Verified: 105 unit/component, 43 integration (real Supabase; Stripe faked), 13 e2e. **Not yet verified against real Stripe:** 4 Stripe test-mode integration tests and the e2e card test are skipped until test keys are in `.env.local`.
+
 - [ ] **Task 8: Artwork upload to private storage** (M)
   - Acceptance: private `artwork` bucket with RLS; signed upload URL scoped to the hold; JPG/PNG/PDF only, ≤ 25 MB, checked server-side by magic bytes, not just extension; `artworks` row linked to reservation.
   - Verify: integration test rejects wrong type, oversize and another hold's path; standard verify.

@@ -31,6 +31,41 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_access_tokens: {
+        Row: {
+          booking_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_access_tokens_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_artwork: {
         Row: {
           booking_id: string
@@ -86,6 +121,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "booking_artwork_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_contacts: {
+        Row: {
+          booking_id: string
+          business_name: string
+          category: string | null
+          contact_name: string
+          created_at: string
+          email: string
+          phone: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          booking_id: string
+          business_name: string
+          category?: string | null
+          contact_name: string
+          created_at?: string
+          email: string
+          phone: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          booking_id?: string
+          business_name?: string
+          category?: string | null
+          contact_name?: string
+          created_at?: string
+          email?: string
+          phone?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_contacts_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: true
             referencedRelation: "bookings"
@@ -149,6 +228,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          confirmed_at: string | null
           created_at: string
           edition_id: string
           hold_expires_at: string | null
@@ -156,11 +236,16 @@ export type Database = {
           hold_token_hash: string
           id: string
           price_cents: number
+          reference: string | null
           size: string
           status: string
+          stripe_customer_id: string | null
+          stripe_payment_method_id: string | null
+          stripe_setup_intent_id: string | null
           updated_at: string
         }
         Insert: {
+          confirmed_at?: string | null
           created_at?: string
           edition_id: string
           hold_expires_at?: string | null
@@ -168,11 +253,16 @@ export type Database = {
           hold_token_hash: string
           id?: string
           price_cents: number
+          reference?: string | null
           size: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
+          stripe_setup_intent_id?: string | null
           updated_at?: string
         }
         Update: {
+          confirmed_at?: string | null
           created_at?: string
           edition_id?: string
           hold_expires_at?: string | null
@@ -180,8 +270,12 @@ export type Database = {
           hold_token_hash?: string
           id?: string
           price_cents?: number
+          reference?: string | null
           size?: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
+          stripe_setup_intent_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -252,6 +346,115 @@ export type Database = {
           },
         ]
       }
+      email_outbox: {
+        Row: {
+          attempts: number
+          booking_id: string
+          created_at: string
+          id: string
+          kind: string
+          last_error: string | null
+          next_attempt_at: string
+          provider_message_id: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          booking_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          last_error?: string | null
+          next_attempt_at?: string
+          provider_message_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          booking_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          provider_message_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_outbox_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_consents: {
+        Row: {
+          amount_cents: number
+          booking_id: string
+          consented_at: string
+          currency: string
+          edition_id: string
+          id: string
+          stripe_setup_intent_id: string
+          terms_version: string
+        }
+        Insert: {
+          amount_cents: number
+          booking_id: string
+          consented_at?: string
+          currency?: string
+          edition_id: string
+          id?: string
+          stripe_setup_intent_id: string
+          terms_version: string
+        }
+        Update: {
+          amount_cents?: number
+          booking_id?: string
+          consented_at?: string
+          currency?: string
+          edition_id?: string
+          id?: string
+          stripe_setup_intent_id?: string
+          terms_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_consents_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_consents_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_consents_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "slot_availability"
+            referencedColumns: ["edition_id"]
+          },
+          {
+            foreignKeyName: "payment_consents_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "slot_pairs"
+            referencedColumns: ["edition_id"]
+          },
+        ]
+      }
       slots: {
         Row: {
           created_at: string
@@ -309,6 +512,24 @@ export type Database = {
             referencedColumns: ["edition_id"]
           },
         ]
+      }
+      stripe_events: {
+        Row: {
+          id: string
+          received_at: string
+          type: string
+        }
+        Insert: {
+          id: string
+          received_at?: string
+          type: string
+        }
+        Update: {
+          id?: string
+          received_at?: string
+          type?: string
+        }
+        Relationships: []
       }
       zones: {
         Row: {
@@ -369,6 +590,15 @@ export type Database = {
       }
     }
     Functions: {
+      confirm_booking: {
+        Args: {
+          p_booking_id: string
+          p_payment_method_id: string
+          p_reference: string
+          p_setup_intent_id: string
+        }
+        Returns: string
+      }
       extend_hold: { Args: { p_token_hash: string }; Returns: string }
       hold_slots: {
         Args: { p_slot_ids: string[]; p_token_hash: string }

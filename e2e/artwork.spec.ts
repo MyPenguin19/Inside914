@@ -72,8 +72,7 @@ test("standard ad: upload, adjust with keyboard, preview, review, make changes",
 
   await page.getByRole("button", { name: "Continue to review" }).click();
   await page.getByRole("link", { name: "Continue" }).click();
-  await expect(page.getByRole("heading", { name: "Your details: coming next" })).toBeVisible();
-  await expect(page.getByText(/isn't confirmed and nothing has been charged/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your business details" })).toBeVisible();
 });
 
 test("double ad: one image spans both units, at the double price", async ({ page }) => {

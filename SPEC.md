@@ -49,6 +49,12 @@ Build order: catalog → booking → payments → notify → admin (review/expor
 - Effective resolution is checked against the PROVISIONAL print spec (`src/lib/print/spec.ts`): a warning below 300 ppi and a stronger warning below 150 ppi. Nothing is blocked until the printer confirms real requirements.
 - The server renders the final print file at 300 DPI from the original plus the transform, using `sharp`. Bleed and safe-zone margins come from the printer (see Open Questions).
 
+### Checkout (built in Task 8)
+- Details form (business, contact, email, phone; optional website/category), validated and normalized on the server.
+- Card saved with a Stripe SetupIntent (`usage: off_session`), $0 charged. An unticked consent box shows the exact amount ($500/$900); consent is stored with amount, currency, terms version, edition and SetupIntent id.
+- `confirm_booking()` confirms only an unexpired pending hold whose slots are still claimed, with artwork, contact and matching consent; an expired hold is released and the saved card removed from Stripe.
+- Confirmation email via an outbox (one row per booking, retried with backoff, never sent twice) with a private reservation link (hashed token, 180-day expiry, revocable).
+
 ### Payments (`payments`)
 - At booking: create a Stripe Customer and a **SetupIntent** (`usage: off_session`). The checkout shows a mandate line: *"Your card will be charged $X only when this edition is approved to print."*
 - On **Approve to print**: for each `approved` reservation, create an off-session PaymentIntent (`confirm: true`, `off_session: true`, idempotency key `charge:<reservation_id>:<attempt>`).

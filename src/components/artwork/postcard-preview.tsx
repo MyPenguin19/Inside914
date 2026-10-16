@@ -8,13 +8,14 @@ type Props = {
   otherSlots: SlotGeometry[]; // positions belonging to other advertisers on this side
   area: SlotGeometry; // the customer's ad (one slot, or the union of a double)
   showSafeArea?: boolean;
+  compact?: boolean; // thumbnail: no caption
   children: ReactNode; // what to draw inside the ad area
 };
 
 const pct = (value: number, of: number) => `${(value / of) * 100}%`;
 
 // The whole front or back of the postcard, to scale, with the customer's ad in its position.
-export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, children }: Props) {
+export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, compact = false, children }: Props) {
   const inset = PRINT_SPEC.safeMarginInches;
   return (
     <figure className="flex flex-col gap-2">
@@ -66,7 +67,7 @@ export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, c
           </div>
         </div>
       </div>
-      <figcaption className="text-xs text-muted">
+      <figcaption className={compact ? "sr-only" : "text-xs text-muted"}>
         {side === "front" ? "Front" : "Back"} of the postcard · your ad is outlined in green. Gray blocks are other local
         businesses.
       </figcaption>
