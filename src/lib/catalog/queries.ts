@@ -1,5 +1,5 @@
 import "server-only";
-import type { Availability, CatalogSlot, Side, SlotPair } from "@/lib/booking/selection";
+import type { Availability, CatalogSlot, Occupancy, Side, SlotPair } from "@/lib/booking/selection";
 import { createPublicClient } from "@/lib/supabase/public";
 
 export type EditionSummary = {
@@ -50,7 +50,9 @@ function toSummary(row: EditionRow, slots: { available: boolean }[]): EditionSum
   };
 }
 
-function toSlots(rows: { slot_id: string | null; side: string | null; label: string | null; x_in: number | null; y_in: number | null; width_in: number | null; height_in: number | null; available: boolean | null }[]): CatalogSlot[] {
+const OCCUPANCY = new Set<Occupancy>(["available", "held", "reserved", "closed"]);
+
+function toSlots(rows: { slot_id: string | null; side: string | null; label: string | null; x_in: number | null; y_in: number | null; width_in: number | null; height_in: number | null; available: boolean | null; occupancy?: string | null }[]): CatalogSlot[] {
   return rows.map((r) => ({
     id: r.slot_id!,
     side: r.side as Side,
@@ -60,6 +62,7 @@ function toSlots(rows: { slot_id: string | null; side: string | null; label: str
     width: Number(r.width_in),
     height: Number(r.height_in),
     available: r.available === true,
+    occupancy: OCCUPANCY.has(r.occupancy as Occupancy) ? (r.occupancy as Occupancy) : undefined,
   }));
 }
 
@@ -126,7 +129,7 @@ async function getAvailabilityRows(editionId: string) {
   const [slots, pairs] = await Promise.all([
     supabase
       .from("slot_availability")
-      .select("slot_id, side, label, x_in, y_in, width_in, height_in, available")
+      .select("slot_id, side, label, x_in, y_in, width_in, height_in, available, occupancy")
       .eq("edition_id", editionId)
       .order("side", { ascending: false })
       .order("y_in")

@@ -566,6 +566,7 @@ export type Database = {
           household_count: number | null
           issue_month: string | null
           label: string | null
+          occupancy: string | null
           side: string | null
           slot_id: string | null
           unit_price_cents: number | null
@@ -600,6 +601,14 @@ export type Database = {
         Returns: string
       }
       extend_hold: { Args: { p_token_hash: string }; Returns: string }
+      note_hold_attempt: {
+        Args: {
+          p_max: number
+          p_visitor_hash: string
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       hold_slots: {
         Args: { p_slot_ids: string[]; p_token_hash: string }
         Returns: {

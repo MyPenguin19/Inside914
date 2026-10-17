@@ -12,6 +12,7 @@ export type HoldFailure =
   | "slot_not_found"
   | "edition_closed"
   | "slot_unavailable"
+  | "rate_limited"
   | "error";
 
 export type HoldResult =

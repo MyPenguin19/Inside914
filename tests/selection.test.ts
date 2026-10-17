@@ -70,6 +70,13 @@ describe("re-checking a selection against fresh availability", () => {
     expect(updated.find((s) => s.id === "f2")?.available).toBe(false);
     expect(updated.find((s) => s.id === "b1")?.available).toBe(false);
   });
+
+  test("a space taken since the page loaded shows as on hold (new claims always start as holds)", () => {
+    const updated = applyAvailability(slots, fresh);
+    expect(updated.find((s) => s.id === "f2")?.occupancy).toBe("held"); // was free, now taken
+    expect(updated.find((s) => s.id === "f4")?.occupancy).toBe("reserved"); // already taken before
+    expect(updated.find((s) => s.id === "f1")?.occupancy).toBe("available");
+  });
 });
 
 describe("hold expiry", () => {

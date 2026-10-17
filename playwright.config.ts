@@ -14,10 +14,13 @@ export default defineConfig({
     command: "npm run dev",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    env: Object.fromEntries(
-      ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "INSIDE914_DEV_TEST_RESERVATIONS"].flatMap((key) =>
-        process.env[key] ? [[key, process.env[key]!]] : [],
+    env: {
+      ...Object.fromEntries(
+        ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "INSIDE914_DEV_TEST_RESERVATIONS"].flatMap((key) =>
+          process.env[key] ? [[key, process.env[key]!]] : [],
+        ),
       ),
-    ),
+      INSIDE914_HOLD_ATTEMPTS_MAX: "1000", // the suite places many holds from one address
+    },
   },
 });

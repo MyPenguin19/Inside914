@@ -39,6 +39,7 @@ const FAILURE_TEXT: Record<Exclude<HoldSelectionResult, { ok: true }>["reason"],
   slot_not_found: "That position has changed since the page loaded. Please refresh the page.",
   invalid_input: "That selection wasn't valid. Please choose a position again.",
   error: "We couldn't hold your position right now. Nothing was reserved; please try again in a moment.",
+  rate_limited: "That's a lot of attempts in a short time. Please wait a few minutes, then try again.",
 };
 
 const SIDES: Side[] = ["front", "back"];
@@ -113,7 +114,17 @@ export function PostcardBooking({
       .map((slot) => {
         const isSelected = selected.includes(slot.id);
         const selectable = isSelectable(slot.id, mode, slots, pairs);
-        const note = isSelected ? "Selected" : !slot.available ? "Reserved" : selectable ? "Available" : "Standard only";
+        const note = isSelected
+          ? "Selected"
+          : !slot.available
+            ? slot.occupancy === "held"
+              ? "On hold"
+              : slot.occupancy === "closed"
+                ? "Closed"
+                : "Reserved"
+            : selectable
+              ? "Available"
+              : "Standard only";
         return { slot, selected: isSelected, selectable, note };
       });
   }

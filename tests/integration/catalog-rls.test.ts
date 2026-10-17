@@ -22,7 +22,7 @@ describe("catalog as anon", () => {
     expect(new Set(rows.map((r) => r.issue_month))).toEqual(new Set(["2027-01-01"]));
     expect(Object.keys(rows[0]).sort()).toEqual(
       [
-        "artwork_deadline", "available", "edition_id", "height_in", "household_count", "issue_month", "label",
+        "artwork_deadline", "available", "edition_id", "height_in", "household_count", "issue_month", "label", "occupancy",
         "side", "slot_id", "unit_price_cents", "width_in", "x_in", "y_in", "zone_name", "zone_slug",
       ].sort(),
     );

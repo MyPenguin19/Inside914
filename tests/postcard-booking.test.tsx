@@ -47,6 +47,27 @@ describe("PostcardBooking", () => {
     expect(holdButton().hasAttribute("disabled")).toBe(false);
   });
 
+  test("a held position says 'On hold'; a closed one says 'Closed'; neither can be selected", () => {
+    const heldCatalog = {
+      ...catalog,
+      slots: catalog.slots.map((s) => (s.id === "f4" ? { ...s, occupancy: "held" as const } : s.id === "b1" ? { ...s, occupancy: "closed" as const } : s)),
+    };
+    render(<PostcardBooking catalog={heldCatalog} holdSelection={vi.fn()} />);
+    const pos = (label: string) => screen.getAllByRole("button").find((b) => b.getAttribute("data-slot-label") === label)!;
+    expect(pos("F4").getAttribute("aria-label")).toMatch(/On hold/);
+    expect(pos("F4").hasAttribute("disabled")).toBe(true);
+    expect(pos("B1").getAttribute("aria-label")).toMatch(/Closed/);
+  });
+
+  test("too many hold attempts: explains it and holds nothing", async () => {
+    const { position, holdButton } = setup({ ok: false, reason: "rate_limited" });
+    fireEvent.click(position("F1"));
+    fireEvent.click(holdButton());
+    const alert = await screen.findByRole("alert", {}, { timeout: 3000 });
+    expect(alert.textContent).toMatch(/wait a few minutes/);
+    expect(push).not.toHaveBeenCalled();
+  });
+
   test("a reserved position can't be selected", () => {
     const { position, holdButton } = setup();
     fireEvent.click(position("F4"));

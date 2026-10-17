@@ -5,6 +5,9 @@ import { PRINT_SPEC } from "@/lib/print/spec";
 export type Side = "front" | "back";
 export type SizeMode = "standard" | "double";
 
+// Public occupancy (no booking details): held = someone is mid-checkout, reserved = confirmed.
+export type Occupancy = "available" | "held" | "reserved" | "closed";
+
 export type CatalogSlot = {
   id: string;
   side: Side;
@@ -14,6 +17,7 @@ export type CatalogSlot = {
   width: number;
   height: number;
   available: boolean;
+  occupancy?: Occupancy;
 };
 
 export type SlotPair = { leftId: string; rightId: string; side: Side; available: boolean };
@@ -60,7 +64,12 @@ export function isSelectionAvailable(slotIds: string[], availability: Availabili
 }
 
 export function applyAvailability(slots: CatalogSlot[], availability: Availability): CatalogSlot[] {
-  return slots.map((s) => ({ ...s, available: availability.slots[s.id] ?? false }));
+  return slots.map((s) => {
+    const available = availability.slots[s.id] ?? false;
+    // A space that was free a moment ago was just claimed, and every new claim starts as a hold.
+    const occupancy: Occupancy = available ? "available" : s.available ? "held" : (s.occupancy ?? "reserved");
+    return { ...s, available, occupancy };
+  });
 }
 
 // Seconds left on a hold; 0 once it has expired.

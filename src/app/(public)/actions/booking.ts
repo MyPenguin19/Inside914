@@ -1,13 +1,15 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { removeArtwork } from "@/lib/artwork/service";
 import { releaseHold } from "@/lib/booking/held-booking";
 import { HOLD_COOKIE, placeHold, type HoldFailure } from "@/lib/booking/place-hold";
+import { allowHoldAttempt, clientAddress, visitorHash } from "@/lib/booking/hold-rate-limit";
 import { isSelectionAvailable, type Availability } from "@/lib/booking/selection";
 import { getAvailability } from "@/lib/catalog/queries";
+import { getServerEnv } from "@/lib/env/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type HoldSelectionResult =
@@ -19,18 +21,21 @@ const HoldSelectionInput = z.object({
   slotIds: z.array(z.uuid()).min(1).max(2),
 });
 
-// Re-checks availability, then places one atomic hold (1 or 2 slots). The token goes into an
-// httpOnly cookie; on a lost race the caller gets fresh availability to redraw the postcard.
+// Rate-limits the visitor, re-checks availability, then places one atomic hold (1 or 2 slots). The
+// token goes into an httpOnly cookie; on a lost race the caller gets fresh availability to redraw.
 export async function holdSelection(raw: unknown): Promise<HoldSelectionResult> {
   const input = HoldSelectionInput.safeParse(raw);
   if (!input.success) return { ok: false, reason: "invalid_input" };
   const { editionId, slotIds } = input.data;
 
   try {
+    const admin = createAdminClient();
+    const visitor = visitorHash(clientAddress(await headers()), getServerEnv().SUPABASE_SECRET_KEY);
+    if (!(await allowHoldAttempt(admin, visitor))) return { ok: false, reason: "rate_limited" };
+
     const fresh = await getAvailability(editionId);
     if (!isSelectionAvailable(slotIds, fresh)) return { ok: false, reason: "slot_unavailable", availability: fresh };
 
-    const admin = createAdminClient();
     const cookieStore = await cookies();
     const previous = cookieStore.get(HOLD_COOKIE)?.value;
     if (previous) {

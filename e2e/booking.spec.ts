@@ -79,7 +79,7 @@ test("two visitors want the same position: the second is told and sees it reserv
     await second.getByRole("button", { name: /hold this position/i }).click();
     await expect(errorAlert(second)).toContainText(/another business just reserved/i);
     await expect(position(second, "Back", "B1")).toBeDisabled();
-    await expect(position(second, "Back", "B1")).toHaveAccessibleName(/Reserved/);
+    await expect(position(second, "Back", "B1")).toHaveAccessibleName(/On hold/); // held by the first visitor, not yet confirmed
     await expect(second).toHaveURL(new RegExp(`${EDITION_URL}$`));
   } finally {
     await first.getByRole("button", { name: "Change selection" }).click(); // release B1

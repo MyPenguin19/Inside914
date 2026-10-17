@@ -188,6 +188,6 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Shared `page-width`/`section-y` layout utilities; tighter homepage, booking, editor, checkout, Verified Mail and admin spacing (pages 2-19% shorter). No redesign, copy, journey or behavior changes.
   - Awaiting visual review.
 
-- [ ] **Task 12: Supabase campaign and postcard inventory integration**, 2026-10-17 on `task-12/live-inventory`
+- [x] **Task 12: Supabase campaign and postcard inventory integration**, 2026-10-17 on `task-12/live-inventory`
   - Done: live `/areas` from Supabase (counts, prices, reserve-by, mail date; empty/error/full/coming-soon states), real edition page aligned to the approved design, provisional-data notice, CTAs and stale `/#editions` links point to `/areas`.
-  - Pending approval: migration `20261017040000_slot_occupancy_and_hold_rate_limit.sql` (held vs reserved; per-visitor hold rate limit). UI wiring follows once applied.
+  - Migration `20261017035938_slot_occupancy_and_hold_rate_limit` applied to dev (approved): postcard shows On hold vs Reserved; per-visitor hold rate limit.
