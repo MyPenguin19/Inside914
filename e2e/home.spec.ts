@@ -27,7 +27,7 @@ test("homepage: hero, Verified Mail, how it works, pricing, FAQ and footer", asy
   }
 
   await page.getByRole("link", { name: "View Available Spaces" }).first().click();
-  await expect(page).toHaveURL(/\/demo\/areas$/);
+  await expect(page).toHaveURL(/\/areas$/); // the live areas page
 });
 
 test("homepage: no sideways scrolling on a phone, and the menu opens", async ({ page }) => {

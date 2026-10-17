@@ -4,10 +4,12 @@ import { createPublicClient } from "@/lib/supabase/public";
 
 export type EditionSummary = {
   id: string;
+  zoneSlug: string;
   zoneName: string;
   households: number;
   issueMonth: string;
   artworkDeadline: string;
+  mailDate: string | null;
   unitPriceCents: number;
   doublePriceCents: number | null;
   bookable: boolean;
@@ -21,22 +23,25 @@ type EditionRow = {
   id: string;
   issue_month: string;
   artwork_deadline: string;
+  mail_date: string | null;
   status: string;
   unit_price_cents: number;
   double_unit_price_cents: number | null;
-  zones: { name: string; household_count: number } | null;
+  zones: { slug: string; name: string; household_count: number } | null;
 };
 
 const EDITION_COLUMNS =
-  "id, issue_month, artwork_deadline, status, unit_price_cents, double_unit_price_cents, zones(name, household_count)";
+  "id, issue_month, artwork_deadline, mail_date, status, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
 
 function toSummary(row: EditionRow, slots: { available: boolean }[]): EditionSummary {
   return {
     id: row.id,
+    zoneSlug: row.zones?.slug ?? "",
     zoneName: row.zones?.name ?? "",
     households: row.zones?.household_count ?? 0,
     issueMonth: row.issue_month,
     artworkDeadline: row.artwork_deadline,
+    mailDate: row.mail_date,
     unitPriceCents: row.unit_price_cents,
     doublePriceCents: row.double_unit_price_cents,
     bookable: row.status === "open" && Date.parse(row.artwork_deadline) > Date.now(),

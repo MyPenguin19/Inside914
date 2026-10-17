@@ -64,7 +64,7 @@ export default function Home() {
               advertising space, upload your artwork, and reserve without paying upfront.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <ButtonLink href="/demo/areas" size="lg">
+              <ButtonLink href="/areas" size="lg">
                 View Available Spaces
               </ButtonLink>
               <ButtonLink href="#how-it-works" size="lg" variant="secondary">
@@ -166,7 +166,7 @@ export default function Home() {
               <h2 className="font-display text-3xl font-medium">Ready to see the open spaces?</h2>
               <p className="mt-2 text-background/75">Pick your spot on the first Central Westchester postcard.</p>
             </div>
-            <ButtonLink href="/demo/areas" size="lg" variant="inverse">
+            <ButtonLink href="/areas" size="lg" variant="inverse">
               View Available Spaces
             </ButtonLink>
           </Card>

@@ -25,3 +25,13 @@ export function formatDeadline(isoTimestamp: string) {
 export function formatHouseholds(count: number) {
   return new Intl.NumberFormat("en-US").format(count);
 }
+
+// "2027-01-05" -> "January 5, 2027" (date-only, read as UTC so the day never shifts).
+export function formatDay(isoDate: string) {
+  return new Date(`${isoDate.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}

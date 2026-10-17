@@ -97,7 +97,7 @@ function NoHold() {
   return (
     <Panel title="You don't have a position on hold">
       <p className="text-muted">Choose an edition and a spot on the postcard to place a 15-minute hold.</p>
-      <Link href="/#editions" className="mt-5 inline-block text-sm font-medium text-accent underline">
+      <Link href="/areas" className="mt-5 inline-block text-sm font-medium text-accent underline">
         See open editions
       </Link>
     </Panel>

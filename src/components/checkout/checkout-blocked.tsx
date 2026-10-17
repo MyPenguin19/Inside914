@@ -12,7 +12,7 @@ export function CheckoutBlocked({ reason, editionId }: { reason: string; edition
     <Panel title={reason === "hold_expired" ? "Your hold has ended" : "We can't continue this booking"}>
       <p className="text-muted">{checkoutMessage(reason)}</p>
       <Link
-        href={editionId ? `/editions/${editionId}` : "/#editions"}
+        href={editionId ? `/editions/${editionId}` : "/areas"}
         className="mt-5 inline-block rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:bg-accent"
       >
         Choose a position

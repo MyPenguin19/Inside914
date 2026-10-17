@@ -20,10 +20,12 @@ export const pairs: SlotPair[] = [
 
 export const catalog: EditionCatalog = {
   id: "00000000-0000-4000-8000-000000000101",
+  zoneSlug: "central-westchester",
   zoneName: "Central Westchester",
   households: 5000,
   issueMonth: "2027-01-01",
   artworkDeadline: "2099-12-15T04:59:59Z",
+  mailDate: "2100-01-05",
   unitPriceCents: 50000,
   doublePriceCents: 90000,
   bookable: true,

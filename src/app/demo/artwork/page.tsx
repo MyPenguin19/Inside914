@@ -63,6 +63,7 @@ export default function DemoArtworkPage() {
         }
         actions={actions}
         nextHref="/demo/checkout"
+        restartHref="/demo/postcard"
         zones={DEMO_ZONES}
         upload={async (_url, _file, _type, options) => {
           for (const step of [0.35, 0.7, 1]) {

@@ -74,5 +74,5 @@ export async function releaseCurrentHold(formData: FormData) {
     }
     cookieStore.delete(HOLD_COOKIE);
   }
-  redirect(editionId.success ? `/editions/${editionId.data}` : "/#editions");
+  redirect(editionId.success ? `/editions/${editionId.data}` : "/areas");
 }

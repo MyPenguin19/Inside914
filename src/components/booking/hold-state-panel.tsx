@@ -27,7 +27,7 @@ export function HoldStatePanel({ state, editionId }: { state: "none" | "expired"
           again. You&apos;ll need to upload your image again too.
         </p>
         <Link
-          href={editionId ? `/editions/${editionId}` : "/#editions"}
+          href={editionId ? `/editions/${editionId}` : "/areas"}
           className="mt-5 inline-block rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:bg-accent"
         >
           Back to the postcard
@@ -38,7 +38,7 @@ export function HoldStatePanel({ state, editionId }: { state: "none" | "expired"
   return (
     <Panel title="You don't have a position on hold">
       <p className="text-muted">Choose an edition and a spot on the postcard first.</p>
-      <Link href="/#editions" className="mt-5 inline-block text-sm font-medium text-accent underline">
+      <Link href="/areas" className="mt-5 inline-block text-sm font-medium text-accent underline">
         See open editions
       </Link>
     </Panel>

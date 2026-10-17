@@ -41,6 +41,7 @@ type Props = {
   actions: ArtworkActions;
   nextHref?: string; // where the continue button goes
   continueLabel?: string;
+  restartHref?: string; // where to choose a position again after the hold ends
   zones?: PostcardZone[]; // printed non-ad areas for the preview
   upload?: typeof uploadToSignedUrl; // injectable for tests
   inspect?: typeof inspectFile;
@@ -76,6 +77,7 @@ export function ArtworkStudio({
   actions,
   nextHref = "/book/review",
   continueLabel = "Continue to review",
+  restartHref = "/areas",
   zones,
   upload = uploadToSignedUrl,
   inspect = inspectFile,
@@ -231,7 +233,7 @@ export function ArtworkStudio({
         {expiredNow ? (
           <Notice tone="danger" role="alert">
             Your hold has ended, so this position may no longer be available.{" "}
-            <Link href="/#editions" className="font-medium underline">
+            <Link href={restartHref} className="font-medium underline">
               Choose your position again
             </Link>
             .

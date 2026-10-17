@@ -41,7 +41,7 @@ export function ContactForm({ action, initial, onDone, submitLabel = "Continue t
         <Notice tone="danger" role="alert">
           {checkoutMessage(state.message)}{" "}
           {state.message !== "error" && (
-            <Link href="/#editions" className="font-medium underline">
+            <Link href="/areas" className="font-medium underline">
               Choose a position
             </Link>
           )}

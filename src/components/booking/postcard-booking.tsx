@@ -47,7 +47,7 @@ export function PostcardBooking({
   catalog,
   holdSelection,
   nextHref = "/book/hold",
-  continueLabel = "Hold this position for 15 minutes",
+  continueLabel = "Hold this position (15 min)",
   initialSelected = [],
   zones,
 }: Props) {

@@ -141,7 +141,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
       <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
         {error?.text ?? checkoutMessage("payments_unavailable")}{" "}
         {error?.startOver && (
-          <Link href="/#editions" className="font-medium underline">
+          <Link href="/areas" className="font-medium underline">
             Choose a position
           </Link>
         )}
@@ -196,7 +196,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
         <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">
           {error.text}{" "}
           {error.startOver && (
-            <Link href="/#editions" className="font-medium underline">
+            <Link href="/areas" className="font-medium underline">
               Choose a position
             </Link>
           )}

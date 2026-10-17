@@ -4,7 +4,7 @@ import { HeaderCta } from "@/components/header-cta";
 
 const NAV = [
   { href: "/#how-it-works", label: "How It Works" },
-  { href: "/demo/areas", label: "Advertising Areas" },
+  { href: "/areas", label: "Advertising Areas" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/#verified-mail", label: "Verified Mail" },
 ];
@@ -45,7 +45,7 @@ export function SiteHeader() {
                   {item.label}
                 </Link>
               ))}
-              <Link href="/demo/areas" className="mt-1 rounded-xl bg-foreground px-4 py-3 text-center text-base font-medium text-background">
+              <Link href="/areas" className="mt-1 rounded-xl bg-foreground px-4 py-3 text-center text-base font-medium text-background">
                 Reserve Your Spot
               </Link>
             </nav>

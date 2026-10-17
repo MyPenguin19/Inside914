@@ -25,8 +25,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("shows the edition, both sides, the provisional-layout notice and Verified Mail", async ({ page }) => {
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Central Westchester");
-  await expect(page.getByText(/Planned mailing quantity/)).toContainText("5,000 homes");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Choose your space");
+  await expect(page.locator("main header")).toContainText("Central Westchester");
+  await expect(page.locator("main header")).toContainText("5,000 homes");
+  await expect(page.getByRole("note").filter({ hasText: "Provisional campaign details" })).toBeVisible();
   await showSide(page, "Back");
   await expect(page.getByRole("group", { name: "Back of the postcard" })).toBeVisible();
   await expect(page.getByText(/Provisional layout/)).toBeVisible();

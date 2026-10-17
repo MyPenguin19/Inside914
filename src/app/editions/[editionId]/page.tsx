@@ -9,7 +9,9 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { VerifiedMail } from "@/components/verified-mail";
 import { getEditionCatalog } from "@/lib/catalog/queries";
-import { formatDeadline, formatHouseholds, formatIssueMonth } from "@/lib/format";
+import { Card, Notice } from "@/components/ui/primitives";
+import { CAMPAIGN_DETAILS_PROVISIONAL } from "@/lib/catalog/areas";
+import { formatDay, formatDeadline, formatHouseholds, formatIssueMonth } from "@/lib/format";
 
 export default function EditionPage({ params }: PageProps<"/editions/[editionId]">) {
   return (
@@ -39,33 +41,43 @@ async function EditionBooking({ params }: { params: PageProps<"/editions/[editio
   } catch (error) {
     console.error(error);
     return (
-      <p role="alert" className="mt-8 rounded-xl border border-line bg-surface p-5 text-muted">
-        We couldn&apos;t load this postcard right now. Please refresh the page in a moment.
-      </p>
+      <div className="mt-6">
+        <Notice tone="danger" role="alert">
+          We couldn&apos;t load this postcard right now. Nothing was reserved. Please refresh the page in a moment.
+        </Notice>
+      </div>
     );
   }
   if (!catalog) notFound();
 
   return (
     <>
-      <header className="mt-8 border-b border-line pb-6">
-        <p className="text-sm text-muted">{formatIssueMonth(catalog.issueMonth)} edition</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{catalog.zoneName}</h1>
-        <p className="mt-3 text-muted">
-          Planned mailing quantity: <strong className="text-foreground">≈ {formatHouseholds(catalog.households)} homes</strong>
-          {" · "}Artwork due {formatDeadline(catalog.artworkDeadline)}
+      <header className="mt-6">
+        <h1 className="font-display text-4xl font-medium tracking-tight">Choose your space</h1>
+        <p className="mt-2 text-muted">
+          {catalog.zoneName} · {formatIssueMonth(catalog.issueMonth)} · ≈ {formatHouseholds(catalog.households)} homes · Reserve by{" "}
+          {formatDeadline(catalog.artworkDeadline)}
+          {catalog.mailDate && <> · Planned mail date {formatDay(catalog.mailDate)}</>}
         </p>
       </header>
-      <div className="mt-8">
+      {CAMPAIGN_DETAILS_PROVISIONAL && (
+        <div className="mt-4">
+          <Notice tone="warning" role="note">
+            <strong>Provisional campaign details.</strong> Dates, household counts and the postcard layout are placeholders
+            and may change before the campaign is confirmed.
+          </Notice>
+        </div>
+      )}
+      <div className="mt-6">
         {catalog.bookable ? (
           <PostcardBooking catalog={catalog} holdSelection={holdSelection} />
         ) : (
-          <div className="rounded-xl border border-line bg-surface p-5">
+          <Card>
             <p className="font-medium">This edition is closed for booking.</p>
-            <Link href="/#editions" className="mt-2 inline-block text-sm text-accent underline">
-              See open editions
+            <Link href="/areas" className="mt-2 inline-block text-sm text-accent underline">
+              See open advertising areas
             </Link>
-          </div>
+          </Card>
         )}
       </div>
     </>
@@ -74,7 +86,7 @@ async function EditionBooking({ params }: { params: PageProps<"/editions/[editio
 
 function BookingSkeleton() {
   return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]" aria-busy="true" aria-label="Loading postcard">
+    <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]" aria-busy="true" aria-label="Loading postcard">
       <div className="grid grid-cols-2 gap-4 sm:gap-8">
         <div className="aspect-[6.5/12] animate-pulse rounded-lg border border-line bg-surface" />
         <div className="aspect-[6.5/12] animate-pulse rounded-lg border border-line bg-surface" />

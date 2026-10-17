@@ -45,10 +45,12 @@ const pairs: SlotPair[] = slots.flatMap((l) =>
 
 export const DEMO_EDITION: EditionCatalog = {
   id: "demo-central-westchester",
+  zoneSlug: "demo-central-westchester",
   zoneName: "Central Westchester",
   households: 5000,
   issueMonth: "2027-01-01",
   artworkDeadline: "2026-12-16T04:59:59Z",
+  mailDate: null, // sample data: no mail date shown
   unitPriceCents: 50000,
   doublePriceCents: 90000,
   bookable: true,
