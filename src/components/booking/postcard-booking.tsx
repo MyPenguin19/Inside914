@@ -21,6 +21,7 @@ import { formatPrice } from "@/lib/format";
 type Props = {
   catalog: EditionCatalog;
   holdSelection: (input: { editionId: string; slotIds: string[] }) => Promise<HoldSelectionResult>;
+  nextHref?: string; // where to go once the hold is placed
 };
 
 type Message = { tone: "error" | "info"; text: string };
@@ -37,7 +38,7 @@ const FAILURE_TEXT: Record<Exclude<HoldSelectionResult, { ok: true }>["reason"],
 
 const SIDES: Side[] = ["front", "back"];
 
-export function PostcardBooking({ catalog, holdSelection }: Props) {
+export function PostcardBooking({ catalog, holdSelection, nextHref = "/book/hold" }: Props) {
   const router = useRouter();
   const [slots, setSlots] = useState<CatalogSlot[]>(catalog.slots);
   const [pairs, setPairs] = useState<SlotPair[]>(catalog.pairs);
@@ -45,6 +46,7 @@ export function PostcardBooking({ catalog, holdSelection }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState<Message | null>(null);
   const [pending, startTransition] = useTransition();
+  const [visibleSide, setVisibleSide] = useState<Side>("front");
 
   const pricing = { unitPriceCents: catalog.unitPriceCents, doublePriceCents: catalog.doublePriceCents };
   const doubleOffered = isDoubleOffered(pricing, pairs);
@@ -76,7 +78,7 @@ export function PostcardBooking({ catalog, holdSelection }: Props) {
     startTransition(async () => {
       const result = await holdSelection({ editionId: catalog.id, slotIds: selected });
       if (result.ok) {
-        router.push("/book/hold");
+        router.push(nextHref);
         return;
       }
       if (result.availability) {
@@ -114,9 +116,30 @@ export function PostcardBooking({ catalog, holdSelection }: Props) {
           </h2>
           <Legend />
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:gap-8">
+        <div role="group" aria-label="Postcard side" className="mt-4 inline-flex rounded-full border border-line bg-surface p-1">
+          {SIDES.map((side) => {
+            const count = selectedSlots.filter((s) => s.side === side).length;
+            return (
+              <button
+                key={side}
+                type="button"
+                aria-pressed={visibleSide === side}
+                onClick={() => setVisibleSide(side)}
+                className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                  visibleSide === side ? "bg-foreground text-background" : "text-muted hover:text-foreground"
+                }`}
+              >
+                {side === "front" ? "Front" : "Back"}
+                {count > 0 && <span className="ml-1.5 text-xs opacity-80">· selected</span>}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mx-auto mt-5 max-w-[380px]">
           {SIDES.map((side) => (
-            <PostcardSide key={side} side={side} views={viewsFor(side)} priceCents={price} onSelect={select} />
+            <div key={side} className={visibleSide === side ? "" : "hidden"}>
+              <PostcardSide side={side} views={viewsFor(side)} priceCents={price} onSelect={select} caption={false} />
+            </div>
           ))}
         </div>
         <p className="mt-4 rounded-lg border border-dashed border-line px-4 py-3 text-xs text-muted">

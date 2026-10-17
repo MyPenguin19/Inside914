@@ -21,7 +21,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const holdToken = async () => (await cookies()).get(HOLD_COOKIE)?.value;
 
-export type ContactFormState = { errors?: ContactErrors; message?: string; values?: Record<string, string> };
+export type ContactFormState = { errors?: ContactErrors; message?: string; values?: Record<string, string>; done?: boolean };
 
 // Details form (useActionState). Keeps what was typed on error; continues to payment on success.
 export async function submitContact(_prev: ContactFormState, form: FormData): Promise<ContactFormState> {

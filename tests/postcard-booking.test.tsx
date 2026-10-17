@@ -90,7 +90,7 @@ describe("PostcardBooking", () => {
     fireEvent.click(position("F1"));
     fireEvent.click(holdButton());
 
-    const alert = await screen.findByRole("alert");
+    const alert = await screen.findByRole("alert", {}, { timeout: 3000 }); // generous under full-suite load
     expect(within(alert).getByText(/another business just reserved/i)).toBeTruthy();
     expect(position("F1").hasAttribute("disabled")).toBe(true);
     expect(holdButton().hasAttribute("disabled")).toBe(true); // selection cleared

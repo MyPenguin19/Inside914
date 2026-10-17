@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState } from "react";
+import { startTransition, useActionState, useEffect } from "react";
 import type { ContactFormState } from "@/app/(public)/actions/checkout";
 import { BUSINESS_CATEGORIES, type ContactField } from "@/lib/checkout/contact";
 import { checkoutMessage } from "@/lib/checkout/messages";
@@ -9,10 +9,15 @@ import { checkoutMessage } from "@/lib/checkout/messages";
 type Props = {
   action: (state: ContactFormState, form: FormData) => Promise<ContactFormState>;
   initial: Record<ContactField, string>;
+  onDone?: () => void; // for actions that finish without a server redirect (design preview)
+  submitLabel?: string;
 };
 
-export function ContactForm({ action, initial }: Props) {
+export function ContactForm({ action, initial, onDone, submitLabel = "Continue to payment details" }: Props) {
   const [state, formAction, pending] = useActionState(action, { values: initial });
+  useEffect(() => {
+    if (state.done) onDone?.();
+  }, [state.done, onDone]);
   const values = initial; // uncontrolled fields keep what the customer typed
   const errors = state.errors ?? {};
 
@@ -71,7 +76,7 @@ export function ContactForm({ action, initial }: Props) {
         disabled={pending}
         className="mt-2 rounded-full bg-foreground px-6 py-3 text-base font-medium text-background hover:bg-accent disabled:cursor-wait disabled:bg-line disabled:text-muted"
       >
-        {pending ? "Saving…" : "Continue to payment details"}
+        {pending ? "Saving…" : submitLabel}
       </button>
     </form>
   );

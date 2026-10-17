@@ -36,6 +36,7 @@ type Props = {
   otherSlots: SlotGeometry[];
   initialArtwork: ArtworkView | null;
   actions: ArtworkActions;
+  nextHref?: string; // where "Continue to review" goes
   upload?: typeof uploadToSignedUrl; // injectable for tests
   inspect?: typeof inspectFile;
 };
@@ -62,7 +63,7 @@ const PROBLEM_TEXT: Record<ArtworkFailure | "interrupted", string> = {
   error: "Something went wrong on our side and your image wasn't saved. Please try again in a moment.",
 };
 
-export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, upload = uploadToSignedUrl, inspect = inspectFile }: Props) {
+export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, nextHref = "/book/review", upload = uploadToSignedUrl, inspect = inspectFile }: Props) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<StudioImage | null>(
@@ -173,7 +174,7 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, u
     // Next keeps this page's state for back-navigation, so leave it idle (not "saving").
     setPhase("idle");
     if (!result.ok) return fail(result.reason);
-    router.push("/book/review");
+    router.push(nextHref);
   }
 
   const onAreaChange = useCallback((_: Area, pixels: Area) => setArea(pixels), []);

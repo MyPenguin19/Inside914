@@ -174,3 +174,7 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
 ### Checkpoint D (MVP complete)
 - [ ] All SPEC success criteria 1–8 verified
 - [ ] `agent-skills:review` on the full diff · ready for your launch decision (deploy needs separate approval)
+
+- [x] **Task 9 (revised): Frontend design system and full visual experience** (design preview), 2026-10-16 on `task-5/slot-hold`
+  - New homepage; shared UI components; `/demo` design preview of areas, postcard selection (front/back toggle, merged double ad), editor, checkout, payment prototype (no card inputs), confirmation, Verified Mail timeline, owner dashboard. Sample data only, no backend calls.
+  - Awaiting visual approval before more backend work.

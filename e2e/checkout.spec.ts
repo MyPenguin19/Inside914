@@ -11,6 +11,7 @@ const errorAlert = (page: Page) => page.locator("main").getByRole("alert");
 
 async function toDetails(page: Page) {
   await page.goto(EDITION_URL);
+  await page.getByRole("group", { name: "Postcard side" }).getByRole("button", { name: /^Back/ }).click();
   await page.getByRole("button", { name: /^Back position B\d+: Open/ }).first().click();
   await page.getByRole("button", { name: /hold this position/i }).click();
   await page.getByRole("link", { name: "Continue to artwork upload" }).click();

@@ -5,6 +5,9 @@ const EDITION_URL = "/editions/00000000-0000-4000-8000-000000000101";
 const position = (page: Page, side: "Front" | "Back", label: string) =>
   page.getByRole("button", { name: new RegExp(`^${side} position ${label}:`) });
 const totalPrice = (page: Page) => page.getByTestId("total-price");
+// The postcard shows one side at a time; this flips it.
+const showSide = (page: Page, side: "Front" | "Back") =>
+  page.getByRole("group", { name: "Postcard side" }).getByRole("button", { name: new RegExp(`^${side}`) }).click();
 // Our error messages live in <main>; Next's route announcer (also role=alert) does not.
 const errorAlert = (page: Page) => page.locator("main").getByRole("alert");
 
@@ -16,6 +19,7 @@ test.beforeEach(async ({ page }) => {
 test("shows the edition, both sides, the provisional-layout notice and Verified Mail", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Central Westchester");
   await expect(page.getByText(/Planned mailing quantity/)).toContainText("5,000 homes");
+  await showSide(page, "Back");
   await expect(page.getByRole("group", { name: "Back of the postcard" })).toBeVisible();
   await expect(page.getByText("Provisional layout.")).toBeVisible();
   await expect(page.getByText(/private verification link/)).toBeVisible();
@@ -51,6 +55,7 @@ test("two visitors want the same position: the second is told and sees it reserv
   const second = await (await browser.newContext()).newPage();
   for (const page of [first, second]) {
     await page.goto(EDITION_URL);
+    await showSide(page, "Back");
     await position(page, "Back", "B1").click(); // both select B1 while it's open
   }
 
@@ -74,6 +79,7 @@ test("two visitors want the same position: the second is told and sees it reserv
 
 test("holding never fakes success: it either reaches the hold page or explains why not", async ({ page }) => {
   // Any open back position, so a hold left by an interrupted run can't block this test.
+  await showSide(page, "Back");
   await page.getByRole("button", { name: /^Back position B\d+: Open/ }).first().click();
   await page.getByRole("button", { name: /hold this position/i }).click();
 
@@ -101,12 +107,14 @@ test("holding never fakes success: it either reaches the hold page or explains w
 test("mobile: both sides and the summary fit without horizontal scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
+  await showSide(page, "Back");
   await expect(page.getByRole("group", { name: "Back of the postcard" })).toBeVisible();
   await expect(page.getByRole("button", { name: /hold this position/i })).toBeAttached();
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 
+  await showSide(page, "Front");
   const box = await position(page, "Front", "F1").boundingBox();
   expect(box!.width).toBeGreaterThanOrEqual(44); // comfortable tap target
   expect(box!.height).toBeGreaterThanOrEqual(44);

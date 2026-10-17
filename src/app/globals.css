@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
-/* Light, paper-like palette: the product is printed mail. */
+/* Inside914 design tokens: light, paper-like palette (the product is printed mail). */
 :root {
   --background: #fbfaf7;
+  --background-soft: #f4f2ec;
   --foreground: #1c1b19;
   --muted: #5f5b53;
   --line: #e4e0d7;
@@ -10,10 +11,14 @@
   --accent: #1f5c4a;
   --accent-soft: #e7f0ec;
   --danger: #a3302a;
+  --danger-soft: #fbeceb;
+  --warning: #8a5a00;
+  --warning-soft: #fdf4e3;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-soft: var(--background-soft);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-line: var(--line);
@@ -21,11 +26,25 @@
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Restrained motion; none for people who ask for less. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
