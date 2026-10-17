@@ -1,0 +1,133 @@
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import type { HoldSelectionResult } from "@/app/(public)/actions/booking";
+import { PostcardBooking } from "@/components/booking/postcard-booking";
+import { catalog, pairs } from "./fixtures/catalog";
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
+
+afterEach(() => {
+  cleanup();
+  push.mockReset();
+});
+
+function setup(result: HoldSelectionResult = { ok: true }) {
+  const holdSelection = vi.fn(async () => result);
+  render(<PostcardBooking catalog={catalog} holdSelection={holdSelection} />);
+  const position = (label: string) =>
+    screen.getAllByRole("button").find((b) => b.getAttribute("data-slot-label") === label)!;
+  // The button appears twice (summary panel + phone bar; CSS shows one), so check they agree.
+  const holdButton = () => {
+    const [panel, phoneBar] = screen.getAllByRole("button", { name: /hold this position/i });
+    expect(phoneBar.hasAttribute("disabled")).toBe(panel.hasAttribute("disabled"));
+    return panel;
+  };
+  return { holdSelection, position, holdButton };
+}
+
+describe("PostcardBooking", () => {
+  test("shows both sides with open and reserved positions from the catalog", () => {
+    const { position } = setup();
+    expect(screen.getByRole("group", { name: "Front of the postcard" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Back of the postcard" })).toBeTruthy();
+    expect(position("F1").hasAttribute("disabled")).toBe(false);
+    expect(position("F4").hasAttribute("disabled")).toBe(true);
+    expect(position("F4").getAttribute("aria-label")).toMatch(/Reserved/);
+  });
+
+  test("selecting an open position shows it and the $500 standard price", () => {
+    const { position, holdButton } = setup();
+    expect(holdButton().hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(position("F3"));
+    expect(position("F3").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getAllByText("Front · F3")).toHaveLength(2); // summary + phone bar
+    expect(screen.getByTestId("total-price").textContent).toBe("$500");
+    expect(holdButton().hasAttribute("disabled")).toBe(false);
+  });
+
+  test("a held position says 'On hold'; a closed one says 'Closed'; neither can be selected", () => {
+    const heldCatalog = {
+      ...catalog,
+      slots: catalog.slots.map((s) => (s.id === "f4" ? { ...s, occupancy: "held" as const } : s.id === "b1" ? { ...s, occupancy: "closed" as const } : s)),
+    };
+    render(<PostcardBooking catalog={heldCatalog} holdSelection={vi.fn()} />);
+    const pos = (label: string) => screen.getAllByRole("button").find((b) => b.getAttribute("data-slot-label") === label)!;
+    expect(pos("F4").getAttribute("aria-label")).toMatch(/On hold/);
+    expect(pos("F4").hasAttribute("disabled")).toBe(true);
+    expect(pos("B1").getAttribute("aria-label")).toMatch(/Closed/);
+  });
+
+  test("too many hold attempts: explains it and holds nothing", async () => {
+    const { position, holdButton } = setup({ ok: false, reason: "rate_limited" });
+    fireEvent.click(position("F1"));
+    fireEvent.click(holdButton());
+    const alert = await screen.findByRole("alert", {}, { timeout: 3000 });
+    expect(alert.textContent).toMatch(/wait a few minutes/);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  test("a reserved position can't be selected", () => {
+    const { position, holdButton } = setup();
+    fireEvent.click(position("F4"));
+    expect(position("F4").getAttribute("aria-pressed")).toBe("false");
+    expect(holdButton().hasAttribute("disabled")).toBe(true);
+  });
+
+  test("double size selects a side-by-side pair for $900 and blocks units without a free neighbor", () => {
+    const { position } = setup();
+    fireEvent.click(screen.getByRole("radio", { name: /double/i }));
+
+    expect(position("F3").hasAttribute("disabled")).toBe(true); // F4 is reserved
+    expect(position("F3").getAttribute("aria-label")).toMatch(/Standard only/);
+
+    fireEvent.click(position("F2"));
+    expect(position("F1").getAttribute("aria-pressed")).toBe("true");
+    expect(position("F2").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getAllByText("Front · F1 + F2")).toHaveLength(2);
+    expect(screen.getByTestId("total-price").textContent).toBe("$900");
+  });
+
+  test("the customer can change their selection before holding", () => {
+    const { position } = setup();
+    fireEvent.click(position("F1"));
+    fireEvent.click(position("F3"));
+    expect(position("F1").getAttribute("aria-pressed")).toBe("false");
+    expect(position("F3").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  test("holds the exact selection and moves on to the hold page", async () => {
+    const { position, holdButton, holdSelection } = setup({ ok: true });
+    fireEvent.click(screen.getByRole("radio", { name: /double/i }));
+    fireEvent.click(position("F1"));
+    fireEvent.click(holdButton());
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/book/hold"));
+    expect(holdSelection).toHaveBeenCalledWith({ editionId: catalog.id, slotIds: ["f1", "f2"] });
+  });
+
+  test("when another business takes the position first, says so and redraws availability", async () => {
+    const { position, holdButton } = setup({
+      ok: false,
+      reason: "slot_unavailable",
+      availability: { slots: { f1: false, f2: true, f3: true, f4: false, b1: false, b2: false }, pairs },
+    });
+    fireEvent.click(position("F1"));
+    fireEvent.click(holdButton());
+
+    const alert = await screen.findByRole("alert", {}, { timeout: 3000 }); // generous under full-suite load
+    expect(within(alert).getByText(/another business just reserved/i)).toBeTruthy();
+    expect(position("F1").hasAttribute("disabled")).toBe(true);
+    expect(holdButton().hasAttribute("disabled")).toBe(true); // selection cleared
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  test("a service error never pretends the hold succeeded", async () => {
+    const { position, holdButton } = setup({ ok: false, reason: "error" });
+    fireEvent.click(position("F1"));
+    fireEvent.click(holdButton());
+    expect(await screen.findByText(/nothing was reserved/i)).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
+  });
+});

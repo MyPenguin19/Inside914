@@ -39,6 +39,12 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Files: `supabase/migrations/20261016043850_reservations_hold.sql`, `src/lib/booking/{hold-token,place-hold}.ts`, `src/app/(public)/actions/hold-slot.ts`, `tests/place-hold.test.ts`, `tests/integration/hold-slot.test.ts`
   - Deps: 2, 3
   - Status 2026-10-16: migration applied to Inside914 dev; advisors clean; SQL smoke test (rolled back) confirms hold, INS01/02/03, expiry re-hold and unique-index backstop. **Open:** the 10-way concurrency integration test needs `SUPABASE_SECRET_KEY` in `.env.local`. It is skipped until then.
+  - Status 2026-10-16: superseded by the Task 6 booking redesign below (`bookings` + `booking_slots`, `hold_slots()`).
+
+- [x] **Task 6 (revised): Interactive postcard booking + atomic 1-or-2-slot holds** (L)
+  - Done 2026-10-16 on `task-5/slot-hold`: landing (`/`), edition booking page (`/editions/[id]`), hold page (`/book/hold`), artwork next-step placeholder (`/book/artwork`); migration `20261016045929_bookings_multi_slot_hold` + dev data `supabase/dev-data/20261016_central_westchester.sql` applied to Inside914 dev.
+  - Verified: typecheck, lint, build; 37 unit/component tests; 11 integration tests (anon); 6 Playwright e2e (incl. keyboard + mobile); rolled-back SQL smoke test of standard/double holds, rollback, adjacency, expiry.
+  - Secret key added 2026-10-16: all 18 integration tests pass against dev, including the 10-way race (exactly 1 of 10 wins) and doubles-vs-singles racing on overlapping slots (no slot ever claimed twice); 6 e2e pass with real holds, incl. two visitors on the same position and hold → artwork → change selection.
 
 - [ ] **Task 6: Contact details step** (S)
   - Acceptance: form (business name, contact name, email, phone) validated by zod on client and server; saved against the held reservation; rejects an expired hold token.
@@ -58,6 +64,15 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
 - [ ] Review with you before Phase 3
 
 ## Phase 3: Artwork
+
+- [x] **Task 7 (revised): Artwork upload, editing and postcard preview** (L), done 2026-10-16 on `task-5/slot-hold`
+  - Covers the original Tasks 8 (storage), 9 (fit-to-slot editor + resolution check); print rendering (Task 10) is still open.
+  - Migration `20261016053626_artwork_storage_and_hold_extension` applied to Inside914 dev: private `artwork` bucket (20 MB, JPEG/PNG, no browser policies), `booking_artwork`, `bookings.hold_extensions`, `extend_hold()`.
+  - Verified: 70 unit/component, 28 integration (real Storage + DB), 11 Playwright e2e (real uploads, keyboard, mobile, interruption).
+
+- [x] **Task 8 (revised): Customer details, Stripe saved card, consent, confirmation, email, reservation link** (L), built 2026-10-16 on `task-5/slot-hold`
+  - Migration `20261016184224_checkout_and_confirmation` applied to Inside914 dev.
+  - Verified: 105 unit/component, 43 integration (real Supabase; Stripe faked), 13 e2e. **Not yet verified against real Stripe:** 4 Stripe test-mode integration tests and the e2e card test are skipped until test keys are in `.env.local`.
 
 - [ ] **Task 8: Artwork upload to private storage** (M)
   - Acceptance: private `artwork` bucket with RLS; signed upload URL scoped to the hold; JPG/PNG/PDF only, ≤ 25 MB, checked server-side by magic bytes, not just extension; `artworks` row linked to reservation.
@@ -159,3 +174,25 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
 ### Checkpoint D (MVP complete)
 - [ ] All SPEC success criteria 1–8 verified
 - [ ] `agent-skills:review` on the full diff · ready for your launch decision (deploy needs separate approval)
+
+- [x] **Task 9 (revised): Frontend design system and full visual experience** (design preview), 2026-10-16 on `task-5/slot-hold`
+  - New homepage; shared UI components; `/demo` design preview of areas, postcard selection (front/back toggle, merged double ad), editor, checkout, payment prototype (no card inputs), confirmation, Verified Mail timeline, owner dashboard. Sample data only, no backend calls.
+  - Awaiting visual approval before more backend work.
+
+- [x] **Task 10: Frontend UX refinement and visual quality audit** (design preview), 2026-10-16 on `task-10/frontend-refinement`
+  - Fixed the failing Vercel preview build (/reservation read env during prerender). Journey is now 4 steps: area, space, artwork, review & reserve (details + card prototype + agreement on one page).
+  - Realistic postcard (masthead, mailing panel), both sides on desktop, sticky phone bar, restored selections, editor zoom buttons and safe area, admin readiness, phone-friendly tables, token-only colors.
+  - Awaiting visual approval before backend work.
+
+- [x] **Task 11: Precision spacing, layout and responsive refinement** (design preview), 2026-10-16 on `task-11/spacing-refinement`
+  - Shared `page-width`/`section-y` layout utilities; tighter homepage, booking, editor, checkout, Verified Mail and admin spacing (pages 2-19% shorter). No redesign, copy, journey or behavior changes.
+  - Awaiting visual review.
+
+- [x] **Task 12: Supabase campaign and postcard inventory integration**, 2026-10-17 on `task-12/live-inventory`
+  - Done: live `/areas` from Supabase (counts, prices, reserve-by, mail date; empty/error/full/coming-soon states), real edition page aligned to the approved design, provisional-data notice, CTAs and stale `/#editions` links point to `/areas`.
+  - Migration `20261017035938_slot_occupancy_and_hold_rate_limit` applied to dev (approved): postcard shows On hold vs Reserved; per-visitor hold rate limit.
+
+- [x] **Task 13: Stripe test-mode checkout with temporary $1 / $2 pricing**, 2026-10-17 on `task-13/stripe-test-pricing`
+  - Migrations applied to dev (approved): `20261017041155_server_pricing_and_setup_status`, `20261017041706_consent_amount_any_price`.
+  - Server pricing config (explicit `INSIDE914_PRICING_MODE`), priced `hold_slots()`, test labels in checkout, emails and summaries; webhook records setup status; checkout pages restyled to the approved look; confirmation never claims an unsent email.
+  - Blocked on keys: real-Stripe tests and preview checkout need Stripe TEST keys + `INSIDE914_PRICING_MODE=test` in `.env.local` and Vercel Preview.

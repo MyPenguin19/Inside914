@@ -1,0 +1,150 @@
+import "server-only";
+import type { Availability, CatalogSlot, Occupancy, Side, SlotPair } from "@/lib/booking/selection";
+import { pricesFor, type PricingMode } from "@/lib/pricing";
+import { createPublicClient } from "@/lib/supabase/public";
+
+export type EditionSummary = {
+  id: string;
+  zoneSlug: string;
+  zoneName: string;
+  households: number;
+  issueMonth: string;
+  artworkDeadline: string;
+  mailDate: string | null;
+  unitPriceCents: number;
+  doublePriceCents: number | null;
+  pricingMode: PricingMode;
+  bookable: boolean;
+  totalUnits: number;
+  availableUnits: number;
+};
+
+export type EditionCatalog = EditionSummary & { slots: CatalogSlot[]; pairs: SlotPair[] };
+
+type EditionRow = {
+  id: string;
+  issue_month: string;
+  artwork_deadline: string;
+  mail_date: string | null;
+  status: string;
+  unit_price_cents: number;
+  double_unit_price_cents: number | null;
+  zones: { slug: string; name: string; household_count: number } | null;
+};
+
+const EDITION_COLUMNS =
+  "id, issue_month, artwork_deadline, mail_date, status, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
+
+// Prices shown are what a hold would cost under the active pricing configuration (lib/pricing).
+// priced=false is ONLY for views that never show these prices (an existing reservation shows its
+// own stored price), so they keep working whatever the current pricing configuration is.
+function toSummary(row: EditionRow, slots: { available: boolean }[], priced = true): EditionSummary {
+  const edition = { unitPriceCents: row.unit_price_cents, doublePriceCents: row.double_unit_price_cents };
+  const prices = priced ? pricesFor(edition) : { mode: "launch" as const, ...edition };
+  return {
+    id: row.id,
+    zoneSlug: row.zones?.slug ?? "",
+    zoneName: row.zones?.name ?? "",
+    households: row.zones?.household_count ?? 0,
+    issueMonth: row.issue_month,
+    artworkDeadline: row.artwork_deadline,
+    mailDate: row.mail_date,
+    unitPriceCents: prices.unitPriceCents,
+    doublePriceCents: prices.doublePriceCents,
+    pricingMode: prices.mode,
+    bookable: row.status === "open" && Date.parse(row.artwork_deadline) > Date.now(),
+    totalUnits: slots.length,
+    availableUnits: slots.filter((s) => s.available).length,
+  };
+}
+
+const OCCUPANCY = new Set<Occupancy>(["available", "held", "reserved", "closed"]);
+
+function toSlots(rows: { slot_id: string | null; side: string | null; label: string | null; x_in: number | null; y_in: number | null; width_in: number | null; height_in: number | null; available: boolean | null; occupancy?: string | null }[]): CatalogSlot[] {
+  return rows.map((r) => ({
+    id: r.slot_id!,
+    side: r.side as Side,
+    label: r.label!,
+    x: Number(r.x_in),
+    y: Number(r.y_in),
+    width: Number(r.width_in),
+    height: Number(r.height_in),
+    available: r.available === true,
+    occupancy: OCCUPANCY.has(r.occupancy as Occupancy) ? (r.occupancy as Occupancy) : undefined,
+  }));
+}
+
+function toPairs(rows: { left_slot_id: string | null; right_slot_id: string | null; side: string | null; available: boolean | null }[]): SlotPair[] {
+  return rows.map((r) => ({
+    leftId: r.left_slot_id!,
+    rightId: r.right_slot_id!,
+    side: r.side as Side,
+    available: r.available === true,
+  }));
+}
+
+// Open editions whose artwork deadline hasn't passed, soonest first.
+export async function getBookableEditions(): Promise<EditionSummary[]> {
+  const supabase = createPublicClient();
+  const { data: editions, error } = await supabase
+    .from("editions")
+    .select(EDITION_COLUMNS)
+    .eq("status", "open")
+    .gt("artwork_deadline", new Date().toISOString())
+    .order("issue_month")
+    .returns<EditionRow[]>();
+  if (error) throw new Error(`Could not load editions: ${error.message}`);
+  if (!editions.length) return [];
+
+  const { data: slots, error: slotError } = await supabase
+    .from("slot_availability")
+    .select("edition_id, available")
+    .in("edition_id", editions.map((e) => e.id));
+  if (slotError) throw new Error(`Could not load availability: ${slotError.message}`);
+
+  return editions.map((e) =>
+    toSummary(e, (slots ?? []).filter((s) => s.edition_id === e.id).map((s) => ({ available: s.available === true }))),
+  );
+}
+
+export async function getEditionCatalog(editionId: string, { priced = true } = {}): Promise<EditionCatalog | null> {
+  const supabase = createPublicClient();
+  const { data: edition, error } = await supabase
+    .from("editions")
+    .select(EDITION_COLUMNS)
+    .eq("id", editionId)
+    .returns<EditionRow[]>()
+    .maybeSingle();
+  if (error) throw new Error(`Could not load edition: ${error.message}`);
+  if (!edition) return null;
+
+  const availability = await getAvailabilityRows(editionId);
+  const slots = toSlots(availability.slotRows);
+  return { ...toSummary(edition, slots, priced), slots, pairs: toPairs(availability.pairRows) };
+}
+
+// Fresh, uncached availability for one edition (read right before placing a hold).
+export async function getAvailability(editionId: string): Promise<Availability> {
+  const { slotRows, pairRows } = await getAvailabilityRows(editionId);
+  return {
+    slots: Object.fromEntries(slotRows.map((r) => [r.slot_id!, r.available === true])),
+    pairs: toPairs(pairRows),
+  };
+}
+
+async function getAvailabilityRows(editionId: string) {
+  const supabase = createPublicClient();
+  const [slots, pairs] = await Promise.all([
+    supabase
+      .from("slot_availability")
+      .select("slot_id, side, label, x_in, y_in, width_in, height_in, available, occupancy")
+      .eq("edition_id", editionId)
+      .order("side", { ascending: false })
+      .order("y_in")
+      .order("x_in"),
+    supabase.from("slot_pairs").select("left_slot_id, right_slot_id, side, available").eq("edition_id", editionId),
+  ]);
+  if (slots.error) throw new Error(`Could not load slots: ${slots.error.message}`);
+  if (pairs.error) throw new Error(`Could not load slot pairs: ${pairs.error.message}`);
+  return { slotRows: slots.data ?? [], pairRows: pairs.data ?? [] };
+}

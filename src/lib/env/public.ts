@@ -11,6 +11,12 @@ const PublicEnv = z.object({
 
 export type PublicEnv = z.infer<typeof PublicEnv>;
 
+// Stripe publishable key for the card form (test or live; the server checks it matches the secret key).
+export function getStripePublishableKey(): string | null {
+  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  return key && (key.startsWith("pk_test_") || key.startsWith("pk_live_")) ? key : null;
+}
+
 // Safe for the browser. Each variable is referenced literally so Next.js inlines it at build time.
 export function getPublicEnv(): PublicEnv {
   return parseEnv(PublicEnv, {

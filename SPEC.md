@@ -38,15 +38,22 @@ Build order: catalog → booking → payments → notify → admin (review/expor
 
 ### Slot hold and reservation (`booking`)
 - Picking a slot creates a **15-minute pending hold** so two people can't book the same slot. The hold is released if checkout isn't finished.
+- In a hold's last 5 minutes the customer may renew it to a fresh 15 minutes, at most twice (`extend_hold()`); nothing extends a hold automatically.
 - A database constraint enforces at most one active reservation per slot: a unique partial index on `reservations(slot_id)` where status is pending, reserved, submitted, approved, rejected (keeps the slot for one resubmission), charge_failed or charged.
 - Reservation statuses: `pending` → `reserved` (card saved) → `submitted` → `approved` | `rejected` → (`submitted` again, once) → `charged` | `charge_failed` → `released`. `cancelled` applies when an edition is cancelled.
 - No new bookings or uploads after the edition's artwork deadline.
 
 ### Artwork (`booking`)
-- Upload JPG, PNG or PDF (first page), up to 25 MB, stored in a private Supabase Storage bucket.
+- Upload JPG or PNG (PDF not supported yet), up to 20 MB, stored in a private Supabase Storage bucket via single-use signed upload URLs to server-chosen random paths; the server re-validates (signature + full decode with sharp) and deletes anything invalid.
 - The editor is client-side: crop, zoom and pan inside a frame locked to the slot's aspect ratio. Only the transform (crop rectangle in source pixels) is stored; the original file is never modified.
-- Effective resolution is checked: **block below 150 DPI** at print size and **warn below 300 DPI**.
+- Effective resolution is checked against the PROVISIONAL print spec (`src/lib/print/spec.ts`): a warning below 300 ppi and a stronger warning below 150 ppi. Nothing is blocked until the printer confirms real requirements.
 - The server renders the final print file at 300 DPI from the original plus the transform, using `sharp`. Bleed and safe-zone margins come from the printer (see Open Questions).
+
+### Checkout (built in Task 8)
+- Details form (business, contact, email, phone; optional website/category), validated and normalized on the server.
+- Card saved with a Stripe SetupIntent (`usage: off_session`), $0 charged. An unticked consent box shows the exact amount ($500/$900); consent is stored with amount, currency, terms version, edition and SetupIntent id.
+- `confirm_booking()` confirms only an unexpired pending hold whose slots are still claimed, with artwork, contact and matching consent; an expired hold is released and the saved card removed from Stripe.
+- Confirmation email via an outbox (one row per booking, retried with backoff, never sent twice) with a private reservation link (hashed token, 180-day expiry, revocable).
 
 ### Payments (`payments`)
 - At booking: create a Stripe Customer and a **SetupIntent** (`usage: off_session`). The checkout shows a mandate line: *"Your card will be charged $X only when this edition is approved to print."*

@@ -49,3 +49,6 @@ graphify-out/
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# development TEST reservation email previews
+/.dev-emails/
