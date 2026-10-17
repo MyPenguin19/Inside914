@@ -93,6 +93,7 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
       reservationUrl: `${getAppUrl()}/r/${access.token}`,
       supportEmail,
       test: view.isTest,
+      testPricing: view.pricingMode === "test",
     });
 
     const message = { to: view.email, ...email, idempotencyKey: `${row.id}:${row.attempts + 1}` };

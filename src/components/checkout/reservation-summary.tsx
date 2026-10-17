@@ -35,7 +35,12 @@ export function ReservationSummary({
         </dl>
       </div>
       <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
-        <span className="text-sm text-muted">{amountLabel}</span>
+        <span className="text-sm text-muted">
+          {amountLabel}
+          {view.pricingMode === "test" && (
+            <span className="ml-2 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">Test price</span>
+          )}
+        </span>
         <span className="font-display text-3xl font-medium">{formatPrice(view.priceCents)}</span>
       </div>
       <p className="mt-1 text-xs text-muted">Charged only if the campaign fills and is approved. $0 today.</p>

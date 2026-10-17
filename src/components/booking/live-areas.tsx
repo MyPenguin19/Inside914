@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { AreaCards } from "@/components/booking/area-cards";
+import { TestCheckoutNotice } from "@/components/checkout/test-checkout-notice";
 import { Card, Notice } from "@/components/ui/primitives";
 import { areaCardsFrom, PLANNED_AREAS } from "@/lib/catalog/areas";
 import { getBookableEditions } from "@/lib/catalog/queries";
@@ -23,6 +24,11 @@ export async function LiveAreas() {
   }
   return (
     <>
+      {editions.some((e) => e.pricingMode === "test") && (
+        <div className="mt-4">
+          <TestCheckoutNotice />
+        </div>
+      )}
       {editions.length === 0 && (
         <Card className="mt-6">
           <h2 className="font-medium">No campaigns are open for booking right now.</h2>

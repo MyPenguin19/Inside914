@@ -191,3 +191,8 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
 - [x] **Task 12: Supabase campaign and postcard inventory integration**, 2026-10-17 on `task-12/live-inventory`
   - Done: live `/areas` from Supabase (counts, prices, reserve-by, mail date; empty/error/full/coming-soon states), real edition page aligned to the approved design, provisional-data notice, CTAs and stale `/#editions` links point to `/areas`.
   - Migration `20261017035938_slot_occupancy_and_hold_rate_limit` applied to dev (approved): postcard shows On hold vs Reserved; per-visitor hold rate limit.
+
+- [x] **Task 13: Stripe test-mode checkout with temporary $1 / $2 pricing**, 2026-10-17 on `task-13/stripe-test-pricing`
+  - Migrations applied to dev (approved): `20261017041155_server_pricing_and_setup_status`, `20261017041706_consent_amount_any_price`.
+  - Server pricing config (explicit `INSIDE914_PRICING_MODE`), priced `hold_slots()`, test labels in checkout, emails and summaries; webhook records setup status; checkout pages restyled to the approved look; confirmation never claims an unsent email.
+  - Blocked on keys: real-Stripe tests and preview checkout need Stripe TEST keys + `INSIDE914_PRICING_MODE=test` in `.env.local` and Vercel Preview.

@@ -55,11 +55,11 @@ describe.skipIf(!enabled)("Stripe test mode: saved cards, no charges", () => {
     return { ...hold, setupIntentId: started.setupIntentId, customerId: booking!.stripeCustomerId! };
   }
 
-  test("a saved Visa confirms the $500 reservation, and nothing is charged", async () => {
+  test("a saved Visa confirms the $1 (test price) reservation, and nothing is charged", async () => {
     const stripe = getStripe();
     const ctx = await readyForCard(["F1"]);
     const intent = await stripe.setupIntents.retrieve(ctx.setupIntentId);
-    expect(intent).toMatchObject({ usage: "off_session", metadata: { amount_cents: "50000", booking_id: ctx.bookingId } });
+    expect(intent).toMatchObject({ usage: "off_session", metadata: { amount_cents: "100", pricing_mode: "test", booking_id: ctx.bookingId } });
 
     await stripe.setupIntents.confirm(ctx.setupIntentId, { payment_method: "pm_card_visa" });
     expect(await checkout.completeReservation(admin, stripe, ctx.bookingId)).toBe("confirmed");
@@ -74,10 +74,10 @@ describe.skipIf(!enabled)("Stripe test mode: saved cards, no charges", () => {
     expect(cards.data).toHaveLength(1);
   });
 
-  test("a $900 double reservation is authorized as one SetupIntent", async () => {
+  test("a $2 (test price) double reservation is authorized as one SetupIntent", async () => {
     const ctx = await readyForCard(["F3", "F4"]);
     const intent = await getStripe().setupIntents.retrieve(ctx.setupIntentId);
-    expect(intent.metadata).toMatchObject({ amount_cents: "90000", size: "double" });
+    expect(intent.metadata).toMatchObject({ amount_cents: "200", size: "double", pricing_mode: "test" });
   });
 
   test("a declined card can't be saved, so the reservation isn't confirmed", async () => {

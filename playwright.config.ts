@@ -21,6 +21,7 @@ export default defineConfig({
         ),
       ),
       INSIDE914_HOLD_ATTEMPTS_MAX: "1000", // the suite places many holds from one address
+      INSIDE914_PRICING_MODE: "test", // the e2e suite checks the temporary $1 / $2 prices
     },
   },
 });

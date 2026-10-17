@@ -53,6 +53,7 @@ export const DEMO_EDITION: EditionCatalog = {
   mailDate: null, // sample data: no mail date shown
   unitPriceCents: 50000,
   doublePriceCents: 90000,
+  pricingMode: "launch", // sample launch prices: the design preview never charges
   bookable: true,
   totalUnits: slots.length,
   availableUnits: slots.filter((s) => s.available).length,

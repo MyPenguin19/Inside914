@@ -8,6 +8,7 @@ import { catalog } from "./fixtures/catalog";
 const getBookableEditions = vi.fn<() => Promise<EditionSummary[]>>();
 vi.mock("@/lib/catalog/queries", () => ({ getBookableEditions: () => getBookableEditions() }));
 vi.mock("next/server", () => ({ connection: async () => {} }));
+vi.mock("server-only", () => ({}));
 
 afterEach(() => {
   cleanup();

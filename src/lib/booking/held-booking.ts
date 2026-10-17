@@ -10,6 +10,7 @@ export type HeldBooking = {
   issueMonth: string;
   size: "standard" | "double";
   priceCents: number;
+  pricingMode: "launch" | "test";
   expiresAt: string;
   positions: { label: string; side: "front" | "back"; x: number; y: number; width: number; height: number }[];
   holdExtensions: number;
@@ -21,6 +22,7 @@ type Row = {
   edition_id: string;
   size: string;
   price_cents: number;
+  pricing_mode: string;
   status: string;
   hold_expires_at: string | null;
   hold_extensions: number;
@@ -35,7 +37,7 @@ export async function getHeldBooking(admin: SupabaseClient<Database>, token: str
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id, edition_id, size, price_cents, status, hold_expires_at, hold_extensions, editions(issue_month, zones(name)), booking_slots(slots(label, side, x_in, y_in, width_in, height_in))",
+      "id, edition_id, size, price_cents, pricing_mode, status, hold_expires_at, hold_extensions, editions(issue_month, zones(name)), booking_slots(slots(label, side, x_in, y_in, width_in, height_in))",
     )
     .eq("hold_token_hash", hashHoldToken(token))
     .returns<Row[]>()
@@ -51,6 +53,7 @@ export async function getHeldBooking(admin: SupabaseClient<Database>, token: str
     issueMonth: data.editions?.issue_month ?? "",
     size: data.size as "standard" | "double",
     priceCents: data.price_cents,
+    pricingMode: data.pricing_mode === "test" ? "test" : "launch",
     expiresAt: data.hold_expires_at,
     positions: data.booking_slots
       .flatMap((bs) => (bs.slots ? [bs.slots] : []))

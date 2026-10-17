@@ -1,5 +1,6 @@
 import "server-only";
 import type { Availability, CatalogSlot, Occupancy, Side, SlotPair } from "@/lib/booking/selection";
+import { pricesFor, type PricingMode } from "@/lib/pricing";
 import { createPublicClient } from "@/lib/supabase/public";
 
 export type EditionSummary = {
@@ -12,6 +13,7 @@ export type EditionSummary = {
   mailDate: string | null;
   unitPriceCents: number;
   doublePriceCents: number | null;
+  pricingMode: PricingMode;
   bookable: boolean;
   totalUnits: number;
   availableUnits: number;
@@ -33,7 +35,12 @@ type EditionRow = {
 const EDITION_COLUMNS =
   "id, issue_month, artwork_deadline, mail_date, status, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
 
-function toSummary(row: EditionRow, slots: { available: boolean }[]): EditionSummary {
+// Prices shown are what a hold would cost under the active pricing configuration (lib/pricing).
+// priced=false is ONLY for views that never show these prices (an existing reservation shows its
+// own stored price), so they keep working whatever the current pricing configuration is.
+function toSummary(row: EditionRow, slots: { available: boolean }[], priced = true): EditionSummary {
+  const edition = { unitPriceCents: row.unit_price_cents, doublePriceCents: row.double_unit_price_cents };
+  const prices = priced ? pricesFor(edition) : { mode: "launch" as const, ...edition };
   return {
     id: row.id,
     zoneSlug: row.zones?.slug ?? "",
@@ -42,8 +49,9 @@ function toSummary(row: EditionRow, slots: { available: boolean }[]): EditionSum
     issueMonth: row.issue_month,
     artworkDeadline: row.artwork_deadline,
     mailDate: row.mail_date,
-    unitPriceCents: row.unit_price_cents,
-    doublePriceCents: row.double_unit_price_cents,
+    unitPriceCents: prices.unitPriceCents,
+    doublePriceCents: prices.doublePriceCents,
+    pricingMode: prices.mode,
     bookable: row.status === "open" && Date.parse(row.artwork_deadline) > Date.now(),
     totalUnits: slots.length,
     availableUnits: slots.filter((s) => s.available).length,
@@ -99,7 +107,7 @@ export async function getBookableEditions(): Promise<EditionSummary[]> {
   );
 }
 
-export async function getEditionCatalog(editionId: string): Promise<EditionCatalog | null> {
+export async function getEditionCatalog(editionId: string, { priced = true } = {}): Promise<EditionCatalog | null> {
   const supabase = createPublicClient();
   const { data: edition, error } = await supabase
     .from("editions")
@@ -112,7 +120,7 @@ export async function getEditionCatalog(editionId: string): Promise<EditionCatal
 
   const availability = await getAvailabilityRows(editionId);
   const slots = toSlots(availability.slotRows);
-  return { ...toSummary(edition, slots), slots, pairs: toPairs(availability.pairRows) };
+  return { ...toSummary(edition, slots, priced), slots, pairs: toPairs(availability.pairRows) };
 }
 
 // Fresh, uncached availability for one edition (read right before placing a hold).

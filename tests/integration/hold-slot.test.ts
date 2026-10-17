@@ -59,9 +59,32 @@ describe.skipIf(!secretKey)("hold_slots", () => {
     expect(data?.available).toBe(true); // F1 was not left half-held
   });
 
-  test("double hold prices at the edition's double rate", async () => {
+  test("double hold is priced by the server's pricing config ($2 in test mode)", async () => {
     const result = await placeHold(admin, { slotIds: [ids.F3, ids.F4] });
-    expect(result).toMatchObject({ ok: true, size: "double", priceCents: 90000 });
+    expect(result).toMatchObject({ ok: true, size: "double", priceCents: 200 });
+  });
+
+  test("launch mode holds at the edition's own prices", async () => {
+    process.env.INSIDE914_PRICING_MODE = "launch";
+    try {
+      expect(await placeHold(admin, { slotIds: [ids.F5, ids.F6] })).toMatchObject({ ok: true, priceCents: 90000 });
+      const { data } = await admin.from("bookings").select("pricing_mode").eq("edition_id", OPEN_EDITION).single();
+      expect(data?.pricing_mode).toBe("launch");
+    } finally {
+      process.env.INSIDE914_PRICING_MODE = "test";
+    }
+  });
+
+  test("the database refuses prices that don't follow the rules, even from the service role", async () => {
+    const call = (mode: string, unit: number, double: number | null) =>
+      admin.rpc("hold_slots", { p_slot_ids: [ids.B1], p_token_hash: "a".repeat(64), p_pricing_mode: mode, p_unit_price_cents: unit, p_double_price_cents: double });
+    expect((await call("launch", 100, 200)).error?.code).toBe("INS05"); // launch must equal the edition
+    expect((await call("test", 50000, 90000)).error?.code).toBe("INS05"); // test must be lower
+    expect((await call("test", 60000, 200)).error?.code).toBe("INS05");
+    expect((await call("free", 100, 200)).error?.code).toBe("INS05");
+    expect((await call("test", 0, 200)).error?.code).toBe("INS05");
+    const { data } = await anon.from("slot_availability").select("available").eq("slot_id", ids.B1).single();
+    expect(data?.available).toBe(true); // nothing was held
   });
 
   test("non-adjacent or cross-side pairs are refused", async () => {

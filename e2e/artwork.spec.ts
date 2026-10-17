@@ -63,7 +63,7 @@ test("standard ad: upload, adjust with keyboard, preview, review, make changes",
   await page.getByRole("button", { name: "Continue to review" }).click();
   await expect(page.getByRole("heading", { name: "Review your ad" })).toBeVisible();
   const details = page.locator("dl").filter({ hasText: "Charged today" });
-  await expect(details).toContainText("$500");
+  await expect(details).toContainText("$1");
   await expect(details).toContainText("Standard");
   await expect(page.getByText("This is a provisional preview, not a print proof.")).toBeVisible();
 
@@ -82,7 +82,7 @@ test("double ad: one image spans both units, at the double price", async ({ page
 
   const box = await page.getByAltText("Your ad as it will sit on the postcard").locator("..").boundingBox();
   expect(box!.width / box!.height).toBeCloseTo(6.5 / 3, 1); // the full double area, not one unit
-  await expect(sidePanel(page).getByText("$900")).toBeVisible();
+  await expect(sidePanel(page).getByText("$2")).toBeVisible();
 });
 
 test("bad files are rejected with a clear message", async ({ page }) => {

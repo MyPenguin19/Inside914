@@ -5,6 +5,8 @@ import { existsSync } from "node:fs";
 // then the NEXT_PUBLIC_* values from .env.local, then the local stack from `supabase status`.
 // SUPABASE_SECRET_KEY comes from .env.local. (Next's loadEnvConfig skips .env.local under NODE_ENV=test.)
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
+// Integration tests exercise the temporary TEST pricing unless a run sets the mode explicitly.
+process.env.INSIDE914_PRICING_MODE ||= "test";
 // Guarded: assigning undefined to process.env stores the string "undefined".
 const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY } = process.env;
 if (!process.env.SUPABASE_URL && NEXT_PUBLIC_SUPABASE_URL) process.env.SUPABASE_URL = NEXT_PUBLIC_SUPABASE_URL;

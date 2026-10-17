@@ -22,6 +22,7 @@ export type CheckoutBooking = {
   status: string;
   size: "standard" | "double";
   priceCents: number;
+  pricingMode: "launch" | "test";
   holdExpiresAt: string | null;
   stripeCustomerId: string | null;
   stripeSetupIntentId: string | null;
@@ -42,6 +43,7 @@ function toCheckoutBooking(row: Row): CheckoutBooking {
     status: row.status,
     size: row.size as "standard" | "double",
     priceCents: row.price_cents,
+    pricingMode: row.pricing_mode === "test" ? "test" : "launch",
     holdExpiresAt: row.hold_expires_at,
     stripeCustomerId: row.stripe_customer_id,
     stripeSetupIntentId: row.stripe_setup_intent_id,
@@ -147,7 +149,7 @@ export async function startPayment(admin: Admin, stripe: StripeClient, token: st
       customer: customerId,
       usage: "off_session",
       allowed_payment_method_types: ["card"], // cards only (API 2026-09-30 name)
-      metadata: { booking_id: b.id, edition_id: b.editionId, amount_cents: String(b.priceCents), size: b.size },
+      metadata: { booking_id: b.id, edition_id: b.editionId, amount_cents: String(b.priceCents), size: b.size, pricing_mode: b.pricingMode },
     },
     { idempotencyKey: `inside914-seti-${b.id}-${b.stripeSetupIntentId ?? "first"}` },
   );
@@ -175,6 +177,7 @@ export async function recordConsent(admin: Admin, token: string | undefined, raw
       edition_id: booking!.editionId,
       stripe_setup_intent_id: booking!.stripeSetupIntentId,
       amount_cents: booking!.priceCents,
+      pricing_mode: booking!.pricingMode,
       currency: "usd",
       terms_version: TERMS_VERSION,
     },

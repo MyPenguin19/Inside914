@@ -28,6 +28,7 @@ export const catalog: EditionCatalog = {
   mailDate: "2100-01-05",
   unitPriceCents: 50000,
   doublePriceCents: 90000,
+  pricingMode: "launch",
   bookable: true,
   totalUnits: slots.length,
   availableUnits: slots.filter((s) => s.available).length,

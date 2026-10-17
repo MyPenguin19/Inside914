@@ -6,11 +6,12 @@ test("lists the open Central Westchester campaign from Supabase and leads to its
   await page.goto("/areas");
   await expect(page.getByRole("heading", { name: "Choose your advertising area." })).toBeVisible();
   await expect(page.getByRole("note").filter({ hasText: "Provisional campaign details" })).toBeVisible();
+  await expect(page.getByRole("note").filter({ hasText: "Test checkout" })).toContainText("$1 standard, $2 double");
 
   const central = page.getByRole("article").filter({ hasText: "Central Westchester" });
   await expect(central).toContainText("Available");
   await expect(central).toContainText("≈ 5,000 homes");
-  await expect(central).toContainText("$500 / $900");
+  await expect(central).toContainText("$1 / $2"); // temporary TEST prices (e2e runs with INSIDE914_PRICING_MODE=test)
   await expect(central).toContainText("December 15, 2026"); // reserve-by, from editions.artwork_deadline
   await expect(central).toContainText("January 5, 2027"); // planned mail date, from editions.mail_date
   await expect(central.getByText(/^\d+ of 16$/)).toBeVisible(); // open count comes from live availability

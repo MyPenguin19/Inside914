@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { VerifiedMail } from "@/components/verified-mail";
 import { getEditionCatalog } from "@/lib/catalog/queries";
+import { TestCheckoutNotice } from "@/components/checkout/test-checkout-notice";
 import { Card, Notice } from "@/components/ui/primitives";
 import { CAMPAIGN_DETAILS_PROVISIONAL } from "@/lib/catalog/areas";
 import { formatDay, formatDeadline, formatHouseholds, formatIssueMonth } from "@/lib/format";
@@ -60,6 +61,11 @@ async function EditionBooking({ params }: { params: PageProps<"/editions/[editio
           {catalog.mailDate && <> · Planned mail date {formatDay(catalog.mailDate)}</>}
         </p>
       </header>
+      {catalog.pricingMode === "test" && (
+        <div className="mt-4">
+          <TestCheckoutNotice />
+        </div>
+      )}
       {CAMPAIGN_DETAILS_PROVISIONAL && (
         <div className="mt-4">
           <Notice tone="warning" role="note">

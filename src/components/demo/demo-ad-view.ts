@@ -10,6 +10,10 @@ export function demoReservationView(selection: DemoSelection, artwork: DemoArtwo
     bookingId: "design-preview",
     status: "reserved",
     isTest: false,
+    pricingMode: "launch", // sample prices; the design preview never charges
+    editionId: DEMO_EDITION.id,
+    campaign: { taken: DEMO_EDITION.totalUnits - DEMO_EDITION.availableUnits, total: DEMO_EDITION.totalUnits },
+    emailSent: false,
     reference: DEMO_REFERENCE,
     confirmedAt: null,
     businessName: contact?.businessName ?? "Your business",

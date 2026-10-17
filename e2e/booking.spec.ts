@@ -39,7 +39,7 @@ test("keyboard: choose a standard position, then switch to a double", async ({ p
   await position(page, "Front", "F1").focus();
   await page.keyboard.press("Enter");
   await expect(position(page, "Front", "F1")).toHaveAttribute("aria-pressed", "true");
-  await expect(totalPrice(page)).toHaveText("$500");
+  await expect(totalPrice(page)).toHaveText("$1");
 
   // Space toggles a different position: the selection moves.
   await position(page, "Front", "F3").focus();
@@ -57,7 +57,7 @@ test("keyboard: choose a standard position, then switch to a double", async ({ p
   await expect(position(page, "Front", "F1")).toHaveAttribute("aria-pressed", "true");
   await expect(position(page, "Front", "F2")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("complementary").getByText("Front · F1 + F2")).toBeVisible();
-  await expect(totalPrice(page)).toHaveText("$900");
+  await expect(totalPrice(page)).toHaveText("$2");
 });
 
 test("two visitors want the same position: the second is told and sees it reserved", async ({ browser }) => {
@@ -103,7 +103,7 @@ test("holding never fakes success: it either reaches the hold page or explains w
   }
   try {
     await expect(page.getByText(/left/)).toBeVisible(); // live countdown
-    await expect(page.locator("dd", { hasText: "$500" })).toBeVisible(); // hold summary price
+    await expect(page.locator("dd", { hasText: "$1" })).toBeVisible(); // hold summary price (test pricing)
     await page.getByRole("link", { name: "Continue to artwork upload" }).click();
     await expect(page.getByRole("heading", { name: "Add your artwork" })).toBeVisible();
   } finally {

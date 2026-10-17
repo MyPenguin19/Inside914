@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { TestCheckoutNotice } from "@/components/checkout/test-checkout-notice";
+import { ButtonLink } from "@/components/ui/button";
 import { Suspense } from "react";
 import { QualityNote } from "@/components/artwork/artwork-studio";
 import { CroppedImage } from "@/components/artwork/cropped-image";
@@ -18,7 +20,7 @@ export default function ReviewPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="page-width flex-1 py-6 sm:py-8">
         <BookingSteps current={4} />
         <Suspense fallback={<div className="mt-8 h-96 animate-pulse rounded-2xl border border-line bg-surface" />}>
           <Review />
@@ -49,15 +51,20 @@ async function Review() {
   const ppi = effectivePpi(artwork.crop, area);
   const side = area.side === "front" ? "Front" : "Back";
   return (
-    <div className="mt-8 grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-      <section aria-labelledby="review-title">
-        <h1 id="review-title" className="text-3xl font-semibold tracking-tight">
+    <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:gap-8">
+      <section aria-labelledby="review-title" className="min-w-0">
+        <h1 id="review-title" className="font-display text-4xl font-medium tracking-tight">
           Review your ad
         </h1>
         <p className="mt-2 text-muted">
           Check everything looks right. Your position is held for <HoldCountdown expiresAt={booking.expiresAt} />.
         </p>
-        <dl className="mt-6 grid gap-4 border-y border-line py-5 text-sm sm:grid-cols-2">
+        {booking.pricingMode === "test" && (
+          <div className="mt-5">
+            <TestCheckoutNotice />
+          </div>
+        )}
+        <dl className="mt-5 grid gap-4 border-y border-line py-5 text-sm sm:grid-cols-2">
           <Item label="Edition" value={`${booking.zoneName} · ${formatIssueMonth(booking.issueMonth)}`} />
           <Item label="Postcard side" value={side} />
           <Item label="Position" value={booking.positions.map((p) => p.label).join(" + ")} />
@@ -74,15 +81,15 @@ async function Review() {
           </p>
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Link href="/book/details" className="rounded-full bg-foreground px-6 py-3 text-center text-sm font-medium text-background hover:bg-accent">
+          <ButtonLink href="/book/details" size="lg">
             Continue
-          </Link>
-          <Link href="/book/artwork" className="rounded-full border border-line px-6 py-3 text-center text-sm hover:border-foreground">
+          </ButtonLink>
+          <ButtonLink href="/book/artwork" size="lg" variant="secondary">
             Make changes
-          </Link>
+          </ButtonLink>
         </div>
       </section>
-      <aside aria-label="Your ad on the postcard">
+      <aside aria-label="Your ad on the postcard" className="mx-auto w-full max-w-[300px] lg:sticky lg:top-20 lg:max-w-none lg:self-start">
         <PostcardPreview side={area.side} otherSlots={otherSlots} area={area}>
           <CroppedImage
             src={artwork.viewUrl}

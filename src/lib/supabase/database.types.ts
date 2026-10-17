@@ -236,12 +236,15 @@ export type Database = {
           hold_token_hash: string
           id: string
           price_cents: number
+          pricing_mode: string
           reference: string | null
           size: string
           status: string
           stripe_customer_id: string | null
           stripe_payment_method_id: string | null
           stripe_setup_intent_id: string | null
+          stripe_setup_status: string | null
+          stripe_setup_status_at: string | null
           updated_at: string
         }
         Insert: {
@@ -253,12 +256,15 @@ export type Database = {
           hold_token_hash: string
           id?: string
           price_cents: number
+          pricing_mode?: string
           reference?: string | null
           size: string
           status?: string
           stripe_customer_id?: string | null
           stripe_payment_method_id?: string | null
           stripe_setup_intent_id?: string | null
+          stripe_setup_status?: string | null
+          stripe_setup_status_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -270,12 +276,15 @@ export type Database = {
           hold_token_hash?: string
           id?: string
           price_cents?: number
+          pricing_mode?: string
           reference?: string | null
           size?: string
           status?: string
           stripe_customer_id?: string | null
           stripe_payment_method_id?: string | null
           stripe_setup_intent_id?: string | null
+          stripe_setup_status?: string | null
+          stripe_setup_status_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -401,6 +410,7 @@ export type Database = {
           currency: string
           edition_id: string
           id: string
+          pricing_mode: string
           stripe_setup_intent_id: string
           terms_version: string
         }
@@ -411,6 +421,7 @@ export type Database = {
           currency?: string
           edition_id: string
           id?: string
+          pricing_mode?: string
           stripe_setup_intent_id: string
           terms_version: string
         }
@@ -421,6 +432,7 @@ export type Database = {
           currency?: string
           edition_id?: string
           id?: string
+          pricing_mode?: string
           stripe_setup_intent_id?: string
           terms_version?: string
         }
@@ -610,7 +622,13 @@ export type Database = {
         Returns: boolean
       }
       hold_slots: {
-        Args: { p_slot_ids: string[]; p_token_hash: string }
+        Args: {
+          p_double_price_cents: number | null
+          p_pricing_mode: string
+          p_slot_ids: string[]
+          p_token_hash: string
+          p_unit_price_cents: number
+        }
         Returns: {
           booking_id: string
           hold_expires_at: string

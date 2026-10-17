@@ -120,14 +120,15 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
   });
 
   describe("server-side pricing and consent", () => {
-    test("consent records the booking's own price: $500 standard, $900 double", async () => {
+    test("consent records the booking's own TEST price: $1 standard, $2 double, marked as test", async () => {
       const standard = await prepare(["F1"]);
       const double = await prepare(["F3", "F4"]);
       const amount = async (id: string) =>
-        (await admin.from("payment_consents").select("amount_cents, terms_version, edition_id").eq("booking_id", id).single()).data;
-      expect(await amount(standard.bookingId)).toEqual({ amount_cents: 50000, terms_version: TERMS_VERSION, edition_id: EDITION });
-      expect(await amount(double.bookingId)).toMatchObject({ amount_cents: 90000 });
-      expect(double.stripe.intent(double.setupIntentId!).metadata).toMatchObject({ amount_cents: "90000", size: "double" });
+        (await admin.from("payment_consents").select("amount_cents, terms_version, edition_id, pricing_mode").eq("booking_id", id).single()).data;
+      expect(await amount(standard.bookingId)).toEqual({ amount_cents: 100, terms_version: TERMS_VERSION, edition_id: EDITION, pricing_mode: "test" });
+      expect(await amount(double.bookingId)).toMatchObject({ amount_cents: 200, pricing_mode: "test" });
+      expect(double.stripe.intent(double.setupIntentId!).metadata).toMatchObject({ amount_cents: "200", size: "double", pricing_mode: "test" });
+      expect(await bookingRow(standard.bookingId)).toMatchObject({ price_cents: 100, pricing_mode: "test" });
     });
 
     test("consent must be an explicit true for the current terms", async () => {
@@ -161,11 +162,11 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
       expect(data?.available).toBe(false);
     });
 
-    test("double: both units are confirmed together as one $900 reservation", async () => {
+    test("double: both units are confirmed together as one $2 (test price) reservation", async () => {
       const { bookingId, stripe, setupIntentId } = await prepare(["B5", "B6"]);
       stripe.succeed(setupIntentId!);
       expect(await checkout.completeReservation(admin, stripe, bookingId)).toBe("confirmed");
-      expect(await bookingRow(bookingId)).toMatchObject({ status: "reserved", size: "double", price_cents: 90000 });
+      expect(await bookingRow(bookingId)).toMatchObject({ status: "reserved", size: "double", price_cents: 200, pricing_mode: "test" });
       expect(await liveClaims(bookingId)).toHaveLength(2);
     });
 
@@ -214,6 +215,48 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
       expect(await handleStripeEvent(admin, stripe, event, send)).toBe("duplicate");
       expect((await bookingRow(bookingId)).status).toBe("reserved");
       expect(send).toHaveBeenCalledTimes(1);
+    });
+
+    const setupEvent = (type: string, setupIntentId: string, bookingId: string, created: number) =>
+      ({ id: `evt_inttest_${randomUUID().replaceAll("-", "")}`, type, created, data: { object: { id: setupIntentId, metadata: { booking_id: bookingId } } } }) as never;
+    const setupStatus = async (id: string) =>
+      (await admin.from("bookings").select("stripe_setup_status, status").eq("id", id).single()).data;
+
+    test("setup_failed and canceled are recorded; nothing is confirmed or charged", async () => {
+      const failed = await prepare(["B1"]);
+      const now = Math.floor(Date.now() / 1000);
+      expect(await handleStripeEvent(admin, failed.stripe, setupEvent("setup_intent.setup_failed", failed.setupIntentId!, failed.bookingId, now))).toBe("handled");
+      expect(await setupStatus(failed.bookingId)).toEqual({ stripe_setup_status: "failed", status: "pending" });
+
+      const canceled = await prepare(["B2"]);
+      await handleStripeEvent(admin, canceled.stripe, setupEvent("setup_intent.canceled", canceled.setupIntentId!, canceled.bookingId, now));
+      expect(await setupStatus(canceled.bookingId)).toEqual({ stripe_setup_status: "canceled", status: "pending" });
+    });
+
+    test("out-of-order delivery: an older failure can't overwrite a newer success", async () => {
+      const { bookingId, stripe, setupIntentId } = await prepare(["B3"]);
+      stripe.succeed(setupIntentId!);
+      const now = Math.floor(Date.now() / 1000);
+      await handleStripeEvent(admin, stripe, setupEvent("setup_intent.succeeded", setupIntentId!, bookingId, now));
+      await handleStripeEvent(admin, stripe, setupEvent("setup_intent.setup_failed", setupIntentId!, bookingId, now - 60));
+      expect(await setupStatus(bookingId)).toEqual({ stripe_setup_status: "succeeded", status: "reserved" });
+    });
+
+    test("an event naming another booking's SetupIntent changes nothing", async () => {
+      const mine = await prepare(["B4"]);
+      const other = await prepare(["B5"]);
+      const now = Math.floor(Date.now() / 1000);
+      // Valid-looking event that pairs my booking id with someone else's SetupIntent.
+      await handleStripeEvent(admin, mine.stripe, setupEvent("setup_intent.setup_failed", other.setupIntentId!, mine.bookingId, now));
+      expect(await setupStatus(mine.bookingId)).toEqual({ stripe_setup_status: null, status: "pending" });
+      other.stripe.succeed(other.setupIntentId!);
+      await handleStripeEvent(admin, mine.stripe, setupEvent("setup_intent.succeeded", other.setupIntentId!, mine.bookingId, now));
+      expect((await setupStatus(mine.bookingId))?.status).toBe("pending"); // completeReservation rejects the mismatch
+    });
+
+    test("a malformed booking id in metadata is ignored, not retried forever", async () => {
+      const { stripe, setupIntentId } = await prepare(["B6"]);
+      expect(await handleStripeEvent(admin, stripe, setupEvent("setup_intent.setup_failed", setupIntentId!, "not-a-uuid", 1))).toBe("ignored");
     });
   });
 

@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -7,11 +7,16 @@ const { placeHold } = await import("@/lib/booking/place-hold");
 
 const SLOT_ID = "6f1c2d3e-4b5a-4c6d-8e7f-901234567890";
 
-// Minimal stand-in for supabase.rpc(...).single().
-function fakeAdmin(result: { data?: unknown; error?: { code: string; message: string } | null }) {
+// Minimal stand-in for the edition price lookup and supabase.rpc(...).single().
+const EDITION = { unit_price_cents: 50000, double_unit_price_cents: 90000 };
+function fakeAdmin(result: { data?: unknown; error?: { code: string; message: string } | null }, edition: object | null = EDITION) {
   const rpc = vi.fn(() => ({ single: async () => ({ data: result.data ?? null, error: result.error ?? null }) }));
-  return { client: { rpc } as never, rpc };
+  const lookup = { select: () => lookup, eq: () => lookup, maybeSingle: async () => ({ data: edition && { editions: edition }, error: null }) };
+  return { client: { rpc, from: () => lookup } as never, rpc };
 }
+
+afterEach(() => vi.unstubAllEnvs());
+beforeEach(() => vi.stubEnv("INSIDE914_PRICING_MODE", "test"));
 
 describe("hold token", () => {
   test("is 256-bit base64url and unique per call", () => {
@@ -40,17 +45,53 @@ describe("placeHold", () => {
 
   test("sends the token hash, never the token, and returns the token to the caller", async () => {
     const { client, rpc } = fakeAdmin({
-      data: { booking_id: "b1", hold_expires_at: "2026-10-16T05:15:00Z", size: "standard", price_cents: 50000 },
+      data: { booking_id: "b1", hold_expires_at: "2026-10-16T05:15:00Z", size: "standard", price_cents: 100 },
     });
     const result = await placeHold(client, { slotIds: [SLOT_ID] });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const args = rpc.mock.calls[0] as unknown as [string, { p_slot_ids: string[]; p_token_hash: string }];
+    const args = rpc.mock.calls[0] as unknown as [string, Record<string, unknown> & { p_token_hash: string }];
     expect(args[0]).toBe("hold_slots");
     expect(args[1].p_slot_ids).toEqual([SLOT_ID]);
     expect(args[1].p_token_hash).toBe(hashHoldToken(result.token));
-    expect(result).toMatchObject({ bookingId: "b1", expiresAt: "2026-10-16T05:15:00Z", size: "standard", priceCents: 50000 });
+    expect(result).toMatchObject({ bookingId: "b1", expiresAt: "2026-10-16T05:15:00Z", size: "standard", priceCents: 100 });
+  });
+
+  test("sends the server's test prices ($1 / $2) with mode 'test', never a browser value", async () => {
+    const { client, rpc } = fakeAdmin({ data: { booking_id: "b1", hold_expires_at: "x", size: "standard", price_cents: 100 } });
+    await placeHold(client, { slotIds: [SLOT_ID], priceCents: 1, unitPriceCents: 1 }); // extra fields are ignored
+    expect(rpc.mock.calls[0]).toEqual([
+      "hold_slots",
+      expect.objectContaining({ p_pricing_mode: "test", p_unit_price_cents: 100, p_double_price_cents: 200 }),
+    ]);
+  });
+
+  test("launch mode sends the edition's own prices", async () => {
+    vi.stubEnv("INSIDE914_PRICING_MODE", "launch");
+    const { client, rpc } = fakeAdmin({ data: { booking_id: "b1", hold_expires_at: "x", size: "standard", price_cents: 50000 } });
+    await placeHold(client, { slotIds: [SLOT_ID] });
+    expect((rpc.mock.calls[0] as unknown[])[1]).toMatchObject({ p_pricing_mode: "launch", p_unit_price_cents: 50000, p_double_price_cents: 90000 });
+  });
+
+  test("no pricing mode configured, or test pricing with a live Stripe key: nothing is held", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("INSIDE914_PRICING_MODE", "");
+    const unset = fakeAdmin({});
+    expect(await placeHold(unset.client, { slotIds: [SLOT_ID] })).toEqual({ ok: false, reason: "error" });
+    expect(unset.rpc).not.toHaveBeenCalled();
+
+    vi.stubEnv("INSIDE914_PRICING_MODE", "test");
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_example");
+    const live = fakeAdmin({});
+    expect(await placeHold(live.client, { slotIds: [SLOT_ID] })).toEqual({ ok: false, reason: "error" });
+    expect(live.rpc).not.toHaveBeenCalled();
+  });
+
+  test("an unknown slot is reported without placing a hold", async () => {
+    const { client, rpc } = fakeAdmin({}, null);
+    expect(await placeHold(client, { slotIds: [SLOT_ID] })).toEqual({ ok: false, reason: "slot_not_found" });
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   test.each([
@@ -58,6 +99,7 @@ describe("placeHold", () => {
     ["INS02", "edition_closed"],
     ["INS03", "slot_unavailable"],
     ["INS04", "invalid_selection"],
+    ["INS05", "invalid_pricing"],
     ["XX000", "error"],
   ])("maps database error %s to %s", async (code, reason) => {
     vi.spyOn(console, "error").mockImplementation(() => {});

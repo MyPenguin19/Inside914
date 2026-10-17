@@ -65,10 +65,11 @@ test("details: inline errors, kept values, then the payment step with an unticke
   const summary = page.getByRole("region", { name: "Reservation summary" });
   await expect(summary).toContainText("Central Westchester");
   await expect(summary).toContainText("5,000 homes");
-  await expect(summary).toContainText("$500");
+  await expect(summary).toContainText("$1");
+  await expect(summary).toContainText("Test price");
   if (hasStripe || devTestMode) {
     await expect(page.getByRole("checkbox")).not.toBeChecked();
-    await expect(page.getByRole("checkbox").locator("..")).toContainText("charge $500");
+    await expect(page.getByRole("checkbox").locator("..")).toContainText("charge $1");
   } else {
     await expect(errorAlert(page)).toContainText("aren't set up");
   }
@@ -103,7 +104,7 @@ test("full checkout with a Stripe test card", async ({ page }) => {
 
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /save card and reserve/i }).click();
-  await expect(page.getByRole("heading", { name: "Your advertising space is reserved!" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Your advertising space is reserved." })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("No payment has been collected.")).toBeVisible();
 });
 
@@ -123,5 +124,5 @@ test("development TEST mode: the whole booking completes as a clearly labeled TE
 
   await expect(page.getByRole("heading", { name: "Test reservation complete" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/TEST RESERVATION \(development only\): this is not a real booking/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Your advertising space is reserved!" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your advertising space is reserved." })).toHaveCount(0);
 });

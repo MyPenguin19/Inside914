@@ -18,6 +18,7 @@ export type ReservationEmailData = {
   reservationUrl: string;
   supportEmail: string;
   test?: boolean; // development TEST reservation: preview only, never delivered
+  testPricing?: boolean; // Stripe test mode with temporary prices
 };
 
 const escape = (value: string) =>
@@ -33,9 +34,10 @@ export function reservationConfirmedEmail(d: ReservationEmailData) {
     ["Authorized amount", `${formatPrice(d.priceCents)}, charged only if the campaign fills and is approved`],
     ["Reservation deadline", formatDeadline(d.artworkDeadline)],
     ["Charged today", "Nothing"],
+    ...(d.testPricing ? ([["Mode", "Stripe test mode with a temporary test price. No real card can be charged."]] as [string, string][]) : []),
   ];
 
-  const subject = `${d.test ? "[TEST] " : ""}Your Inside914 ad space is reserved (${d.reference})`;
+  const subject = `${d.test ? "[TEST] " : d.testPricing ? "[Stripe test] " : ""}Your Inside914 ad space is reserved (${d.reference})`;
   const testNote = "TEST RESERVATION (development only): not a real booking. No card saved, no payment authorized.";
   const text = [
     ...(d.test ? [testNote, ""] : []),

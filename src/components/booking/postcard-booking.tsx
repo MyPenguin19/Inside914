@@ -40,6 +40,7 @@ const FAILURE_TEXT: Record<Exclude<HoldSelectionResult, { ok: true }>["reason"],
   invalid_input: "That selection wasn't valid. Please choose a position again.",
   error: "We couldn't hold your position right now. Nothing was reserved; please try again in a moment.",
   rate_limited: "That's a lot of attempts in a short time. Please wait a few minutes, then try again.",
+  invalid_pricing: "We couldn't price this space right now. Nothing was reserved; please refresh and try again.",
 };
 
 const SIDES: Side[] = ["front", "back"];

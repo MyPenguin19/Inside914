@@ -15,6 +15,10 @@ export type ReservationView = {
   bookingId: string;
   status: string;
   isTest: boolean; // development TEST reservation (simulated card, no payment method, no authorization)
+  pricingMode: "launch" | "test"; // test = Stripe test mode with temporary prices
+  editionId: string;
+  campaign: { taken: number; total: number }; // spaces held or reserved on this edition
+  emailSent: boolean; // the confirmation email was actually sent (not just queued)
   reference: string | null;
   confirmedAt: string | null;
   businessName: string | null;
@@ -39,6 +43,7 @@ type Row = {
   confirmed_at: string | null;
   size: string;
   price_cents: number;
+  pricing_mode: string;
   edition_id: string;
   stripe_customer_id: string | null;
   booking_contacts: { business_name: string; contact_name: string; email: string } | null;
@@ -49,7 +54,7 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id, status, reference, confirmed_at, size, price_cents, edition_id, stripe_customer_id, booking_contacts(business_name, contact_name, email), booking_slots(released_at, slots(label, side, x_in, y_in, width_in, height_in))",
+      "id, status, reference, confirmed_at, size, price_cents, pricing_mode, edition_id, stripe_customer_id, booking_contacts(business_name, contact_name, email), booking_slots(released_at, slots(label, side, x_in, y_in, width_in, height_in))",
     )
     .eq("id", bookingId)
     .returns<Row[]>()
@@ -63,13 +68,21 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
     .sort((a, b) => a.label.localeCompare(b.label, "en", { numeric: true }));
   if (!slots.length) return null;
 
-  const [catalog, artwork] = await Promise.all([getEditionCatalog(data.edition_id), getArtwork(admin, data.id)]);
+  const [catalog, artwork, email] = await Promise.all([
+    getEditionCatalog(data.edition_id, { priced: false }), // this view shows the booking's stored price
+    getArtwork(admin, data.id),
+    admin.from("email_outbox").select("status").eq("booking_id", data.id).eq("status", "sent").limit(1),
+  ]);
   if (!catalog) return null;
   const own = new Set(slots.map((s) => s.label));
   return {
     bookingId: data.id,
     status: data.status,
     isTest: isTestStripeId(data.stripe_customer_id),
+    pricingMode: data.pricing_mode === "test" ? "test" : "launch",
+    editionId: data.edition_id,
+    campaign: { taken: catalog.slots.filter((s) => !s.available).length, total: catalog.slots.length },
+    emailSent: (email.data?.length ?? 0) > 0,
     reference: data.reference,
     confirmedAt: data.confirmed_at,
     businessName: data.booking_contacts?.business_name ?? null,
