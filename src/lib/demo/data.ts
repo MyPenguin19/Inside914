@@ -1,18 +1,40 @@
 // DESIGN-PREVIEW sample data. Not real inventory, advertisers or campaigns; never written anywhere.
 import type { CatalogSlot, SlotPair } from "@/lib/booking/selection";
 import type { EditionCatalog } from "@/lib/catalog/queries";
+import type { PostcardZone } from "@/components/postcard/postcard-side";
 
-// Provisional 2 x 4 grid per side, matching the dev seed's geometry (not the approved print layout).
+// PROVISIONAL sample layout (not the approved print layout): a masthead across the top of the
+// front, a mailing panel (address + postage) across the bottom of the back, ad spaces in between.
+const CARD = { width: 6.5, height: 12 };
+const MASTHEAD = 1.4;
+const MAILING = 3.3;
 const RESERVED_SAMPLE = new Set(["F2", "B5", "B6"]);
+const round = (n: number) => Math.round(n * 1000) / 1000;
 
-const slots: CatalogSlot[] = (["front", "back"] as const).flatMap((side) =>
-  Array.from({ length: 8 }, (_, i) => {
-    const row = Math.floor(i / 2);
-    const col = i % 2;
+function grid(side: "front" | "back", top: number, height: number, rows: number): CatalogSlot[] {
+  const unitHeight = round(height / rows);
+  const unitWidth = CARD.width / 2;
+  return Array.from({ length: rows * 2 }, (_, i) => {
     const label = `${side === "front" ? "F" : "B"}${i + 1}`;
-    return { id: `demo-${label}`, side, label, x: col * 3.25, y: row * 3, width: 3.25, height: 3, available: !RESERVED_SAMPLE.has(label) };
-  }),
-);
+    return {
+      id: `demo-${label}`,
+      side,
+      label,
+      x: (i % 2) * unitWidth,
+      y: round(top + Math.floor(i / 2) * unitHeight),
+      width: unitWidth,
+      height: unitHeight,
+      available: !RESERVED_SAMPLE.has(label),
+    };
+  });
+}
+
+const slots: CatalogSlot[] = [...grid("front", MASTHEAD, CARD.height - MASTHEAD, 4), ...grid("back", 0, CARD.height - MAILING, 3)];
+
+export const DEMO_ZONES: PostcardZone[] = [
+  { side: "front", kind: "masthead", x: 0, y: 0, width: CARD.width, height: MASTHEAD, title: "Local businesses near you", detail: "Central Westchester · January 2027" },
+  { side: "back", kind: "mailing", x: 0, y: CARD.height - MAILING, width: CARD.width, height: MAILING, title: "Address area", detail: "Mailing panel (provisional)" },
+];
 
 // Same rule as the database's slot_pairs view: same side and row, right unit starts where left ends.
 const pairs: SlotPair[] = slots.flatMap((l) =>

@@ -178,3 +178,8 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
 - [x] **Task 9 (revised): Frontend design system and full visual experience** (design preview), 2026-10-16 on `task-5/slot-hold`
   - New homepage; shared UI components; `/demo` design preview of areas, postcard selection (front/back toggle, merged double ad), editor, checkout, payment prototype (no card inputs), confirmation, Verified Mail timeline, owner dashboard. Sample data only, no backend calls.
   - Awaiting visual approval before more backend work.
+
+- [x] **Task 10: Frontend UX refinement and visual quality audit** (design preview), 2026-10-16 on `task-10/frontend-refinement`
+  - Fixed the failing Vercel preview build (/reservation read env during prerender). Journey is now 4 steps: area, space, artwork, review & reserve (details + card prototype + agreement on one page).
+  - Realistic postcard (masthead, mailing panel), both sides on desktop, sticky phone bar, restored selections, editor zoom buttons and safe area, admin readiness, phone-friendly tables, token-only colors.
+  - Awaiting visual approval before backend work.

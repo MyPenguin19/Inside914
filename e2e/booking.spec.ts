@@ -5,9 +5,17 @@ const EDITION_URL = "/editions/00000000-0000-4000-8000-000000000101";
 const position = (page: Page, side: "Front" | "Back", label: string) =>
   page.getByRole("button", { name: new RegExp(`^${side} position ${label}:`) });
 const totalPrice = (page: Page) => page.getByTestId("total-price");
-// The postcard shows one side at a time; this flips it.
-const showSide = (page: Page, side: "Front" | "Back") =>
-  page.getByRole("group", { name: "Postcard side" }).getByRole("button", { name: new RegExp(`^${side}`) }).click();
+// Narrow screens show one side at a time (this flips it); wide screens show both, with no toggle.
+const showSide = async (page: Page, side: "Front" | "Back") => {
+  if (page.viewportSize()!.width >= 1024) return; // wide screens show both sides, no toggle
+  const toggle = page.getByRole("group", { name: "Postcard side" });
+  const button = toggle.getByRole("button", { name: new RegExp(`^${side}`) });
+  // Retry until hydrated: a click on server-rendered HTML does nothing yet.
+  await expect(async () => {
+    await button.click();
+    await expect(button).toHaveAttribute("aria-pressed", "true", { timeout: 1_000 });
+  }).toPass();
+};
 // Our error messages live in <main>; Next's route announcer (also role=alert) does not.
 const errorAlert = (page: Page) => page.locator("main").getByRole("alert");
 
@@ -21,7 +29,7 @@ test("shows the edition, both sides, the provisional-layout notice and Verified 
   await expect(page.getByText(/Planned mailing quantity/)).toContainText("5,000 homes");
   await showSide(page, "Back");
   await expect(page.getByRole("group", { name: "Back of the postcard" })).toBeVisible();
-  await expect(page.getByText("Provisional layout.")).toBeVisible();
+  await expect(page.getByText(/Provisional layout/)).toBeVisible();
   await expect(page.getByText(/private verification link/)).toBeVisible();
 });
 
@@ -46,7 +54,7 @@ test("keyboard: choose a standard position, then switch to a double", async ({ p
   await page.keyboard.press("Enter");
   await expect(position(page, "Front", "F1")).toHaveAttribute("aria-pressed", "true");
   await expect(position(page, "Front", "F2")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText("Front · F1 + F2")).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("Front · F1 + F2")).toBeVisible();
   await expect(totalPrice(page)).toHaveText("$900");
 });
 
@@ -80,7 +88,7 @@ test("two visitors want the same position: the second is told and sees it reserv
 test("holding never fakes success: it either reaches the hold page or explains why not", async ({ page }) => {
   // Any open back position, so a hold left by an interrupted run can't block this test.
   await showSide(page, "Back");
-  await page.getByRole("button", { name: /^Back position B\d+: Open/ }).first().click();
+  await page.getByRole("button", { name: /^Back position B\d+: Available/ }).first().click();
   await page.getByRole("button", { name: /hold this position/i }).click();
 
   const holdPage = page.getByRole("heading", { name: "Your position is on hold" });

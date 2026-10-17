@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { SlotGeometry } from "@/lib/artwork/rules";
 import { POSTCARD_INCHES } from "@/lib/booking/selection";
 import { PRINT_SPEC } from "@/lib/print/spec";
+import { boxStyle, type PostcardZone } from "@/components/postcard/postcard-side";
 
 type Props = {
   side: "front" | "back";
@@ -9,13 +10,14 @@ type Props = {
   area: SlotGeometry; // the customer's ad (one slot, or the union of a double)
   showSafeArea?: boolean;
   compact?: boolean; // thumbnail: no caption
+  zones?: PostcardZone[]; // printed non-ad areas, drawn as quiet blocks
   children: ReactNode; // what to draw inside the ad area
 };
 
 const pct = (value: number, of: number) => `${(value / of) * 100}%`;
 
 // The whole front or back of the postcard, to scale, with the customer's ad in its position.
-export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, compact = false, children }: Props) {
+export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, compact = false, zones = [], children }: Props) {
   const inset = PRINT_SPEC.safeMarginInches;
   return (
     <figure className="flex flex-col gap-2">
@@ -25,6 +27,21 @@ export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, c
         className="relative w-full overflow-hidden rounded-lg border border-line bg-surface shadow-sm"
         style={{ aspectRatio: `${POSTCARD_INCHES.width} / ${POSTCARD_INCHES.height}` }}
       >
+        {zones
+          .filter((z) => z.side === side)
+          .map((zone) => (
+            <div key={zone.kind} aria-hidden="true" className="absolute p-[2%]" style={boxStyle(zone)}>
+              {zone.kind === "masthead" ? (
+                <div className="flex h-full w-full items-end border-b border-foreground/40 pb-[4%]">
+                  <span className="h-[22%] w-[34%] rounded-[1px] bg-foreground/30" />
+                </div>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-sm border border-line bg-background-soft">
+                  {!compact && <span className="text-[9px] text-muted">Mailing panel</span>}
+                </div>
+              )}
+            </div>
+          ))}
         {otherSlots.map((slot, i) => (
           <div
             key={i}
@@ -37,7 +54,7 @@ export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, c
               height: pct(slot.height, POSTCARD_INCHES.height),
             }}
           >
-            <div className="h-full w-full rounded-sm bg-[#efece5]" />
+            <div className="h-full w-full rounded-sm bg-reserved" />
           </div>
         ))}
         {/* No padding here: the ad box must keep the exact aspect ratio of the ad area. */}

@@ -50,7 +50,7 @@ export type Tone = "neutral" | "success" | "info" | "warning" | "danger";
 const TONES: Record<Tone, string> = {
   neutral: "bg-background-soft text-muted",
   success: "bg-accent-soft text-accent",
-  info: "bg-[#eaf0f7] text-[#2b4a6b]",
+  info: "bg-info-soft text-info",
   warning: "bg-warning-soft text-warning",
   danger: "bg-danger-soft text-danger",
 };

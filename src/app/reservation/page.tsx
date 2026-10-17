@@ -32,8 +32,9 @@ export default function ReservationPage() {
 }
 
 async function Reservation() {
+  const token = (await cookies()).get(ACCESS_COOKIE)?.value; // first: marks the page dynamic before any env access
   const admin = createAdminClient();
-  const bookingId = await resolveAccessToken(admin, (await cookies()).get(ACCESS_COOKIE)?.value).catch(() => null);
+  const bookingId = await resolveAccessToken(admin, token).catch(() => null);
   const view = bookingId ? await getReservationView(admin, bookingId).catch(() => null) : null;
   if (!view || !view.reference) {
     return (

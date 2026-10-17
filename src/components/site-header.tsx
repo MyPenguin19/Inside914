@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ButtonLink } from "@/components/ui/button";
+import { Suspense } from "react";
+import { HeaderCta } from "@/components/header-cta";
 
 const NAV = [
   { href: "/#how-it-works", label: "How It Works" },
@@ -29,12 +30,13 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <ButtonLink href="/demo/areas" className="hidden sm:inline-flex">
-            Reserve Your Spot
-          </ButtonLink>
+          {/* Reads the URL, so it streams in on dynamic routes instead of blocking prerendering. */}
+          <Suspense fallback={null}>
+            <HeaderCta />
+          </Suspense>
           {/* Small screens: a simple disclosure menu, no JavaScript needed. */}
           <details className="relative lg:hidden">
-            <summary className="flex cursor-pointer list-none items-center rounded-full border border-line px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-full border border-line px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
               Menu
             </summary>
             <nav aria-label="Main" className="absolute right-0 mt-2 flex w-60 flex-col rounded-2xl border border-line bg-surface p-2 shadow-lg">

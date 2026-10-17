@@ -54,7 +54,7 @@ async function Payment({ searchParams }: { searchParams: PageProps<"/book/paymen
           <li><strong className="text-foreground">If the campaign doesn&apos;t fill</strong> by its deadline, your reservation is canceled and you&apos;re never charged.</li>
         </ol>
         {typeof outcome === "string" && (
-          <p role="alert" className="mt-5 rounded-lg bg-[#fbeceb] px-4 py-3 text-sm text-danger">
+          <p role="alert" className="mt-5 rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">
             {checkoutMessage(outcome)}
           </p>
         )}

@@ -1,20 +1,20 @@
-import { BookingSteps } from "@/components/booking/booking-steps";
+import { DemoSteps } from "@/components/demo/demo-steps";
 import { ButtonLink } from "@/components/ui/button";
-import { Card, SectionHeading, StatusBadge } from "@/components/ui/primitives";
+import { Card, StatusBadge } from "@/components/ui/primitives";
 import { DEMO_AREAS, DEMO_EDITION } from "@/lib/demo/data";
 import { formatDeadline, formatHouseholds, formatPrice } from "@/lib/format";
 
 export default function DemoAreasPage() {
   return (
     <div>
-      <BookingSteps current={1} />
+      <DemoSteps current={1} />
       <div className="mt-8">
-        <SectionHeading
-          title="Choose your advertising area."
-          intro="Each area is one postcard edition mailed to homes in that part of Westchester. Inside914 plans the mailing routes, so there's nothing for you to map out."
-        />
+        <h1 className="font-display text-4xl font-medium tracking-tight">Choose your advertising area.</h1>
+        <p className="mt-2 max-w-2xl text-muted">
+          Each area is one postcard mailed to homes in that part of Westchester. We plan the mailing routes for you.
+        </p>
       </div>
-      <div className="mt-10 grid gap-5 md:grid-cols-2">
+      <div className="mt-8 grid gap-5 md:grid-cols-2">
         {DEMO_AREAS.map((area) => (
           <Card key={area.name} as="article" className={`flex flex-col ${area.status === "soon" ? "opacity-75" : ""}`}>
             <div className="flex items-start justify-between gap-3">

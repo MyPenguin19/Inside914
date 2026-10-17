@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
-// One button style system for the whole site: primary (dark), secondary (outlined), quiet (text).
-type Variant = "primary" | "secondary" | "quiet";
+// One button style system for the whole site: primary (dark), secondary (outlined), quiet (text),
+// inverse (light button on a dark card).
+type Variant = "primary" | "secondary" | "quiet" | "inverse";
 type Size = "md" | "lg";
 
 const BASE =
@@ -11,6 +12,7 @@ const VARIANTS: Record<Variant, string> = {
   primary: "bg-foreground text-background hover:bg-accent disabled:bg-line disabled:text-muted",
   secondary: "border border-foreground/80 bg-transparent text-foreground hover:bg-foreground hover:text-background disabled:border-line disabled:text-muted",
   quiet: "text-foreground underline-offset-4 hover:underline disabled:text-muted",
+  inverse: "bg-background text-foreground hover:bg-accent-soft disabled:opacity-60",
 };
 const SIZES: Record<Size, string> = { md: "px-5 py-2.5 text-sm", lg: "px-7 py-3.5 text-base" };
 

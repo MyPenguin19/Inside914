@@ -1,14 +1,14 @@
 // A decorative, clearly labeled ILLUSTRATION of the shared postcard (not real advertisers).
-// Proportions follow the 6.5" x 12" card with the provisional 2 x 4 grid per side.
+// Proportions follow the 6.5" x 12" card: masthead, then a provisional 2 x 4 grid of spaces.
 
 const SAMPLE_TILES = [
-  { tone: "bg-[#1f5c4a] text-white", title: "Your Business Here", line: "Standard space" },
-  { tone: "bg-[#f4efe4] text-[#1c1b19]", title: "Local Bakery", line: "Sample ad" },
-  { tone: "bg-[#2b4a6b] text-white", title: "Home Services", line: "Sample ad", wide: true },
-  { tone: "bg-[#efe7dc] text-[#1c1b19]", title: "Family Dentist", line: "Sample ad" },
+  { tone: "bg-accent text-white", title: "Your Business Here", line: "Standard space" },
+  { tone: "bg-[#f4efe4] text-foreground", title: "Local Bakery", line: "Sample ad" },
+  { tone: "bg-info text-white", title: "Home Services", line: "Sample ad", wide: true },
+  { tone: "bg-[#efe7dc] text-foreground", title: "Family Dentist", line: "Sample ad" },
   { tone: "bg-[#c9803a] text-white", title: "Pizza Night", line: "Sample ad" },
-  { tone: "bg-[#e6ece9] text-[#1c1b19]", title: "Yoga Studio", line: "Sample ad" },
-  { tone: "bg-[#3b3a36] text-white", title: "Real Estate", line: "Sample ad" },
+  { tone: "bg-[#e6ece9] text-foreground", title: "Yoga Studio", line: "Sample ad" },
+  { tone: "bg-ink text-white", title: "Real Estate", line: "Sample ad" },
 ];
 
 export function PostcardIllustration() {
@@ -18,10 +18,16 @@ export function PostcardIllustration() {
       <div
         role="img"
         aria-label="Illustration of the shared Inside914 postcard with sample advertising spaces"
-        className="relative -rotate-2 rounded-[10px] border border-line bg-surface p-[3.5%] shadow-[0_24px_60px_-20px_rgba(28,27,25,0.35)]"
+        className="relative flex -rotate-2 flex-col rounded-[6px] border border-line bg-paper p-[3.5%] shadow-[0_24px_60px_-20px_rgba(28,27,25,0.35)]"
         style={{ aspectRatio: "6.5 / 12" }}
       >
-        <div className="grid h-full grid-cols-2 grid-rows-4 gap-[3%]">
+        <div className="mb-[3%] flex items-end justify-between border-b-2 border-foreground px-[2%] pb-[2.5%]">
+          <span className="font-display text-[clamp(14px,4.6vw,22px)] font-semibold leading-none">
+            Inside<span className="text-accent">914</span>
+          </span>
+          <span className="text-[clamp(7px,2vw,9px)] text-muted">Central Westchester</span>
+        </div>
+        <div className="grid flex-1 grid-cols-2 grid-rows-4 gap-[3%]">
           {SAMPLE_TILES.map((tile) => (
             <div
               key={tile.title}
@@ -43,14 +49,14 @@ export function PostcardIllustration() {
 // Mini diagrams for the pricing cards: one space vs two side-by-side spaces merged.
 export function SizeDiagram({ size }: { size: "standard" | "double" }) {
   return (
-    <div aria-hidden="true" className="grid w-24 grid-cols-2 grid-rows-4 gap-1 rounded-md border border-line bg-surface p-1.5" style={{ aspectRatio: "6.5 / 12" }}>
+    <div aria-hidden="true" className="grid w-24 shrink-0 grid-cols-2 grid-rows-4 gap-1 rounded-[4px] border border-line-strong bg-paper p-1.5" style={{ aspectRatio: "6.5 / 12" }}>
       {Array.from({ length: 8 }, (_, i) => {
         if (size === "double" && i === 3) return null;
         const highlighted = size === "standard" ? i === 2 : i === 2;
         return (
           <div
             key={i}
-            className={`rounded-[2px] ${highlighted ? "bg-accent" : "bg-background-soft"} ${size === "double" && i === 2 ? "col-span-2" : ""}`}
+            className={`rounded-[2px] ${highlighted ? "bg-accent" : "bg-reserved"} ${size === "double" && i === 2 ? "col-span-2" : ""}`}
           />
         );
       })}

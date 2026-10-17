@@ -2,12 +2,12 @@
 
 import { useMemo, useRef } from "react";
 import { ArtworkStudio, type ArtworkActions } from "@/components/artwork/artwork-studio";
-import { BookingSteps } from "@/components/booking/booking-steps";
 import { useDemoStore } from "@/components/demo/demo-store";
+import { DemoSteps } from "@/components/demo/demo-steps";
 import { NeedSelection } from "@/components/demo/need-selection";
 import { inspectFile } from "@/lib/artwork/browser-file";
 import { adArea } from "@/lib/artwork/rules";
-import { DEMO_EDITION } from "@/lib/demo/data";
+import { DEMO_EDITION, DEMO_ZONES } from "@/lib/demo/data";
 
 // The real artwork editor with local-only actions: the image never leaves this browser.
 export default function DemoArtworkPage() {
@@ -45,11 +45,11 @@ export default function DemoArtworkPage() {
 
   return (
     <div>
-      <BookingSteps current={3} />
+      <DemoSteps current={3} />
       <header className="mb-6 mt-8">
         <h1 className="font-display text-4xl font-medium tracking-tight">Add your artwork</h1>
         <p className="mt-2 text-muted">
-          Upload your ad, then drag and zoom until it fits. In this preview your image stays on your device.
+          Upload your ad, then drag and zoom until it looks right. In this preview your image stays on your device.
         </p>
       </header>
       <ArtworkStudio
@@ -63,6 +63,7 @@ export default function DemoArtworkPage() {
         }
         actions={actions}
         nextHref="/demo/checkout"
+        zones={DEMO_ZONES}
         upload={async (_url, _file, _type, options) => {
           for (const step of [0.35, 0.7, 1]) {
             await new Promise((r) => setTimeout(r, 120));

@@ -138,7 +138,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
 
   if (phase === "unavailable") {
     return (
-      <p role="alert" className="rounded-xl bg-[#fbeceb] px-4 py-3 text-sm text-danger">
+      <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
         {error?.text ?? checkoutMessage("payments_unavailable")}{" "}
         {error?.startOver && (
           <Link href="/#editions" className="font-medium underline">
@@ -153,7 +153,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" aria-busy={busy}>
       {testMode && (
-        <p role="note" className="rounded-xl border-2 border-dashed border-[#c47f00] bg-[#fdf4e3] px-4 py-3 text-sm font-medium text-[#8a5a00]">
+        <p role="note" className="rounded-xl border-2 border-dashed border-warning-line bg-warning-soft px-4 py-3 text-sm font-medium text-warning">
           TEST MODE (development only): no card is saved and no payment is authorized. This creates a TEST
           reservation, not a real booking.
         </p>
@@ -193,7 +193,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
       </p>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-[#fbeceb] px-4 py-3 text-sm text-danger">
+        <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">
           {error.text}{" "}
           {error.startOver && (
             <Link href="/#editions" className="font-medium underline">

@@ -11,8 +11,16 @@ const errorAlert = (page: Page) => page.locator("main").getByRole("alert");
 
 async function toDetails(page: Page) {
   await page.goto(EDITION_URL);
-  await page.getByRole("group", { name: "Postcard side" }).getByRole("button", { name: /^Back/ }).click();
-  await page.getByRole("button", { name: /^Back position B\d+: Open/ }).first().click();
+  const sides = page.getByRole("group", { name: "Postcard side" });
+  if (page.viewportSize()!.width < 1024) {
+    // Narrow screens only. Retry until hydrated: a click on server-rendered HTML does nothing yet.
+    const back = sides.getByRole("button", { name: /^Back/ });
+    await expect(async () => {
+      await back.click();
+      await expect(back).toHaveAttribute("aria-pressed", "true", { timeout: 1_000 });
+    }).toPass();
+  }
+  await page.getByRole("button", { name: /^Back position B\d+: Available/ }).first().click();
   await page.getByRole("button", { name: /hold this position/i }).click();
   await page.getByRole("link", { name: "Continue to artwork upload" }).click();
   const png = await sharp({ create: { width: 1300, height: 1200, channels: 3, background: { r: 20, g: 90, b: 70 } } }).png().toBuffer();

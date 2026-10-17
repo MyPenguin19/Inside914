@@ -7,6 +7,7 @@ import { formatDeadline, formatIssueMonth, formatPrice } from "@/lib/format";
 
 const SECTIONS = [
   ["#overview", "Overview"],
+  ["#readiness", "Production readiness"],
   ["#inventory", "Spaces"],
   ["#advertisers", "Advertisers"],
   ["#artwork", "Artwork review"],
@@ -20,7 +21,16 @@ export default function DemoAdminPage() {
   const reserved = DEMO_EDITION.slots.filter((s) => !s.available).length;
   const total = DEMO_EDITION.slots.length;
   const booked = DEMO_ADVERTISERS.reduce((sum, a) => sum + a.amount, 0);
-  const potential = DEMO_EDITION.slots.filter((s) => s.available).length * DEMO_EDITION.unitPriceCents + booked;
+  const open = total - reserved;
+  const potential = open * DEMO_EDITION.unitPriceCents + booked;
+  const awaitingArtwork = DEMO_ADVERTISERS.filter((a) => a.artwork !== "Approved").length;
+  const cardsSaved = DEMO_ADVERTISERS.filter((a) => a.payment === "Card saved").length;
+  const readiness: { label: string; ok: boolean; detail: string }[] = [
+    { label: "Every space reserved", ok: open === 0, detail: `${reserved} of ${total} reserved · ${open} open` },
+    { label: "All artwork approved", ok: awaitingArtwork === 0, detail: awaitingArtwork ? `${awaitingArtwork} waiting for review` : "All approved" },
+    { label: "Cards saved for every advertiser", ok: cardsSaved === DEMO_ADVERTISERS.length, detail: `${cardsSaved} of ${DEMO_ADVERTISERS.length}` },
+    { label: "Print layout approved by printer", ok: false, detail: "Layout is still provisional" },
+  ];
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
@@ -48,12 +58,44 @@ export default function DemoAdminPage() {
           <h1 id="overview-title" className="mt-2 font-display text-4xl font-medium tracking-tight">
             {DEMO_EDITION.zoneName}
           </h1>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Spaces reserved" value={`${reserved} of ${total}`} />
-            <Stat label="Reserved value" value={formatPrice(booked)} />
-            <Stat label="Potential if full" value={formatPrice(potential)} note="All open spaces sold as standard" />
-            <Stat label="Reserve-by date" value={formatDeadline(DEMO_EDITION.artworkDeadline)} />
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            <Stat label="Spaces reserved" value={`${reserved} of ${total}`}>
+              <div className="mt-3 h-1.5 rounded-full bg-background-soft" aria-hidden="true">
+                <div className="h-full rounded-full bg-accent" style={{ width: `${(reserved / total) * 100}%` }} />
+              </div>
+            </Stat>
+            <Stat label="Open spaces" value={String(open)} note="Available to book now" />
+            <Stat label="Reserved value" value={formatPrice(booked)} note={`${formatPrice(potential)} if every space sells as standard`} />
+            <Stat label="Reserve-by date" value={formatDeadline(DEMO_EDITION.artworkDeadline)} note="Unfilled campaigns are canceled, no charge" />
           </div>
+        </section>
+
+        <section id="readiness" aria-labelledby="readiness-title" className="scroll-mt-24">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="readiness-title" className="text-lg font-semibold">Production readiness</h2>
+            <StatusBadge tone="warning">Not ready to charge or print</StatusBadge>
+          </div>
+          <Card className="mt-4 p-0">
+            <ul className="divide-y divide-line">
+              {readiness.map((item) => (
+                <li key={item.label} className="flex items-start gap-3 px-4 py-3.5 text-sm sm:items-center sm:px-5">
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${item.ok ? "bg-accent text-white" : "border border-line-strong text-muted"}`}
+                  >
+                    {item.ok ? "✓" : ""}
+                  </span>
+                  <span className="flex flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <span className="font-medium">
+                      {item.label}
+                      <span className="sr-only">: {item.ok ? "done" : "not yet"}</span>
+                    </span>
+                    <span className="text-muted sm:text-right">{item.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
         </section>
 
         <section id="inventory" aria-labelledby="inventory-title" className="scroll-mt-24">
@@ -103,7 +145,7 @@ export default function DemoAdminPage() {
           <Card className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-medium">Sample Home Services · B5 + B6</p>
-              <p className="text-sm text-muted">Double-size ad waiting for review.</p>
+              <p className="text-sm text-muted">Double-size ad · waiting for review</p>
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" disabled>Request changes</Button>
@@ -152,12 +194,13 @@ export default function DemoAdminPage() {
   );
 }
 
-function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
+function Stat({ label, value, note, children }: { label: string; value: string; note?: string; children?: React.ReactNode }) {
   return (
-    <Card className="p-5">
+    <Card className="p-4 sm:p-5">
       <p className="text-sm text-muted">{label}</p>
-      <p className="mt-2 font-display text-3xl font-medium">{value}</p>
+      <p className="mt-2 font-display text-2xl font-medium sm:text-3xl">{value}</p>
       {note && <p className="mt-1 text-xs text-muted">{note}</p>}
+      {children}
     </Card>
   );
 }

@@ -7,7 +7,7 @@ import { useDemoStore } from "@/components/demo/demo-store";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, Eyebrow, Notice, StatusBadge } from "@/components/ui/primitives";
 import { Timeline, type TimelineStep } from "@/components/ui/timeline";
-import { DEMO_EDITION } from "@/lib/demo/data";
+import { DEMO_EDITION, DEMO_ZONES } from "@/lib/demo/data";
 import { formatDeadline, formatHouseholds, formatIssueMonth, formatPrice } from "@/lib/format";
 
 // SAMPLE campaign stages for the design preview. Nothing here describes a real campaign.
@@ -37,9 +37,25 @@ export default function DemoVerifiedMailPage() {
         <Eyebrow>Inside914 Verified Mail · Reference {view.reference}</Eyebrow>
         <h1 className="mt-3 font-display text-4xl font-medium tracking-tight">{view.businessName}</h1>
         <p className="mt-2 text-muted">
-          {view.zoneName} · {formatIssueMonth(view.issueMonth)} edition · ≈ {formatHouseholds(view.households)} homes planned
+          Campaign: {view.zoneName}, {formatIssueMonth(view.issueMonth)} edition · ≈ {formatHouseholds(view.households)} homes planned
         </p>
       </header>
+
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Status at a glance (sample)">
+        {[
+          ["Reservation", "Reserved", "success"],
+          ["Artwork", "Approved", "success"],
+          ["Payment", "Not charged yet", "neutral"],
+          ["Mailing", "Not mailed yet", "neutral"],
+        ].map(([label, value, tone]) => (
+          <div key={label} className="rounded-2xl border border-line bg-surface p-4">
+            <dt className="text-xs text-muted">{label}</dt>
+            <dd className="mt-2">
+              <StatusBadge tone={tone as "success" | "neutral"}>{value}</StatusBadge>
+            </dd>
+          </div>
+        ))}
+      </dl>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
@@ -54,13 +70,13 @@ export default function DemoVerifiedMailPage() {
           </Card>
 
           <Card as="section">
-            <h2 className="font-medium">Mailing documentation</h2>
+            <h2 className="font-medium">Mailing evidence</h2>
             <p className="mt-2 text-sm text-muted">
               Once the postcards have been submitted for mailing, the documentation for your edition will appear here
               to view and download.
             </p>
             <div className="mt-4 rounded-xl border border-dashed border-line bg-background-soft p-6 text-center text-sm text-muted">
-              Nothing yet. This campaign hasn&apos;t been mailed.
+              Nothing yet. This campaign hasn&apos;t been mailed, so there is no mailing documentation to show.
             </div>
           </Card>
         </div>
@@ -69,7 +85,7 @@ export default function DemoVerifiedMailPage() {
           <Card as="section">
             <h2 className="font-medium">Your ad</h2>
             <div className="mx-auto mt-4 max-w-[220px]">
-              <PostcardPreview side={view.area.side} otherSlots={view.otherSlots} area={view.area} showSafeArea={false}>
+              <PostcardPreview side={view.area.side} otherSlots={view.otherSlots} area={view.area} showSafeArea={false} zones={DEMO_ZONES}>
                 {view.artwork?.crop ? (
                   <CroppedImage src={view.artwork.viewUrl} imageWidth={view.artwork.width} imageHeight={view.artwork.height} crop={view.artwork.crop} alt="Your ad" />
                 ) : (
@@ -101,7 +117,7 @@ export default function DemoVerifiedMailPage() {
           <Card as="section" tone="dark">
             <h2 className="font-medium">Book the next edition</h2>
             <p className="mt-2 text-sm text-background/75">Keep your business in front of neighbors month after month.</p>
-            <ButtonLink href="/demo/areas" className="mt-4 bg-background !text-foreground hover:!bg-accent-soft">
+            <ButtonLink href="/demo/areas" variant="inverse" className="mt-4">
               See upcoming editions
             </ButtonLink>
           </Card>

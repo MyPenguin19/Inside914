@@ -11,7 +11,7 @@ const png = (width: number, height: number) =>
 async function holdAndOpenArtwork(page: Page, size: "standard" | "double") {
   await page.goto(EDITION_URL);
   if (size === "double") await page.getByRole("radio", { name: /double/i }).check();
-  await page.getByRole("button", { name: /^Front position F\d+: Open/ }).first().click();
+  await page.getByRole("button", { name: /^Front position F\d+: Available/ }).first().click();
   await page.getByRole("button", { name: /hold this position/i }).click();
   await expect(page.getByRole("heading", { name: "Your position is on hold" })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("link", { name: "Continue to artwork upload" }).click();

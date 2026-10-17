@@ -36,11 +36,11 @@ test("the full customer journey works with sample data and no backend calls", as
   await position(page, "F3").click();
   await expect(page.getByText("Double ad")).toBeVisible();
   await expect(page.getByTestId("total-price")).toHaveText("$900");
-  await side(page, "Back").click();
+  // Wide screens show both sides at once, with no toggle.
+  await expect(page.getByRole("group", { name: "Postcard side" })).toBeHidden();
   await expect(page.getByRole("group", { name: "Back of the postcard" })).toBeVisible();
   await expect(position(page, "B5")).toBeDisabled(); // sample reserved space
-  await side(page, "Front").click();
-  await page.getByRole("button", { name: /hold this position/i }).click();
+  await page.getByRole("complementary").getByRole("button", { name: "Continue" }).click();
 
   // Editor: local upload, preview, continue.
   await expect(page.getByRole("heading", { name: "Add your artwork" })).toBeVisible();
@@ -50,23 +50,29 @@ test("the full customer journey works with sample data and no backend calls", as
   await expect(page.getByAltText("Your ad as it will sit on the postcard")).toBeVisible();
   await page.getByRole("button", { name: "Continue to review" }).click();
 
-  // Details: real validation rules.
-  await expect(page.getByRole("heading", { name: "Your business details" })).toBeVisible();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByText("Please enter your business name.")).toBeVisible();
+  // Review & reserve: one page with real validation rules and NO card inputs at all.
+  await expect(page.getByRole("heading", { name: "Review and reserve" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Reservation summary" })).toContainText("$900");
+  const cardPlaceholder = page.getByRole("img", { name: "Card form placeholder (design preview)" });
+  await expect(cardPlaceholder).toBeVisible();
+  await expect(cardPlaceholder.locator("input, iframe")).toHaveCount(0);
+  const reserve = page.getByRole("button", { name: /Reserve my space/ });
+  await reserve.click();
+  const problems = page.locator("main").getByRole("alert");
+  await expect(problems).toContainText("Business name: Please enter your business name.");
+  await expect(problems).toContainText("agree to the future payment");
+  await expect(page.getByText("Please enter your business name.").last()).toBeVisible(); // inline, by the field too
   await page.getByLabel("Business name").fill("Preview Pizzeria");
   await page.getByLabel("Your name").fill("Pat Preview");
   await page.getByLabel("Email").fill("pat@example.com");
   await page.getByLabel("Phone").fill("914 555 0100");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
 
-  // Reserve step: prototype only, no card inputs at all.
-  await expect(page.getByRole("heading", { name: "Reserve your space" })).toBeVisible();
-  const cardPlaceholder = page.getByRole("img", { name: "Card form placeholder (design preview)" });
-  await expect(cardPlaceholder).toBeVisible();
-  await expect(cardPlaceholder.locator("input, iframe")).toHaveCount(0);
-  const reserve = page.getByRole("button", { name: "Reserve my space" });
-  await expect(reserve).toBeDisabled();
+  // Going back and returning keeps what was typed.
+  await page.getByRole("link", { name: "← Back to artwork" }).click();
+  await expect(page.getByRole("heading", { name: "Add your artwork" })).toBeVisible();
+  await page.getByRole("button", { name: "Continue to review" }).click();
+  await expect(page.getByLabel("Business name")).toHaveValue("Preview Pizzeria");
+
   await expect(page.getByRole("checkbox").locator("..")).toContainText("charge $900");
   await page.getByRole("checkbox").check();
   await reserve.click();
@@ -106,8 +112,10 @@ test("mobile: postcard selection and editor fit a phone screen", async ({ page }
   }
 });
 
-test("keyboard: switch sides and choose a space without a mouse", async ({ page }) => {
+test("keyboard: switch sides and choose a space without a mouse (phone layout)", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/demo/postcard");
+  await expect(page.getByRole("group", { name: "Back of the postcard" })).toBeHidden();
   await side(page, "Back").focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("group", { name: "Back of the postcard" })).toBeVisible();

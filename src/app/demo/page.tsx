@@ -6,9 +6,8 @@ const SCREENS = [
   { href: "/demo/areas", title: "1. Advertising areas", body: "Choose the mailing edition." },
   { href: "/demo/postcard", title: "2. Choose your space", body: "Front/back postcard, standard or double." },
   { href: "/demo/artwork", title: "3. Upload and adjust", body: "Crop, zoom, move, live postcard preview." },
-  { href: "/demo/checkout", title: "4. Your details", body: "Short business and contact form." },
-  { href: "/demo/payment", title: "5. Reserve", body: "Future-payment explanation and card prototype." },
-  { href: "/demo/confirmed", title: "6. Confirmation", body: "Your advertising space is reserved." },
+  { href: "/demo/checkout", title: "4. Review and reserve", body: "Details, how payment works, card prototype, agreement." },
+  { href: "/demo/confirmed", title: "Confirmation", body: "Your advertising space is reserved." },
   { href: "/demo/verified-mail", title: "Verified Mail", body: "Campaign tracking timeline." },
   { href: "/demo/admin", title: "Owner dashboard", body: "Campaign, advertisers, artwork, payments." },
 ];

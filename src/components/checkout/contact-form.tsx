@@ -5,6 +5,9 @@ import { startTransition, useActionState, useEffect } from "react";
 import type { ContactFormState } from "@/app/(public)/actions/checkout";
 import { BUSINESS_CATEGORIES, type ContactField } from "@/lib/checkout/contact";
 import { checkoutMessage } from "@/lib/checkout/messages";
+import { buttonClass } from "@/components/ui/button";
+import { SelectField, TextField } from "@/components/ui/field";
+import { Notice } from "@/components/ui/primitives";
 
 type Props = {
   action: (state: ContactFormState, form: FormData) => Promise<ContactFormState>;
@@ -35,90 +38,49 @@ export function ContactForm({ action, initial, onDone, submitLabel = "Continue t
       }}
     >
       {state.message && (
-        <p role="alert" className="rounded-lg bg-[#fbeceb] px-4 py-3 text-sm text-danger">
+        <Notice tone="danger" role="alert">
           {checkoutMessage(state.message)}{" "}
           {state.message !== "error" && (
             <Link href="/#editions" className="font-medium underline">
               Choose a position
             </Link>
           )}
-        </p>
+        </Notice>
       )}
-      <Field name="businessName" label="Business name" autoComplete="organization" values={values} errors={errors} required />
-      <Field name="contactName" label="Your name" autoComplete="name" values={values} errors={errors} required />
-      <Field name="email" label="Email" type="email" autoComplete="email" inputMode="email" values={values} errors={errors} required
-        hint="We'll send your confirmation and private reservation link here." />
-      <Field name="phone" label="Phone" type="tel" autoComplete="tel" inputMode="tel" values={values} errors={errors} required />
-      <Field name="website" label="Website" autoComplete="url" inputMode="url" values={values} errors={errors} hint="Optional" />
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="category" className="text-sm font-medium">
-          Type of business <span className="font-normal text-muted">(optional)</span>
-        </label>
-        <select
-          id="category"
-          name="category"
-          defaultValue={values.category}
-          aria-invalid={!!errors.category}
-          aria-describedby={errors.category ? "category-error" : undefined}
-          className="rounded-lg border border-line bg-surface px-3 py-3 text-base"
-        >
-          <option value="">Choose one</option>
-          {BUSINESS_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        {errors.category && <p id="category-error" className="text-sm text-danger">{errors.category}</p>}
-      </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-2 rounded-full bg-foreground px-6 py-3 text-base font-medium text-background hover:bg-accent disabled:cursor-wait disabled:bg-line disabled:text-muted"
-      >
+      <ContactFields values={values} errors={errors} />
+      <button type="submit" disabled={pending} className={buttonClass("primary", "lg", "mt-2 disabled:cursor-wait")}>
         {pending ? "Saving…" : submitLabel}
       </button>
     </form>
   );
 }
 
-function Field(props: {
-  name: ContactField;
-  label: string;
-  values: Record<string, string>;
-  errors: Partial<Record<ContactField, string>>;
-  type?: string;
-  autoComplete?: string;
-  inputMode?: "email" | "tel" | "url";
-  required?: boolean;
-  hint?: string;
-}) {
-  const error = props.errors[props.name];
-  const describedBy = [error && `${props.name}-error`, props.hint && `${props.name}-hint`].filter(Boolean).join(" ") || undefined;
+// The business/contact fields on their own, so other forms (the design preview) can reuse them.
+export function ContactFields({ values, errors }: { values: Record<string, string>; errors: Partial<Record<ContactField, string>> }) {
+  const field = (name: ContactField) => ({ id: name, defaultValue: values[name], error: errors[name] });
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={props.name} className="text-sm font-medium">
-        {props.label}
-        {props.required && <span className="text-muted"> *</span>}
-      </label>
-      <input
-        id={props.name}
-        name={props.name}
-        type={props.type ?? "text"}
-        autoComplete={props.autoComplete}
-        inputMode={props.inputMode}
-        defaultValue={props.values[props.name]}
-        required={props.required}
-        aria-invalid={!!error}
-        aria-describedby={describedBy}
-        className={`rounded-lg border bg-surface px-3 py-3 text-base ${error ? "border-danger" : "border-line"}`}
+    <>
+      <TextField {...field("businessName")} label="Business name" autoComplete="organization" required />
+      <TextField {...field("contactName")} label="Your name" autoComplete="name" required />
+      <TextField
+        {...field("email")}
+        label="Email"
+        type="email"
+        autoComplete="email"
+        inputMode="email"
+        required
+        hint="We'll send your confirmation and private reservation link here."
       />
-      {props.hint && !error && <p id={`${props.name}-hint`} className="text-xs text-muted">{props.hint}</p>}
-      {error && (
-        <p id={`${props.name}-error`} className="text-sm text-danger">
-          {error}
-        </p>
-      )}
-    </div>
+      <TextField {...field("phone")} label="Phone" type="tel" autoComplete="tel" inputMode="tel" required />
+      <TextField {...field("website")} label="Website" autoComplete="url" inputMode="url" optional />
+      <SelectField {...field("category")} label="Type of business" optional>
+        <option value="">Choose one</option>
+        {BUSINESS_CATEGORIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </SelectField>
+    </>
   );
 }

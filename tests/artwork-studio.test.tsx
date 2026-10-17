@@ -154,7 +154,7 @@ describe("ArtworkStudio editing", () => {
     const slider = screen.getByRole("slider");
     fireEvent.change(slider, { target: { value: "2.5" } });
     expect(screen.getByTestId("cropper").dataset.zoom).toBe("2.5");
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset position" }));
     expect(screen.getByTestId("cropper").dataset.zoom).toBe("1");
   });
 

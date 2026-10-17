@@ -17,7 +17,12 @@ function setup(result: HoldSelectionResult = { ok: true }) {
   render(<PostcardBooking catalog={catalog} holdSelection={holdSelection} />);
   const position = (label: string) =>
     screen.getAllByRole("button").find((b) => b.getAttribute("data-slot-label") === label)!;
-  const holdButton = () => screen.getByRole("button", { name: /hold this position/i });
+  // The button appears twice (summary panel + phone bar; CSS shows one), so check they agree.
+  const holdButton = () => {
+    const [panel, phoneBar] = screen.getAllByRole("button", { name: /hold this position/i });
+    expect(phoneBar.hasAttribute("disabled")).toBe(panel.hasAttribute("disabled"));
+    return panel;
+  };
   return { holdSelection, position, holdButton };
 }
 
@@ -37,7 +42,7 @@ describe("PostcardBooking", () => {
 
     fireEvent.click(position("F3"));
     expect(position("F3").getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByText("Front · F3")).toBeTruthy();
+    expect(screen.getAllByText("Front · F3")).toHaveLength(2); // summary + phone bar
     expect(screen.getByTestId("total-price").textContent).toBe("$500");
     expect(holdButton().hasAttribute("disabled")).toBe(false);
   });
@@ -54,12 +59,12 @@ describe("PostcardBooking", () => {
     fireEvent.click(screen.getByRole("radio", { name: /double/i }));
 
     expect(position("F3").hasAttribute("disabled")).toBe(true); // F4 is reserved
-    expect(position("F3").getAttribute("aria-label")).toMatch(/Single only/);
+    expect(position("F3").getAttribute("aria-label")).toMatch(/Standard only/);
 
     fireEvent.click(position("F2"));
     expect(position("F1").getAttribute("aria-pressed")).toBe("true");
     expect(position("F2").getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByText("Front · F1 + F2")).toBeTruthy();
+    expect(screen.getAllByText("Front · F1 + F2")).toHaveLength(2);
     expect(screen.getByTestId("total-price").textContent).toBe("$900");
   });
 

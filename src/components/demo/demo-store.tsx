@@ -15,7 +15,7 @@ export type DemoSelection = {
   holdExpiresAt: string; // sample 15-minute hold, set when the space is picked
 };
 export type DemoArtwork = { src: string; width: number; height: number; crop: CropPixels | null; zoom: number };
-export type DemoContact = { businessName: string; contactName: string; email: string; phone: string; website: string };
+export type DemoContact = { businessName: string; contactName: string; email: string; phone: string; website: string; category?: string };
 
 type State = { selection: DemoSelection | null; artwork: DemoArtwork | null; contact: DemoContact | null };
 
@@ -58,9 +58,13 @@ const actions = {
   reset: () => update(EMPTY),
 };
 
+const noop = () => () => {};
+
 export function useDemoStore() {
   const snapshot = useSyncExternalStore(subscribe, current, () => EMPTY);
-  return { ...snapshot, ...actions };
+  // false only while hydrating server HTML, when this tab's saved state isn't readable yet.
+  const hydrated = useSyncExternalStore(noop, () => true, () => false);
+  return { ...snapshot, hydrated, ...actions };
 }
 
 // Kept for layout symmetry; the store itself is module-level.

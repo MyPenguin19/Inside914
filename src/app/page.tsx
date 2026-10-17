@@ -21,7 +21,7 @@ const STEPS = [
 const FAQ = [
   {
     q: "How does shared mail work?",
-    a: "Up to 16 local businesses share one large, professionally printed postcard. Each business has its own space, and Inside914 handles printing and mailing to homes in the area. Sharing the card keeps the cost per business far lower than a solo mailing.",
+    a: "A small group of local businesses share one large, professionally printed postcard. Each business has its own space, and Inside914 handles printing and mailing to homes in the area. Sharing the card keeps the cost per business far lower than a solo mailing.",
   },
   {
     q: "When am I charged?",
@@ -76,27 +76,6 @@ export default function Home() {
           <PostcardIllustration />
         </section>
 
-        {/* Verified Mail / trust */}
-        <section id="verified-mail" aria-labelledby="verified-title" className="scroll-mt-20 border-y border-line bg-surface">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
-            <SectionHeading
-              id="verified-title"
-              eyebrow="Inside914 Verified Mail"
-              title="Advertising you can actually follow."
-              intro="Direct mail usually asks you to take it on faith. With Verified Mail, every advertiser gets a private page that shows where their campaign stands."
-            />
-            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {TRUST.map((item) => (
-                <li key={item.title} className="rounded-2xl border border-line bg-background p-5">
-                  <span aria-hidden="true" className="block h-1 w-8 rounded-full bg-accent" />
-                  <h3 className="mt-4 font-medium">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">{item.body}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
         {/* How it works */}
         <section id="how-it-works" aria-labelledby="how-title" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 sm:px-6 md:py-20">
           <SectionHeading id="how-title" eyebrow="How it works" title="Four simple steps." />
@@ -141,6 +120,27 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Verified Mail / trust */}
+        <section id="verified-mail" aria-labelledby="verified-title" className="scroll-mt-20 border-b border-line bg-surface">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+            <SectionHeading
+              id="verified-title"
+              eyebrow="Inside914 Verified Mail"
+              title="Advertising you can actually follow."
+              intro="Direct mail usually asks you to take it on faith. With Verified Mail, every advertiser gets a private page that shows where their campaign stands."
+            />
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {TRUST.map((item) => (
+                <li key={item.title} className="rounded-2xl border border-line bg-background p-5">
+                  <span aria-hidden="true" className="block h-1 w-8 rounded-full bg-accent" />
+                  <h3 className="mt-4 font-medium">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">{item.body}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         {/* FAQ */}
         <section id="faq" aria-labelledby="faq-title" className="mx-auto max-w-3xl scroll-mt-20 px-4 py-16 sm:px-6 md:py-20">
           <SectionHeading id="faq-title" eyebrow="Questions" title="Good to know." />
@@ -166,7 +166,7 @@ export default function Home() {
               <h2 className="font-display text-3xl font-medium">Ready to see the open spaces?</h2>
               <p className="mt-2 text-background/75">Pick your spot on the first Central Westchester postcard.</p>
             </div>
-            <ButtonLink href="/demo/areas" size="lg" className="bg-background !text-foreground hover:!bg-accent-soft">
+            <ButtonLink href="/demo/areas" size="lg" variant="inverse">
               View Available Spaces
             </ButtonLink>
           </Card>

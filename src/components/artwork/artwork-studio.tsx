@@ -21,6 +21,9 @@ import {
 import type { ArtworkFailure, ArtworkView } from "@/lib/artwork/service";
 import { formatPrice } from "@/lib/format";
 import { PRINT_SPEC } from "@/lib/print/spec";
+import type { PostcardZone } from "@/components/postcard/postcard-side";
+import { Button } from "@/components/ui/button";
+import { Notice } from "@/components/ui/primitives";
 
 export type ArtworkActions = {
   requestUpload: (input: { byteSize: number }) => Promise<UploadTicket>;
@@ -36,7 +39,9 @@ type Props = {
   otherSlots: SlotGeometry[];
   initialArtwork: ArtworkView | null;
   actions: ArtworkActions;
-  nextHref?: string; // where "Continue to review" goes
+  nextHref?: string; // where the continue button goes
+  continueLabel?: string;
+  zones?: PostcardZone[]; // printed non-ad areas for the preview
   upload?: typeof uploadToSignedUrl; // injectable for tests
   inspect?: typeof inspectFile;
 };
@@ -63,7 +68,18 @@ const PROBLEM_TEXT: Record<ArtworkFailure | "interrupted", string> = {
   error: "Something went wrong on our side and your image wasn't saved. Please try again in a moment.",
 };
 
-export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, nextHref = "/book/review", upload = uploadToSignedUrl, inspect = inspectFile }: Props) {
+export function ArtworkStudio({
+  hold,
+  ad,
+  otherSlots,
+  initialArtwork,
+  actions,
+  nextHref = "/book/review",
+  continueLabel = "Continue to review",
+  zones,
+  upload = uploadToSignedUrl,
+  inspect = inspectFile,
+}: Props) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<StudioImage | null>(
@@ -85,6 +101,8 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, n
 
   const busy = phase !== "idle";
   const aspect = ad.area.width / ad.area.height;
+  const safeX = `${(PRINT_SPEC.safeMarginInches / ad.area.width) * 100}%`;
+  const safeY = `${(PRINT_SPEC.safeMarginInches / ad.area.height) * 100}%`;
   const ppi = area ? effectivePpi(area, ad.area) : null;
   const quality = ppi === null ? null : resolutionLevel(ppi);
 
@@ -200,9 +218,9 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, n
             </strong>
           </p>
           {canExtend && (
-            <button type="button" onClick={extend} className="rounded-full border border-foreground px-3 py-1 font-medium hover:bg-foreground hover:text-background">
+            <Button variant="secondary" onClick={extend}>
               Need more time? Add 15 minutes
-            </button>
+            </Button>
           )}
         </div>
 
@@ -211,17 +229,17 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, n
         </h2>
 
         {expiredNow ? (
-          <p role="alert" className="rounded-xl bg-[#fbeceb] px-4 py-3 text-sm text-danger">
+          <Notice tone="danger" role="alert">
             Your hold has ended, so this position may no longer be available.{" "}
             <Link href="/#editions" className="font-medium underline">
               Choose your position again
             </Link>
             .
-          </p>
+          </Notice>
         ) : image ? (
           <div className="flex flex-col gap-3">
             <div
-              className="relative w-full overflow-hidden rounded-xl bg-[#2b2a27]"
+              className="relative w-full overflow-hidden rounded-xl bg-ink"
               style={{ aspectRatio: aspect >= 1 ? `${aspect} / 1` : "1 / 1", maxHeight: 480 }}
             >
               <Cropper
@@ -238,32 +256,47 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, n
                 onCropComplete={onAreaChange}
                 initialCroppedAreaPixels={initialArtwork?.id === image.id ? (initialArtwork.crop ?? undefined) : undefined}
                 cropperProps={{ "aria-label": "Your ad. Drag to move it, or use the arrow keys." }}
+                // Dashed inner line = the safe area: keep words and logos inside it.
+                classes={{
+                  cropAreaClassName:
+                    "after:pointer-events-none after:absolute after:border after:border-dashed after:border-white/85 after:content-[''] after:left-[var(--safe-x)] after:right-[var(--safe-x)] after:top-[var(--safe-y)] after:bottom-[var(--safe-y)]",
+                }}
+                style={{ cropAreaStyle: { "--safe-x": safeX, "--safe-y": safeY } as React.CSSProperties }}
                 keyboardStep={10}
               />
             </div>
-            <label className="flex items-center gap-3 text-sm">
-              <span className="w-12 font-medium">Zoom</span>
-              <input
-                type="range"
-                min={1}
-                max={MAX_ZOOM}
-                step={0.01}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className="flex-1 accent-[var(--accent)]"
-                aria-valuetext={`${Math.round(zoom * 100)} percent`}
-              />
-            </label>
-            <div className="flex flex-wrap gap-2 text-sm">
-              <StudioButton onClick={() => { setCrop({ x: 0, y: 0 }); setZoom(1); }} disabled={busy}>
-                Reset
-              </StudioButton>
-              <StudioButton onClick={() => fileInput.current?.click()} disabled={busy}>
+            <p className="text-xs text-muted">Drag the image to move it. Keep important words inside the dashed line.</p>
+            <div className="flex items-center gap-2">
+              <ZoomButton label="Zoom out" onClick={() => setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))} disabled={zoom <= 1}>
+                −
+              </ZoomButton>
+              <label className="flex flex-1 items-center gap-3 text-sm">
+                <span className="sr-only">Zoom</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={MAX_ZOOM}
+                  step={0.01}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="h-11 flex-1 accent-[var(--accent)]"
+                  aria-valuetext={`${Math.round(zoom * 100)} percent`}
+                />
+              </label>
+              <ZoomButton label="Zoom in" onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.25).toFixed(2)))} disabled={zoom >= MAX_ZOOM}>
+                +
+              </ZoomButton>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => { setCrop({ x: 0, y: 0 }); setZoom(1); }} disabled={busy}>
+                Reset position
+              </Button>
+              <Button variant="secondary" onClick={() => fileInput.current?.click()} disabled={busy}>
                 Replace image
-              </StudioButton>
-              <StudioButton onClick={remove} disabled={busy}>
+              </Button>
+              <Button variant="quiet" onClick={remove} disabled={busy} className="px-3">
                 Remove image
-              </StudioButton>
+              </Button>
             </div>
           </div>
         ) : (
@@ -274,22 +307,20 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, n
             }}
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
-            className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-12 text-center ${
-              dragging ? "border-accent bg-accent-soft" : "border-line bg-surface"
+            className={`flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-14 text-center transition-colors ${
+              dragging ? "border-accent bg-accent-soft" : "border-line-strong bg-surface"
             }`}
           >
-            <p className="text-base font-medium">Drag your ad image here</p>
-            <p className="text-sm text-muted">or</p>
-            <button
-              type="button"
-              onClick={() => fileInput.current?.click()}
-              disabled={busy}
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:bg-accent disabled:bg-line disabled:text-muted"
-            >
+            <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-2xl text-accent">
+              ↑
+            </span>
+            <p className="text-base font-medium">Drag your ad image here, or</p>
+            <Button size="lg" onClick={() => fileInput.current?.click()} disabled={busy}>
               Choose an image
-            </button>
-            <p className="text-xs text-muted">
-              JPG or PNG, up to {formatMegabytes(MAX_UPLOAD_BYTES)}. Use the largest, sharpest version you have.
+            </Button>
+            <p className="max-w-sm text-xs text-muted">
+              JPG or PNG, up to {formatMegabytes(MAX_UPLOAD_BYTES)}. Use the largest, sharpest version you have; you can
+              adjust it next.
             </p>
           </div>
         )}
@@ -318,12 +349,9 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, n
           {phase === "verifying" && <p>Almost done: making sure your image is print-ready…</p>}
           {phase === "saving" && <p>Saving…</p>}
           {message && phase === "idle" && (
-            <p
-              role={message.tone === "error" ? "alert" : undefined}
-              className={`rounded-lg px-3 py-2 ${message.tone === "error" ? "bg-[#fbeceb] text-danger" : "bg-accent-soft text-accent"}`}
-            >
+            <Notice tone={message.tone === "error" ? "danger" : "success"} role={message.tone === "error" ? "alert" : undefined}>
               {message.text}
-            </p>
+            </Notice>
           )}
         </div>
       </section>
@@ -332,7 +360,7 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, n
         <h2 id="preview-title" className="text-lg font-semibold">
           Preview
         </h2>
-        <PostcardPreview side={ad.side} otherSlots={otherSlots} area={ad.area}>
+        <PostcardPreview side={ad.side} otherSlots={otherSlots} area={ad.area} zones={zones}>
           {image && area ? (
             <CroppedImage src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} alt="Your ad as it will sit on the postcard" />
           ) : (
@@ -351,26 +379,23 @@ export function ArtworkStudio({ hold, ad, otherSlots, initialArtwork, actions, n
             {ad.size === "double" ? "Double" : "Standard"}
           </p>
           <p className="mt-1 text-lg font-semibold">{formatPrice(ad.priceCents)}</p>
-          <button
-            type="button"
-            onClick={continueToReview}
-            disabled={!image || !area || busy || expiredNow}
-            className="mt-3 w-full rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background hover:bg-accent disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
-          >
-            Continue to review
-          </button>
+          <Button size="lg" onClick={continueToReview} disabled={!image || !area || busy || expiredNow} className="mt-3 w-full">
+            {continueLabel}
+          </Button>
+          {!image && <p className="mt-2 text-center text-xs text-muted">Add an image to continue.</p>}
         </div>
       </aside>
     </div>
   );
 }
 
-function StudioButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+function ZoomButton({ label, children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
     <button
       type="button"
+      aria-label={label}
       {...props}
-      className="rounded-full border border-line px-4 py-2 hover:border-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-xl leading-none hover:border-foreground disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>
@@ -380,10 +405,10 @@ function StudioButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLBut
 export function QualityNote({ ppi, level }: { ppi: number | null; level: ReturnType<typeof resolutionLevel> | null }) {
   if (ppi === null || level === null) return null;
   if (level === "good") {
-    return <p className="rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">Image quality looks good for print.</p>;
+    return <p className="rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent">✓ Image quality looks good for print.</p>;
   }
   return (
-    <p role="status" className="rounded-lg bg-[#fdf4e3] px-3 py-2 text-sm text-[#8a5a00]">
+    <p role="status" className="rounded-xl bg-warning-soft px-3 py-2 text-sm text-warning">
       {level === "poor"
         ? "This image may look blurry or blocky when printed. A larger, sharper image will look much better."
         : "This image may look slightly soft when printed. If you have a larger version, use that."}{" "}
