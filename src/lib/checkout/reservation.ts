@@ -15,7 +15,7 @@ export type ReservationView = {
   bookingId: string;
   status: string;
   isTest: boolean; // development TEST reservation (simulated card, no payment method, no authorization)
-  pricingMode: "launch" | "test"; // test = Stripe test mode with temporary prices
+  pricingMode: "launch" | "test"; // test = temporary $1 / $2 prices (with test or live Stripe keys)
   editionId: string;
   campaign: { taken: number; total: number }; // spaces held or reserved on this edition
   emailSent: boolean; // the confirmation email was actually sent (not just queued)

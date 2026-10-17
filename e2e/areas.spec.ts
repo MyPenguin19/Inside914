@@ -6,7 +6,7 @@ test("lists the open Central Westchester campaign from Supabase and leads to its
   await page.goto("/areas");
   await expect(page.getByRole("heading", { name: "Choose your advertising area." })).toBeVisible();
   await expect(page.getByRole("note").filter({ hasText: "Provisional campaign details" })).toBeVisible();
-  await expect(page.getByRole("note").filter({ hasText: "Test checkout" })).toContainText("$1 standard, $2 double");
+  await expect(page.getByRole("note").filter({ hasText: "$1 standard, $2 double" })).toBeVisible(); // temporary pricing notice
 
   const central = page.getByRole("article").filter({ hasText: "Central Westchester" });
   await expect(central).toContainText("Available");

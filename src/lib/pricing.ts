@@ -4,7 +4,8 @@ import "server-only";
 //
 // INSIDE914_PRICING_MODE must be set explicitly (no default, so nothing ever falls back to launch
 // prices silently):
-//   test   -> TEMPORARY development prices below. Refused unless the Stripe keys are TEST keys.
+//   test   -> TEMPORARY prices below ($1 / $2). Works with test or live Stripe keys (owner's decision,
+//             2026-10-17); cards are only saved, never charged at reservation.
 //   launch -> each edition's own prices from the database (intended: $500 / $900).
 // hold_slots() re-checks this in the database: 'launch' must equal the edition's prices and
 // 'test' must be lower than them. Every booking stores its price and pricing_mode.
@@ -22,21 +23,10 @@ export class PricingConfigError extends Error {
   }
 }
 
-const isTestSecret = (key: string) => key.startsWith("sk_test_") || key.startsWith("rk_test_");
-
 export function getPricingMode(env: NodeJS.ProcessEnv = process.env): PricingMode {
   const mode = env.INSIDE914_PRICING_MODE;
   if (mode !== "test" && mode !== "launch") {
     throw new PricingConfigError("INSIDE914_PRICING_MODE must be set to 'test' or 'launch'");
-  }
-  if (mode === "test") {
-    // Test prices and Stripe test mode go together: never with live keys.
-    const secret = env.STRIPE_SECRET_KEY;
-    const publishable = env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    if (secret && !isTestSecret(secret)) throw new PricingConfigError("test pricing requires a Stripe TEST secret key");
-    if (publishable && !publishable.startsWith("pk_test_")) {
-      throw new PricingConfigError("test pricing requires a Stripe TEST publishable key");
-    }
   }
   return mode;
 }

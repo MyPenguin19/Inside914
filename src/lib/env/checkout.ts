@@ -2,11 +2,13 @@ import "server-only";
 import { z } from "zod";
 import { parseEnv } from "./parse";
 
-// Stripe is TEST MODE ONLY until live payments are explicitly approved: live keys are refused.
+// Test or LIVE Stripe keys (live approved by the owner, 2026-10-17). Either way the app only saves
+// cards with SetupIntents: no code path creates a charge (tests/checkout-text.test.ts).
+const SECRET_KEY = /^(sk|rk)_(test|live)_/;
 const StripeEnv = z.object({
   STRIPE_SECRET_KEY: z
-    .string({ message: "is required for checkout (Stripe Dashboard > Developers > API keys, Test mode)" })
-    .refine((k) => k.startsWith("sk_test_") || k.startsWith("rk_test_"), "must be a TEST key (sk_test_...); live keys are not allowed yet"),
+    .string({ message: "is required for checkout (Stripe Dashboard > Developers > API keys)" })
+    .refine((k) => SECRET_KEY.test(k), "must be a Stripe secret key (sk_test_..., sk_live_... or a restricted rk_ key)"),
 });
 
 const WebhookEnv = z.object({
@@ -17,6 +19,17 @@ const WebhookEnv = z.object({
 
 export function getStripeEnv() {
   return parseEnv(StripeEnv, { STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY });
+}
+
+// "test" or "live", from the secret key. The publishable key must be the same mode: a mixed pair
+// can't work and is refused rather than failing in the customer's browser.
+export function getStripeKeyMode(): "test" | "live" {
+  const mode = getStripeEnv().STRIPE_SECRET_KEY.includes("_live_") ? "live" : "test";
+  const publishable = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  if (publishable && !publishable.startsWith(`pk_${mode}_`)) {
+    throw new Error(`Invalid environment configuration:\n  - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: must be a ${mode} key (pk_${mode}_...) to match STRIPE_SECRET_KEY`);
+  }
+  return mode;
 }
 
 export function getWebhookEnv() {

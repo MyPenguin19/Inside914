@@ -26,9 +26,13 @@ describe("pricing configuration", () => {
     }
   });
 
-  test("test pricing is refused with live Stripe keys", () => {
-    expect(() => getPricingMode(env({ INSIDE914_PRICING_MODE: "test", STRIPE_SECRET_KEY: "sk_live_x" }))).toThrow(/TEST secret key/);
-    expect(() => getPricingMode(env({ INSIDE914_PRICING_MODE: "test", NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_live_x" }))).toThrow(/TEST publishable/);
-    expect(getPricingMode(env({ INSIDE914_PRICING_MODE: "test", STRIPE_SECRET_KEY: "sk_test_x", NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_x" }))).toBe("test");
+  test("temporary $1 / $2 pricing works with test or live Stripe keys (owner's decision)", () => {
+    for (const [secret, publishable] of [["sk_test_x", "pk_test_x"], ["sk_live_x", "pk_live_x"]]) {
+      expect(pricesFor(edition, env({ INSIDE914_PRICING_MODE: "test", STRIPE_SECRET_KEY: secret, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: publishable }))).toEqual({
+        mode: "test",
+        unitPriceCents: 100,
+        doublePriceCents: 200,
+      });
+    }
   });
 });

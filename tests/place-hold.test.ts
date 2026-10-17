@@ -74,18 +74,20 @@ describe("placeHold", () => {
     expect((rpc.mock.calls[0] as unknown[])[1]).toMatchObject({ p_pricing_mode: "launch", p_unit_price_cents: 50000, p_double_price_cents: 90000 });
   });
 
-  test("no pricing mode configured, or test pricing with a live Stripe key: nothing is held", async () => {
+  test("no pricing mode configured: nothing is held", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubEnv("INSIDE914_PRICING_MODE", "");
     const unset = fakeAdmin({});
     expect(await placeHold(unset.client, { slotIds: [SLOT_ID] })).toEqual({ ok: false, reason: "error" });
     expect(unset.rpc).not.toHaveBeenCalled();
+  });
 
-    vi.stubEnv("INSIDE914_PRICING_MODE", "test");
+  test("with live Stripe keys, test pricing still holds at $1 (owner's decision)", async () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_example");
-    const live = fakeAdmin({});
-    expect(await placeHold(live.client, { slotIds: [SLOT_ID] })).toEqual({ ok: false, reason: "error" });
-    expect(live.rpc).not.toHaveBeenCalled();
+    vi.stubEnv("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "pk_live_example");
+    const { client, rpc } = fakeAdmin({ data: { booking_id: "b1", hold_expires_at: "x", size: "standard", price_cents: 100 } });
+    expect((await placeHold(client, { slotIds: [SLOT_ID] })).ok).toBe(true);
+    expect((rpc.mock.calls[0] as unknown[])[1]).toMatchObject({ p_pricing_mode: "test", p_unit_price_cents: 100 });
   });
 
   test("an unknown slot is reported without placing a hold", async () => {
