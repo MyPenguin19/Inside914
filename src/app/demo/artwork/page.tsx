@@ -46,7 +46,7 @@ export default function DemoArtworkPage() {
   return (
     <div>
       <DemoSteps current={3} />
-      <header className="mb-6 mt-8">
+      <header className="mb-6 mt-6">
         <h1 className="font-display text-4xl font-medium tracking-tight">Add your artwork</h1>
         <p className="mt-2 text-muted">
           Upload your ad, then drag and zoom until it looks right. In this preview your image stays on your device.

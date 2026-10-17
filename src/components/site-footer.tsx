@@ -5,7 +5,7 @@ import { Logo } from "@/components/site-header";
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-background-soft">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div className="page-width grid gap-8 py-10 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <Logo />
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted">
@@ -33,7 +33,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-line">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted sm:px-6">© Inside914. Local advertising you can verify.</p>
+        <p className="page-width py-4 text-xs text-muted">© Inside914. Local advertising you can verify.</p>
       </div>
     </footer>
   );

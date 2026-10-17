@@ -20,7 +20,7 @@ export function Logo() {
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
+      <div className="page-width flex items-center justify-between gap-4 py-3">
         <Logo />
         <nav aria-label="Main" className="hidden items-center gap-7 text-sm text-muted lg:flex">
           {NAV.map((item) => (

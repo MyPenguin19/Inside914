@@ -51,7 +51,7 @@ export default function Home() {
       <SiteHeader />
       <main className="flex-1">
         {/* Hero */}
-        <section className="mx-auto grid max-w-6xl items-center gap-12 overflow-x-clip px-4 pb-16 pt-12 sm:px-6 md:grid-cols-[1.15fr_1fr] md:pt-20">
+        <section className="page-width grid items-center gap-10 overflow-x-clip pb-12 pt-10 md:grid-cols-[1.15fr_1fr] md:gap-12 md:pb-16 md:pt-14">
           <div>
             <Eyebrow>Central Westchester · Shared postcard</Eyebrow>
             <h1 className="mt-4 font-display text-[2.6rem] font-medium leading-[1.05] tracking-tight sm:text-6xl">
@@ -77,9 +77,9 @@ export default function Home() {
         </section>
 
         {/* How it works */}
-        <section id="how-it-works" aria-labelledby="how-title" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 sm:px-6 md:py-20">
+        <section id="how-it-works" aria-labelledby="how-title" className="page-width section-y scroll-mt-20">
           <SectionHeading id="how-title" eyebrow="How it works" title="Four simple steps." />
-          <ol className="mt-10 grid gap-4 md:grid-cols-4">
+          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, i) => (
               <li key={step.title} className="relative rounded-2xl border border-line bg-surface p-5">
                 <span className="font-display text-3xl text-accent">{i + 1}</span>
@@ -92,14 +92,14 @@ export default function Home() {
 
         {/* Pricing */}
         <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-y border-line bg-background-soft">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+          <div className="page-width section-y">
             <SectionHeading
               id="pricing-title"
               eyebrow="Pricing"
               title="Simple, fixed prices."
               intro="One price per space, the same for every advertiser. Nothing is charged until the campaign is confirmed."
             />
-            <div className="mt-10 grid gap-5 md:grid-cols-2">
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
               <PriceCard
                 name="Standard Advertisement"
                 price="$500"
@@ -122,14 +122,14 @@ export default function Home() {
 
         {/* Verified Mail / trust */}
         <section id="verified-mail" aria-labelledby="verified-title" className="scroll-mt-20 border-b border-line bg-surface">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+          <div className="page-width section-y">
             <SectionHeading
               id="verified-title"
               eyebrow="Inside914 Verified Mail"
               title="Advertising you can actually follow."
               intro="Direct mail usually asks you to take it on faith. With Verified Mail, every advertiser gets a private page that shows where their campaign stands."
             />
-            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {TRUST.map((item) => (
                 <li key={item.title} className="rounded-2xl border border-line bg-background p-5">
                   <span aria-hidden="true" className="block h-1 w-8 rounded-full bg-accent" />
@@ -142,26 +142,26 @@ export default function Home() {
         </section>
 
         {/* FAQ */}
-        <section id="faq" aria-labelledby="faq-title" className="mx-auto max-w-3xl scroll-mt-20 px-4 py-16 sm:px-6 md:py-20">
+        <section id="faq" aria-labelledby="faq-title" className="page-width section-y grid scroll-mt-20 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] lg:gap-12">
           <SectionHeading id="faq-title" eyebrow="Questions" title="Good to know." />
-          <div className="mt-8 divide-y divide-line rounded-2xl border border-line bg-surface">
+          <div className="divide-y divide-line self-start rounded-2xl border border-line bg-surface">
             {FAQ.map((item) => (
-              <details key={item.q} className="group px-5 py-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium [&::-webkit-details-marker]:hidden">
+              <details key={item.q} className="group">
+                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-3.5 font-medium [&::-webkit-details-marker]:hidden">
                   {item.q}
                   <span aria-hidden="true" className="text-xl text-muted transition-transform group-open:rotate-45">
                     +
                   </span>
                 </summary>
-                <p className="mt-3 leading-relaxed text-muted">{item.a}</p>
+                <p className="px-5 pb-4 leading-relaxed text-muted">{item.a}</p>
               </details>
             ))}
           </div>
         </section>
 
         {/* Closing CTA */}
-        <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-          <Card tone="dark" className="flex flex-col items-start justify-between gap-6 p-8 sm:flex-row sm:items-center sm:p-10">
+        <section className="page-width pb-14 md:pb-16">
+          <Card tone="dark" className="flex flex-col items-start justify-between gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
             <div>
               <h2 className="font-display text-3xl font-medium">Ready to see the open spaces?</h2>
               <p className="mt-2 text-background/75">Pick your spot on the first Central Westchester postcard.</p>

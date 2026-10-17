@@ -37,10 +37,10 @@ export function SectionHeading({
   return (
     <div className={align === "center" ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-      <h2 id={id} className="mt-3 font-display text-3xl font-medium tracking-tight sm:text-4xl">
+      <h2 id={id} className="mt-2 font-display text-3xl font-medium tracking-tight sm:text-4xl">
         {title}
       </h2>
-      {intro && <p className="mt-4 text-lg leading-relaxed text-muted">{intro}</p>}
+      {intro && <p className="mt-3 text-lg leading-relaxed text-muted">{intro}</p>}
     </div>
   );
 }

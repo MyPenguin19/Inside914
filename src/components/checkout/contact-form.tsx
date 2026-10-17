@@ -47,7 +47,9 @@ export function ContactForm({ action, initial, onDone, submitLabel = "Continue t
           )}
         </Notice>
       )}
-      <ContactFields values={values} errors={errors} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <ContactFields values={values} errors={errors} />
+      </div>
       <button type="submit" disabled={pending} className={buttonClass("primary", "lg", "mt-2 disabled:cursor-wait")}>
         {pending ? "Saving…" : submitLabel}
       </button>
@@ -56,6 +58,7 @@ export function ContactForm({ action, initial, onDone, submitLabel = "Continue t
 }
 
 // The business/contact fields on their own, so other forms (the design preview) can reuse them.
+// Render inside a grid: two per row on wider screens, in reading order.
 export function ContactFields({ values, errors }: { values: Record<string, string>; errors: Partial<Record<ContactField, string>> }) {
   const field = (name: ContactField) => ({ id: name, defaultValue: values[name], error: errors[name] });
   return (

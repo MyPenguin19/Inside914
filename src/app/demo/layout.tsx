@@ -10,7 +10,7 @@ export default function DemoLayout({ children }: LayoutProps<"/demo">) {
   return (
     <>
       <div role="note" className="bg-warning-soft text-warning">
-        <p className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 text-xs font-medium sm:px-6 sm:text-sm">
+        <p className="page-width flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2 text-xs font-medium sm:text-sm">
           <span>
             <strong>Design preview.</strong> Sample data only: no real reservations, payments or emails.
           </span>
@@ -21,7 +21,7 @@ export default function DemoLayout({ children }: LayoutProps<"/demo">) {
       </div>
       <SiteHeader />
       <DemoStoreProvider>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+        <main className="page-width flex-1 py-6 sm:py-8">{children}</main>
       </DemoStoreProvider>
       <SiteFooter />
     </>

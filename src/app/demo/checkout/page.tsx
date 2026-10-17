@@ -70,7 +70,7 @@ export default function DemoCheckoutPage() {
   return (
     <div>
       <DemoSteps current={4} />
-      <div className="mt-6">
+      <div className="mt-5">
         <Link href="/demo/artwork" className="text-sm text-muted underline-offset-4 hover:text-foreground hover:underline">
           ← Back to artwork
         </Link>
@@ -82,9 +82,9 @@ export default function DemoCheckoutPage() {
         </p>
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:gap-8">
         <aside className="lg:order-last">
-          <div className="lg:sticky lg:top-24">
+          <div className="lg:sticky lg:top-20">
             <ReservationSummary view={view} amountLabel="Amount you'll authorize" zones={DEMO_ZONES} />
             <Link href="/demo/postcard" className="mt-3 inline-block text-sm text-muted underline-offset-4 hover:text-foreground hover:underline">
               Change space
@@ -92,7 +92,7 @@ export default function DemoCheckoutPage() {
           </div>
         </aside>
 
-        <form noValidate onSubmit={submit} onChange={(e) => setContact(read(e.currentTarget))} className="flex min-w-0 flex-col gap-8">
+        <form noValidate onSubmit={submit} onChange={(e) => setContact(read(e.currentTarget))} className="flex min-w-0 flex-col gap-7">
           {problems.length > 0 && (
             <div ref={summaryRef} tabIndex={-1} role="alert" className="rounded-2xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger">
               <p className="font-medium">Please fix {problems.length === 1 ? "this" : `these ${problems.length} things`} to continue:</p>
@@ -109,7 +109,7 @@ export default function DemoCheckoutPage() {
           )}
 
           <Section n={1} title="Your business">
-            <div className="grid gap-5">
+            <div className="grid gap-4 sm:grid-cols-2">
               <ContactFields
                 values={{
                   businessName: contact?.businessName ?? "",
@@ -131,7 +131,7 @@ export default function DemoCheckoutPage() {
                 ["When the postcard fills", `and we approve it for print, we charge ${formatPrice(selection.priceCents)} and email you.`],
                 ["If it doesn't fill", `by ${formatDeadline(view.artworkDeadline)}, your reservation is canceled. You're never charged.`],
               ].map(([when, what]) => (
-                <li key={when} className="rounded-xl border border-line bg-surface p-4">
+                <li key={when} className="rounded-xl border border-line bg-surface p-3.5">
                   <p className="font-medium">{when}</p>
                   <p className="mt-1 text-muted">{what}</p>
                 </li>
@@ -155,7 +155,7 @@ export default function DemoCheckoutPage() {
             </div>
           </Section>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <label
               htmlFor="consent"
               className={`flex cursor-pointer gap-3 rounded-xl border bg-surface p-4 text-sm leading-6 ${consentError && !consent ? "border-danger" : "border-line"}`}
@@ -195,7 +195,7 @@ export default function DemoCheckoutPage() {
 function Section({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <section aria-labelledby={`section-${n}`}>
-      <h2 id={`section-${n}`} className="mb-4 flex items-center gap-2.5 text-lg font-semibold">
+      <h2 id={`section-${n}`} className="mb-3 flex items-center gap-2.5 text-lg font-semibold">
         <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-sm text-background">
           {n}
         </span>

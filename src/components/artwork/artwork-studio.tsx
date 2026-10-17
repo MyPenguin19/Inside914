@@ -208,8 +208,12 @@ export function ArtworkStudio({
   const canExtend = !expiredNow && extensionsLeft > 0 && secondsLeft <= EXTEND_WINDOW_SECONDS;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <section aria-labelledby="studio-title" className="flex flex-col gap-4">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+      <section aria-labelledby="studio-title" className="flex min-w-0 flex-col gap-3">
+        <h2 id="studio-title" className="text-lg font-semibold">
+          {image ? "Adjust your ad" : "Upload your ad"}
+        </h2>
+
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
           <p>
             Your position is held for{" "}
@@ -223,10 +227,6 @@ export function ArtworkStudio({
             </Button>
           )}
         </div>
-
-        <h2 id="studio-title" className="text-lg font-semibold">
-          {image ? "Adjust your ad" : "Upload your ad"}
-        </h2>
 
         {expiredNow ? (
           <Notice tone="danger" role="alert">
@@ -356,29 +356,33 @@ export function ArtworkStudio({
         </div>
       </section>
 
-      <aside aria-labelledby="preview-title" className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
+      <aside aria-labelledby="preview-title" className="flex flex-col gap-3 lg:sticky lg:top-20 lg:self-start">
         <h2 id="preview-title" className="text-lg font-semibold">
           Preview
         </h2>
-        <PostcardPreview side={ad.side} otherSlots={otherSlots} area={ad.area} zones={zones}>
-          {image && area ? (
-            <CroppedImage src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} alt="Your ad as it will sit on the postcard" />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-accent-soft p-2 text-center text-xs text-accent">Your ad</div>
-          )}
-        </PostcardPreview>
+        {/* Sized so the whole card, the quality note and Continue fit on screen together. */}
+        <div className="mx-auto w-full max-w-[260px] sm:max-w-[300px] lg:max-w-[min(100%,calc((100svh-24rem)*6.5/12))]">
+          <PostcardPreview side={ad.side} otherSlots={otherSlots} area={ad.area} zones={zones}>
+            {image && area ? (
+              <CroppedImage src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} alt="Your ad as it will sit on the postcard" />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-accent-soft p-2 text-center text-xs text-accent">Your ad</div>
+            )}
+          </PostcardPreview>
+        </div>
         <QualityNote ppi={ppi} level={quality} />
         <p className="text-xs text-muted">
           Keep important words and logos inside the dashed line. This is a{" "}
           <strong className="font-medium text-foreground">provisional preview</strong>, not a print proof: final sizes
           and margins will be confirmed with our printer.
         </p>
-        <div className="rounded-xl border border-line bg-surface p-4 text-sm">
-          <p>
-            {ad.side === "front" ? "Front" : "Back"} · {ad.labels.join(" + ")} ·{" "}
-            {ad.size === "double" ? "Double" : "Standard"}
-          </p>
-          <p className="mt-1 text-lg font-semibold">{formatPrice(ad.priceCents)}</p>
+        <div className="rounded-2xl border border-line bg-surface p-4 text-sm">
+          <div className="flex items-baseline justify-between gap-3">
+            <p>
+              {ad.side === "front" ? "Front" : "Back"} · {ad.labels.join(" + ")} · {ad.size === "double" ? "Double" : "Standard"}
+            </p>
+            <p className="font-display text-2xl font-medium">{formatPrice(ad.priceCents)}</p>
+          </div>
           <Button size="lg" onClick={continueToReview} disabled={!image || !area || busy || expiredNow} className="mt-3 w-full">
             {continueLabel}
           </Button>

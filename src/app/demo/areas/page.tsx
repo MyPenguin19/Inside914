@@ -8,13 +8,13 @@ export default function DemoAreasPage() {
   return (
     <div>
       <DemoSteps current={1} />
-      <div className="mt-8">
+      <div className="mt-6">
         <h1 className="font-display text-4xl font-medium tracking-tight">Choose your advertising area.</h1>
         <p className="mt-2 max-w-2xl text-muted">
           Each area is one postcard mailed to homes in that part of Westchester. We plan the mailing routes for you.
         </p>
       </div>
-      <div className="mt-8 grid gap-5 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
         {DEMO_AREAS.map((area) => (
           <Card key={area.name} as="article" className={`flex flex-col ${area.status === "soon" ? "opacity-75" : ""}`}>
             <div className="flex items-start justify-between gap-3">

@@ -29,14 +29,14 @@ export default function DemoPostcardPage() {
   return (
     <div>
       <DemoSteps current={2} />
-      <header className="mt-8">
+      <header className="mt-6">
         <h1 className="font-display text-4xl font-medium tracking-tight">Choose your space</h1>
         <p className="mt-2 text-muted">
           {DEMO_EDITION.zoneName} · {formatIssueMonth(DEMO_EDITION.issueMonth)} · ≈ {formatHouseholds(DEMO_EDITION.households)} homes ·
           Reserve by {formatDeadline(DEMO_EDITION.artworkDeadline)}
         </p>
       </header>
-      <div className="mt-8">
+      <div className="mt-6">
         <PostcardBooking
           // Remount once the saved choice is read from this tab, so going back shows it selected.
           key={selection ? selection.slotIds.join() : "new"}

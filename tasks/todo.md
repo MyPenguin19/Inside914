@@ -183,3 +183,7 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Fixed the failing Vercel preview build (/reservation read env during prerender). Journey is now 4 steps: area, space, artwork, review & reserve (details + card prototype + agreement on one page).
   - Realistic postcard (masthead, mailing panel), both sides on desktop, sticky phone bar, restored selections, editor zoom buttons and safe area, admin readiness, phone-friendly tables, token-only colors.
   - Awaiting visual approval before backend work.
+
+- [x] **Task 11: Precision spacing, layout and responsive refinement** (design preview), 2026-10-16 on `task-11/spacing-refinement`
+  - Shared `page-width`/`section-y` layout utilities; tighter homepage, booking, editor, checkout, Verified Mail and admin spacing (pages 2-19% shorter). No redesign, copy, journey or behavior changes.
+  - Awaiting visual review.

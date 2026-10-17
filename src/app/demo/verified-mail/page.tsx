@@ -27,7 +27,7 @@ export default function DemoVerifiedMailPage() {
   const view = demoReservationView(selection ?? fallback, artwork, contact);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Notice tone="warning" role="note">
         <strong>Demonstration data.</strong> Every stage, date and status on this page is a sample. No real campaign,
         payment or mailing is shown.
@@ -57,8 +57,8 @@ export default function DemoVerifiedMailPage() {
         ))}
       </dl>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex flex-col gap-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex flex-col gap-5">
           <Card as="section">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-medium">Campaign progress</h2>
@@ -81,7 +81,7 @@ export default function DemoVerifiedMailPage() {
           </Card>
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           <Card as="section">
             <h2 className="font-medium">Your ad</h2>
             <div className="mx-auto mt-4 max-w-[220px]">

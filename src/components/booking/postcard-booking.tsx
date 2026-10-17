@@ -125,38 +125,15 @@ export function PostcardBooking({
   );
 
   return (
-    <div className="grid gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_320px] lg:pb-0">
-      <section aria-labelledby="postcard-title" className="min-w-0">
+    // Phones: size, then the card, then the summary (the aside "dissolves" via display:contents so its
+    // parts can be ordered around the card). Wide screens: cards left, size + summary sticky right.
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+      <section aria-labelledby="postcard-title" className="order-2 min-w-0 lg:order-none">
         <h2 id="postcard-title" className="sr-only">
           Choose your position
         </h2>
 
-        <fieldset>
-          <legend className="text-sm font-medium">1. Choose a size</legend>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:max-w-md">
-            <SizeOption
-              label="Standard"
-              detail="One space"
-              price={formatPrice(catalog.unitPriceCents)}
-              checked={mode === "standard"}
-              onChange={() => changeMode("standard")}
-              shape="standard"
-            />
-            {doubleOffered && catalog.doublePriceCents !== null && (
-              <SizeOption
-                label="Double"
-                detail={doubleAvailable ? "Two spaces, side by side" : "None left"}
-                price={formatPrice(catalog.doublePriceCents)}
-                checked={mode === "double"}
-                disabled={!doubleAvailable}
-                onChange={() => changeMode("double")}
-                shape="double"
-              />
-            )}
-          </div>
-        </fieldset>
-
-        <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-sm font-medium">2. Tap an available space</p>
             {/* Narrow screens show one side at a time; wide screens show both. */}
@@ -183,26 +160,55 @@ export function PostcardBooking({
           <Legend />
         </div>
 
-        <div className="mx-auto mt-5 grid max-w-[400px] gap-6 lg:max-w-none lg:grid-cols-2">
+        <div className="mt-4 grid gap-6 lg:grid-cols-2">
           {SIDES.map((side) => (
-            <div key={side} className={visibleSide === side ? "" : "hidden lg:block"}>
+            // Capped so a whole card fits on screen; the 6.5 x 12 proportions never change.
+            <div
+              key={side}
+              className={`mx-auto w-full max-w-[400px] lg:max-w-[calc((100svh-8rem)*6.5/12)] ${visibleSide === side ? "" : "hidden lg:block"}`}
+            >
               <p className="mb-2 hidden text-sm font-medium text-muted lg:block">{side === "front" ? "Front" : "Back"}</p>
               <PostcardSide side={side} views={viewsFor(side)} priceCents={price} onSelect={select} zones={zones} caption={false} />
             </div>
           ))}
         </div>
-        <p className="mt-4 text-center text-xs text-muted">
+        <p className="mt-3 text-center text-xs text-muted">
           Actual size 6.5&Prime; × 12&Prime;. <strong className="font-medium text-foreground">Provisional layout:</strong> final space
           sizes are confirmed with our printer.
         </p>
       </section>
 
-      <aside aria-labelledby="summary-title" className="lg:sticky lg:top-24 lg:self-start">
-        <Card>
+      <aside aria-labelledby="summary-title" className="contents lg:sticky lg:top-20 lg:block lg:self-start">
+        <fieldset className="order-1 lg:order-none">
+          <legend className="text-sm font-medium">1. Choose a size</legend>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:max-w-md lg:max-w-none">
+            <SizeOption
+              label="Standard"
+              detail="One space"
+              price={formatPrice(catalog.unitPriceCents)}
+              checked={mode === "standard"}
+              onChange={() => changeMode("standard")}
+              shape="standard"
+            />
+            {doubleOffered && catalog.doublePriceCents !== null && (
+              <SizeOption
+                label="Double"
+                detail={doubleAvailable ? "Two spaces, side by side" : "None left"}
+                price={formatPrice(catalog.doublePriceCents)}
+                checked={mode === "double"}
+                disabled={!doubleAvailable}
+                onChange={() => changeMode("double")}
+                shape="double"
+              />
+            )}
+          </div>
+        </fieldset>
+
+        <Card className="order-3 lg:mt-5 lg:order-none">
           <h2 id="summary-title" className="text-lg font-semibold">
             Your ad
           </h2>
-          <dl className="mt-4 grid gap-3 text-sm" aria-live="polite">
+          <dl className="mt-3 grid gap-2.5 text-sm" aria-live="polite">
             <div className="flex justify-between gap-4">
               <dt className="text-muted">Size</dt>
               <dd className="font-medium">{mode === "double" ? "Double" : "Standard"}</dd>
@@ -236,12 +242,13 @@ export function PostcardBooking({
         </Card>
       </aside>
 
-      {/* Phones: the choice, price and next step stay in reach while scrolling the card. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 py-3 shadow-[0_-8px_24px_-16px_rgba(28,27,25,0.35)] backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-xl items-center gap-3">
+      {/* Phones: choice, price and next step stay in reach. Sticky inside this grid (not fixed to the
+          window), so it settles after the summary and never covers the footer. */}
+      <div className="sticky bottom-3 z-30 order-4 self-end rounded-2xl border border-line bg-surface/95 p-3 pl-4 shadow-[0_12px_32px_-12px_rgba(28,27,25,0.4)] backdrop-blur lg:hidden">
+        <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{selectionText ?? "Tap an available space"}</p>
-            <p className="text-xs text-muted">
+            <p className="truncate text-xs text-muted">
               {mode === "double" ? "Double" : "Standard"} · {price !== null ? formatPrice(price) : "—"} · $0 today
             </p>
           </div>
@@ -272,11 +279,10 @@ function SizeOption(props: {
         <span className={`row-start-2 rounded-[1px] bg-accent ${props.shape === "double" ? "col-span-2" : ""}`} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-baseline justify-between gap-2">
-          <span className="text-sm font-semibold">{props.label}</span>
-          <span className="text-sm font-semibold">{props.price}</span>
+        <span className="block text-sm font-semibold">{props.label}</span>
+        <span className="block text-xs leading-snug text-muted">
+          <span className="font-semibold text-foreground">{props.price}</span> · {props.detail}
         </span>
-        <span className="block text-xs text-muted">{props.detail}</span>
       </span>
     </label>
   );

@@ -15,7 +15,7 @@ export default function EditionPage({ params }: PageProps<"/editions/[editionId]
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="page-width flex-1 py-6 sm:py-8">
         <BookingSteps current={2} />
         <Suspense fallback={<BookingSkeleton />}>
           <EditionBooking params={params} />

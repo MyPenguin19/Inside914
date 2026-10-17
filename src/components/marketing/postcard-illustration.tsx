@@ -13,33 +13,36 @@ const SAMPLE_TILES = [
 
 export function PostcardIllustration() {
   return (
-    <figure className="relative mx-auto w-full max-w-[340px]">
-      <div aria-hidden="true" className="absolute inset-0 translate-x-5 translate-y-4 rotate-[5deg] rounded-[10px] border border-line bg-surface shadow-md" />
-      <div
-        role="img"
-        aria-label="Illustration of the shared Inside914 postcard with sample advertising spaces"
-        className="relative flex -rotate-2 flex-col rounded-[6px] border border-line bg-paper p-[3.5%] shadow-[0_24px_60px_-20px_rgba(28,27,25,0.35)]"
-        style={{ aspectRatio: "6.5 / 12" }}
-      >
-        <div className="mb-[3%] flex items-end justify-between border-b-2 border-foreground px-[2%] pb-[2.5%]">
-          <span className="font-display text-[clamp(14px,4.6vw,22px)] font-semibold leading-none">
-            Inside<span className="text-accent">914</span>
-          </span>
-          <span className="text-[clamp(7px,2vw,9px)] text-muted">Central Westchester</span>
-        </div>
-        <div className="grid flex-1 grid-cols-2 grid-rows-4 gap-[3%]">
-          {SAMPLE_TILES.map((tile) => (
-            <div
-              key={tile.title}
-              className={`flex flex-col justify-end rounded-[4px] p-[8%] ${tile.tone} ${tile.wide ? "col-span-2" : ""}`}
-            >
-              <span className="font-display text-[clamp(10px,3.4vw,15px)] leading-tight font-medium">{tile.title}</span>
-              <span className="mt-0.5 text-[clamp(8px,2.4vw,10px)] opacity-80">{tile.line}</span>
-            </div>
-          ))}
+    <figure className="mx-auto w-full max-w-[300px] sm:max-w-[340px]">
+      {/* The back card covers only the card, so the caption below stays visible. */}
+      <div className="relative">
+        <div aria-hidden="true" className="absolute inset-0 translate-x-5 translate-y-4 rotate-[5deg] rounded-[10px] border border-line bg-surface shadow-md" />
+        <div
+          role="img"
+          aria-label="Illustration of the shared Inside914 postcard with sample advertising spaces"
+          className="relative flex -rotate-2 flex-col rounded-[6px] border border-line bg-paper p-[3.5%] shadow-[0_24px_60px_-20px_rgba(28,27,25,0.35)]"
+          style={{ aspectRatio: "6.5 / 12" }}
+        >
+          <div className="mb-[3%] flex items-end justify-between border-b-2 border-foreground px-[2%] pb-[2.5%]">
+            <span className="font-display text-[clamp(14px,4.6vw,22px)] font-semibold leading-none">
+              Inside<span className="text-accent">914</span>
+            </span>
+            <span className="text-[clamp(7px,2vw,9px)] text-muted">Central Westchester</span>
+          </div>
+          <div className="grid flex-1 grid-cols-2 grid-rows-4 gap-[3%]">
+            {SAMPLE_TILES.map((tile) => (
+              <div
+                key={tile.title}
+                className={`flex flex-col justify-end rounded-[4px] p-[8%] ${tile.tone} ${tile.wide ? "col-span-2" : ""}`}
+              >
+                <span className="font-display text-[clamp(10px,3.4vw,15px)] leading-tight font-medium">{tile.title}</span>
+                <span className="mt-0.5 text-[clamp(8px,2.4vw,10px)] opacity-80">{tile.line}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      <figcaption className="mt-6 text-center text-xs text-muted">
+      <figcaption className="mt-8 text-center text-xs text-muted">
         Illustration only: sample ads, provisional layout.
       </figcaption>
     </figure>

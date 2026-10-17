@@ -16,12 +16,12 @@ export default function DemoConfirmedPage() {
   const view = demoReservationView(selection, artwork, contact);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <Notice tone="warning" role="note">
         <strong>Demonstration:</strong> no real reservation was created, no card was saved and no email was sent.
       </Notice>
 
-      <Card className="p-6 sm:p-10">
+      <Card className="sm:p-8">
         <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-xl text-white">
           ✓
         </span>
@@ -34,7 +34,7 @@ export default function DemoConfirmedPage() {
         </p>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         <ReservationSummary view={view} amountLabel="Authorized future charge" zones={DEMO_ZONES} />
         <Card as="section">
           <h2 className="text-lg font-semibold">What happens next</h2>

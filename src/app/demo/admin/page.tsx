@@ -34,7 +34,7 @@ export default function DemoAdminPage() {
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
-      <nav aria-label="Dashboard sections" className="lg:sticky lg:top-24 lg:self-start">
+      <nav aria-label="Dashboard sections" className="lg:sticky lg:top-20 lg:self-start">
         <p className="font-display text-lg font-medium">Owner dashboard</p>
         <ul className="mt-4 flex gap-2 overflow-x-auto text-sm lg:flex-col lg:gap-1">
           {SECTIONS.map(([href, label]) => (
@@ -47,13 +47,13 @@ export default function DemoAdminPage() {
         </ul>
       </nav>
 
-      <div className="flex min-w-0 flex-col gap-8">
+      <div className="flex min-w-0 flex-col gap-7">
         <Notice tone="warning" role="note">
           <strong>Design preview with sample data.</strong> These are not real advertisers or payments, and the buttons
           don&apos;t do anything yet.
         </Notice>
 
-        <section id="overview" aria-labelledby="overview-title" className="scroll-mt-24">
+        <section id="overview" aria-labelledby="overview-title" className="scroll-mt-20">
           <Eyebrow>{formatIssueMonth(DEMO_EDITION.issueMonth)} edition</Eyebrow>
           <h1 id="overview-title" className="mt-2 font-display text-4xl font-medium tracking-tight">
             {DEMO_EDITION.zoneName}
@@ -70,7 +70,7 @@ export default function DemoAdminPage() {
           </div>
         </section>
 
-        <section id="readiness" aria-labelledby="readiness-title" className="scroll-mt-24">
+        <section id="readiness" aria-labelledby="readiness-title" className="scroll-mt-20">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="readiness-title" className="text-lg font-semibold">Production readiness</h2>
             <StatusBadge tone="warning">Not ready to charge or print</StatusBadge>
@@ -98,7 +98,7 @@ export default function DemoAdminPage() {
           </Card>
         </section>
 
-        <section id="inventory" aria-labelledby="inventory-title" className="scroll-mt-24">
+        <section id="inventory" aria-labelledby="inventory-title" className="scroll-mt-20">
           <h2 id="inventory-title" className="text-lg font-semibold">Spaces</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {(["front", "back"] as const).map((side) => (
@@ -122,7 +122,7 @@ export default function DemoAdminPage() {
           </div>
         </section>
 
-        <section id="advertisers" aria-labelledby="advertisers-title" className="scroll-mt-24">
+        <section id="advertisers" aria-labelledby="advertisers-title" className="scroll-mt-20">
           <h2 id="advertisers-title" className="text-lg font-semibold">Advertisers</h2>
           <div className="mt-4">
             <DataTable
@@ -140,7 +140,7 @@ export default function DemoAdminPage() {
           </div>
         </section>
 
-        <section id="artwork" aria-labelledby="artwork-title" className="scroll-mt-24">
+        <section id="artwork" aria-labelledby="artwork-title" className="scroll-mt-20">
           <h2 id="artwork-title" className="text-lg font-semibold">Artwork review</h2>
           <Card className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -154,7 +154,7 @@ export default function DemoAdminPage() {
           </Card>
         </section>
 
-        <section id="progress" aria-labelledby="progress-title" className="scroll-mt-24">
+        <section id="progress" aria-labelledby="progress-title" className="scroll-mt-20">
           <h2 id="progress-title" className="text-lg font-semibold">Campaign progress</h2>
           <Card className="mt-4">
             <Timeline
@@ -171,7 +171,7 @@ export default function DemoAdminPage() {
           </Card>
         </section>
 
-        <section id="mailing" aria-labelledby="mailing-title" className="scroll-mt-24">
+        <section id="mailing" aria-labelledby="mailing-title" className="scroll-mt-20">
           <h2 id="mailing-title" className="text-lg font-semibold">Mailing documentation</h2>
           <Card className="mt-4">
             <p className="text-sm text-muted">After mailing, upload the documentation here. It will appear on every advertiser&apos;s Verified Mail page.</p>
@@ -179,7 +179,7 @@ export default function DemoAdminPage() {
           </Card>
         </section>
 
-        <section id="next" aria-labelledby="next-title" className="scroll-mt-24">
+        <section id="next" aria-labelledby="next-title" className="scroll-mt-20">
           <h2 id="next-title" className="text-lg font-semibold">Next edition</h2>
           <Card className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
