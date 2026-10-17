@@ -196,3 +196,7 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Migrations applied to dev (approved): `20261017041155_server_pricing_and_setup_status`, `20261017041706_consent_amount_any_price`.
   - Server pricing config (explicit `INSIDE914_PRICING_MODE`), priced `hold_slots()`, test labels in checkout, emails and summaries; webhook records setup status; checkout pages restyled to the approved look; confirmation never claims an unsent email.
   - Blocked on keys: real-Stripe tests and preview checkout need Stripe TEST keys + `INSIDE914_PRICING_MODE=test` in `.env.local` and Vercel Preview.
+
+- [x] **Task 14.1: Admin dashboard foundation**, 2026-10-17 on `task-14-1/admin-foundation`
+  - Login/logout, protected admin area, Overview, Campaigns (+detail with postcard map), Advertisers (+detail), Artwork (+detail, read-only), Payments, Settings; real data via RLS; no migration.
+  - Pending: owner creates their Supabase user; then grant admin (insert into `admins`) with approval.
