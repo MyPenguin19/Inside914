@@ -13,7 +13,7 @@ import type { AdminBooking, AdminEdition, AdminSlot } from "./metrics";
 type Db = SupabaseClient<Database>;
 
 const BOOKING_COLUMNS =
-  "id, edition_id, status, size, price_cents, pricing_mode, hold_expires_at, reference, created_at, confirmed_at, stripe_customer_id, stripe_setup_intent_id, stripe_payment_method_id, stripe_setup_status, stripe_setup_status_at, flagged_at, flag_reason, cancelled_at, cancellation_reason, booking_contacts(business_name, contact_name, email, phone), booking_artwork(id, status, crop_width, updated_at, review_status, review_note), booking_slots(slot_id, released_at)";
+  "id, edition_id, status, size, price_cents, pricing_mode, hold_expires_at, reference, created_at, confirmed_at, stripe_customer_id, stripe_setup_intent_id, stripe_payment_method_id, stripe_setup_status, stripe_setup_status_at, flagged_at, flag_reason, cancelled_at, cancellation_reason, card_removed_at, booking_contacts(business_name, contact_name, email, phone), booking_artwork(id, status, crop_width, updated_at, review_status, review_note), booking_slots(slot_id, released_at)";
 
 type BookingRow = {
   id: string;
@@ -35,6 +35,7 @@ type BookingRow = {
   flag_reason: string | null;
   cancelled_at: string | null;
   cancellation_reason: string | null;
+  card_removed_at: string | null;
   booking_contacts: { business_name: string; contact_name: string; email: string; phone: string } | null;
   booking_artwork: { id: string; status: string; crop_width: number | null; updated_at: string; review_status: string; review_note: string | null } | null;
   booking_slots: { slot_id: string; released_at: string | null }[];
@@ -67,7 +68,7 @@ export function toAdminBooking(r: BookingRow): AdminBooking {
       : null,
     claims: r.booking_slots.map((s) => ({ slotId: s.slot_id, released: s.released_at !== null })),
     flag: r.flagged_at ? { at: r.flagged_at, reason: r.flag_reason ?? "" } : null,
-    cancellation: r.cancelled_at ? { at: r.cancelled_at, reason: r.cancellation_reason ?? "" } : null,
+    cancellation: r.cancelled_at ? { at: r.cancelled_at, reason: r.cancellation_reason ?? "", cardRemovedAt: r.card_removed_at } : null,
     artworkId: r.booking_artwork?.id ?? null,
     artworkReview: (r.booking_artwork?.review_status as AdminBooking["artworkReview"]) ?? undefined,
     artworkReviewNote: r.booking_artwork?.review_note ?? null,

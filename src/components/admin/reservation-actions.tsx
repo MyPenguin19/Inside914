@@ -15,6 +15,10 @@ export function ReservationActions({ booking: b, spaces, now }: { booking: Admin
       {b.cancellation && (
         <Notice tone="neutral" role="note">
           Canceled {formatTimestamp(b.cancellation.at)}: {b.cancellation.reason}
+          {b.stripePaymentMethodId &&
+            (b.cancellation.cardRemovedAt
+              ? ` Saved card removed from Stripe ${formatTimestamp(b.cancellation.cardRemovedAt)}.`
+              : " Saved card removal from Stripe is pending; the daily job retries it. This reservation can't be charged.")}
         </Notice>
       )}
       {b.flag && (

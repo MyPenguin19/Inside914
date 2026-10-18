@@ -110,6 +110,7 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
         supportEmail,
         test: view.isTest,
         notFull: row.kind === "campaign_cancelled_not_full",
+        card: view.card,
       });
       return await deliver(admin, row, view.email, view.isTest, email, send);
     }

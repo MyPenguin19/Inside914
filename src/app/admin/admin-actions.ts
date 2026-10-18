@@ -7,9 +7,8 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
 import { adminErrorMessage, parseCampaignForm, parseExtendDeadlineForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
 import { findTemplate } from "@/lib/admin/layouts";
-import { processDueCardRemovals, removeSavedCard } from "@/lib/checkout/card-removal";
+import { followUpCancellations } from "@/lib/checkout/cancellation-followup";
 import { getStripe } from "@/lib/checkout/stripe";
-import { processOutboxForBooking } from "@/lib/email/outbox";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Every admin change goes through here: requireAdmin() first, input validated, then ONE admin_*
@@ -76,19 +75,18 @@ export async function setCampaignStatus(_prev: ActionResult, form: FormData): Pr
   return done("Done.");
 }
 
-// Reservations cancelled with the campaign: email each customer and remove their saved cards
+// Reservations cancelled with the campaign: remove saved cards, then email each customer
 // (secret-key client, only after requireAdmin() and a successful cancel). The daily job retries.
 async function afterCampaignCancel(editionId: string) {
   const admin = createAdminClient();
   const { data: bookings } = await admin.from("bookings").select("id").eq("edition_id", editionId).eq("status", "cancelled");
   if (!bookings?.length) return "";
-  const emails = (await Promise.all(bookings.map((b) => processOutboxForBooking(admin, b.id).catch((): string[] => [])))).flat();
-  const cards = await (async () => processDueCardRemovals(admin, getStripe(), 50))().catch((): string[] => ["failed"]);
+  const { cards, emails } = await followUpCancellations(admin, getStripe, bookings.map((b) => b.id));
   const sent = emails.filter((r) => r === "sent").length;
   return [
     sent ? ` ${sent} ${sent === 1 ? "customer was" : "customers were"} emailed.` : "",
     emails.includes("failed") ? " Some emails will be retried." : "",
-    cards.includes("failed") ? " Removing some saved cards will be retried." : cards.length ? " Saved cards were removed." : "",
+    cards.includes("failed") ? " Removing some saved cards will be retried." : cards.includes("removed") ? " Saved cards were removed." : "",
   ].join("");
 }
 
@@ -132,19 +130,14 @@ export async function cancelBooking(_prev: ActionResult, form: FormData): Promis
   return done(`Canceled. Its spaces are available again.${followUp}`);
 }
 
-// Tells the customer and removes their saved card (secret-key client, only after requireAdmin()
+// Removes the saved card, then tells the customer (secret-key client, only after requireAdmin()
 // and a successful admin_cancel_booking). Failures are retried by the email-outbox cron.
 async function afterCancel(bookingId: string) {
-  const admin = createAdminClient();
-  const [emails, card] = await Promise.all([
-    processOutboxForBooking(admin, bookingId).catch((): string[] => []),
-    (async () => removeSavedCard(admin, getStripe(), bookingId))().catch(() => "failed" as const),
-  ]);
-  const notes = [
+  const { cards, emails } = await followUpCancellations(createAdminClient(), getStripe, [bookingId]);
+  return [
+    cards[0] === "removed" ? " Their saved card was removed." : cards[0] === "failed" ? " Removing their saved card will be retried." : "",
     emails.includes("sent") ? " The customer was emailed." : emails.includes("failed") ? " The email will be retried." : "",
-    card === "removed" ? " Their saved card was removed." : card === "failed" ? " Removing their saved card will be retried." : "",
-  ];
-  return notes.join("");
+  ].join("");
 }
 
 export async function addBookingNote(_prev: ActionResult, form: FormData): Promise<ActionResult> {

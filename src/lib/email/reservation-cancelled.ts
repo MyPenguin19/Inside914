@@ -16,6 +16,14 @@ export type CancellationEmailData = {
   supportEmail: string;
   test?: boolean; // development TEST reservation: preview only, never delivered
   notFull?: boolean; // the whole campaign was cancelled because it didn't fill by its deadline
+  // The saved card's state when the email is sent: "removed" only once Stripe confirmed the detach.
+  card: "removed" | "pending" | "none";
+};
+
+const CARD_SUMMARY: Record<CancellationEmailData["card"], string> = {
+  removed: "You have not been charged, and your saved card has been removed from our payment processor.",
+  pending: "You have not been charged, and this reservation can no longer be charged. Your saved card is being removed from our payment processor.",
+  none: "You have not been charged.",
 };
 
 export function reservationCancelledEmail(d: CancellationEmailData) {
@@ -30,7 +38,7 @@ export function reservationCancelledEmail(d: CancellationEmailData) {
   const subject = d.notFull
     ? `${d.test ? "[TEST] " : ""}Your Inside914 campaign didn't fill, so your reservation was canceled (${d.reference})`
     : `${d.test ? "[TEST] " : ""}Your Inside914 reservation was canceled (${d.reference})`;
-  const summary = "You have not been charged, and your saved card has been removed from our payment processor.";
+  const summary = CARD_SUMMARY[d.card];
   const why = d.notFull ? " The campaign wasn't fully reserved by its deadline, so it won't be printed." : "";
 
   const text = [

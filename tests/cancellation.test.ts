@@ -14,6 +14,7 @@ describe("cancellation email", () => {
     positions: ["F4"],
     side: "front" as const,
     supportEmail: "support@inside914.com",
+    card: "removed" as const,
   };
 
   test("says it's canceled, nothing was charged and the card was removed; escapes customer text", () => {
@@ -27,6 +28,21 @@ describe("cancellation email", () => {
     }
     expect(email.html).toContain("Pat&#39;s &lt;Bakery&gt;");
     expect(email.html).not.toContain("<Bakery>");
+  });
+
+  test("only says the card was removed once Stripe confirmed it (removal pending or failed: says it can't be charged)", () => {
+    const pending = reservationCancelledEmail({ ...base, card: "pending" });
+    for (const body of [pending.text, pending.html]) {
+      expect(body).not.toMatch(/has been removed/i);
+      expect(body).toMatch(/can no longer be charged/i);
+      expect(body).toMatch(/being removed/i);
+      expect(body).not.toMatch(/fail|error|retry|stripe/i); // no internal details
+    }
+    const none = reservationCancelledEmail({ ...base, card: "none" });
+    for (const body of [none.text, none.html]) {
+      expect(body).toMatch(/not been charged/i);
+      expect(body).not.toMatch(/saved card/i);
+    }
   });
 
   test("never includes the internal cancellation reason or a reservation link", () => {

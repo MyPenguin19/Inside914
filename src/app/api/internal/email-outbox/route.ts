@@ -18,12 +18,13 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const { data: campaignsClosed, error: closeError } = await admin.rpc("close_past_deadline_campaigns");
   if (closeError) console.error("closing past-deadline campaigns failed", closeError.code);
-  const results = await processDueOutbox(admin);
+  // Cards first, so a cancellation email sent below can say the card is already removed.
   let cardRemovals: string[] = [];
   try {
     cardRemovals = await processDueCardRemovals(admin, getStripe());
   } catch (error) {
     console.error("card removal job failed", error instanceof Error ? error.message.slice(0, 80) : "unknown");
   }
+  const results = await processDueOutbox(admin);
   return Response.json({ campaignsClosed: campaignsClosed ?? 0, processed: results.length, results, cardRemovals });
 }

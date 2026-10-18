@@ -53,3 +53,29 @@ describe("ErrorState", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Custom" })).toBeTruthy();
   });
 });
+
+describe("root-layout error page (global-error)", () => {
+  test("brings its own document, says nothing was charged, retries, and hides internals", async () => {
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { default: GlobalError } = await import("@/app/global-error");
+    const error = Object.assign(new Error("root layout exploded secret-detail"), { digest: "998877" });
+    const html = renderToStaticMarkup(<GlobalError error={error} retry={() => {}} reset={() => {}} />);
+    expect(html).toMatch(/^<html lang="en">/);
+    expect(html).toContain("Something went wrong");
+    expect(html).toContain("Nothing has been charged");
+    expect(html).toContain("998877");
+    expect(html).not.toContain("secret-detail");
+  });
+
+  test("Try again calls Next's retry (re-fetch and re-render), as Next 16.4 passes it to error boundaries", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { default: GlobalError } = await import("@/app/global-error");
+    const retry = vi.fn();
+    const reset = vi.fn();
+    // Rendered inside a container: jsdom can't mount a second <html>, so check the button wiring only.
+    const { getByRole } = render(<GlobalError error={new Error("x")} retry={retry} reset={reset} />, { container: document.createElement("div") });
+    fireEvent.click(getByRole("button", { name: "Try again" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(reset).not.toHaveBeenCalled();
+  });
+});

@@ -34,7 +34,7 @@ export type AdminBooking = {
   artwork: { status: string; cropped: boolean; updatedAt: string } | null;
   claims: { slotId: string; released: boolean }[];
   flag?: { at: string; reason: string } | null;
-  cancellation?: { at: string; reason: string } | null;
+  cancellation?: { at: string; reason: string; cardRemovedAt: string | null } | null;
   artworkId?: string | null;
   artworkReview?: "pending" | "approved" | "rejected" | "changes_requested";
   artworkReviewNote?: string | null;
