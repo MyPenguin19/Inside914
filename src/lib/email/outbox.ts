@@ -129,7 +129,7 @@ export async function processOutboxForBooking(admin: Admin, bookingId: string, s
   return Promise.all((data ?? []).map((r) => processOutboxRow(admin, r.id, send)));
 }
 
-// Send (or retry) everything due, oldest first. For a scheduled job (not scheduled yet).
+// Send (or retry) everything due, oldest first. Run by the email-outbox cron route.
 export async function processDueOutbox(admin: Admin, limit = 20, send?: SendEmail) {
   const { data } = await admin
     .from("email_outbox")
