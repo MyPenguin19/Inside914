@@ -80,7 +80,7 @@ Depends on Phase 0.
   - unit: detach is called once
 - **Accept when:** canceling in admin frees the space, emails the customer once, and removes the card.
 
-### Phase 6: Deadline handling (R2), spec first
+### Phase 6: Deadline handling (R2), spec first. Draft: tasks/spec-phase-6-deadlines-and-charging.md
 - Write a short spec covering:
   - auto-cancel of reservations when a campaign misses its deadline (cron plus the Phase 5 path)
   - the charge flow, only if you choose it in Phase 0: off-session PaymentIntent for the consented amount, failure and retry emails, and an admin view
