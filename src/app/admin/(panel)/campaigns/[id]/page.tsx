@@ -11,7 +11,10 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
 import { artworkLabel, paymentLabel, positionLabel, reservationLabel } from "@/lib/admin/labels";
 import { artworkAwaitingReview, campaignStats, isConfirmed, isLiveHold, slotStates } from "@/lib/admin/metrics";
-import { formatDay, formatDeadline, formatHouseholds, formatIssueMonth, formatPrice } from "@/lib/format";
+import { CampaignStatusControls } from "@/components/admin/campaign-status-controls";
+import { ButtonLink } from "@/components/ui/button";
+import { findTemplate } from "@/lib/admin/layouts";
+import { formatDay, formatDeadline, formatHouseholds, formatIssueMonth, formatPrice, formatTimestamp } from "@/lib/format-admin";
 
 export default function CampaignDetailPage({ params }: PageProps<"/admin/campaigns/[id]">) {
   return (
@@ -61,8 +64,18 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           ← All campaigns
         </Link>
         <div className="mt-2">
-          <PageHeader title={edition.zoneName} description={`${formatIssueMonth(edition.issueMonth)} edition`}>
-            <StatusBadge tone={edition.status === "open" ? "success" : "neutral"}>{edition.status.replaceAll("_", " ")}</StatusBadge>
+          <PageHeader title={edition.name ?? edition.zoneName} description={`${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)} edition`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge tone={edition.status === "open" && !edition.pausedAt ? "success" : edition.pausedAt ? "warning" : "neutral"}>
+                {edition.status.replaceAll("_", " ")}
+                {edition.pausedAt ? " · paused" : ""}
+              </StatusBadge>
+              {!["cancelled", "completed"].includes(edition.status) && (
+                <ButtonLink href={`/admin/campaigns/${edition.id}/edit`} variant="secondary">
+                  Edit
+                </ButtonLink>
+              )}
+            </div>
           </PageHeader>
         </div>
       </div>
@@ -74,6 +87,23 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
         <Stat label="Reserved value" value={formatPrice(stats.reservedValueCents)} note="Authorized, not collected" />
       </section>
 
+      <section aria-labelledby="status-title">
+        <h2 id="status-title" className="text-lg font-semibold">
+          Status
+        </h2>
+        {stats.fullyReserved && (
+          <p className="mt-1 text-sm text-accent">Every sellable space is reserved. That is not the same as payment-ready: see Payments.</p>
+        )}
+        {stats.blockedUnits > 0 && (
+          <p className="mt-1 text-sm text-muted">
+            {stats.blockedUnits} {stats.blockedUnits === 1 ? "space is" : "spaces are"} blocked, so {stats.sellableUnits} of {stats.totalUnits} are sellable. Blocked spaces never count as sold.
+          </p>
+        )}
+        <div className="mt-3">
+          <CampaignStatusControls edition={edition} stats={stats} />
+        </div>
+      </section>
+
       <Card>
         <h2 className="text-lg font-semibold">Campaign information</h2>
         <div className="mt-4">
@@ -81,9 +111,13 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
             rows={[
               ["Area", edition.zoneName],
               ["Issue month", formatIssueMonth(edition.issueMonth)],
+              ["Reservations open", edition.reservationsOpenAt ? formatTimestamp(edition.reservationsOpenAt) : "As soon as it's opened"],
               ["Reservation deadline", formatDeadline(edition.artworkDeadline)],
-              ["Planned mail date", edition.mailDate ? formatDay(edition.mailDate) : "Not set"],
-              ["Planned mailing quantity", `≈ ${formatHouseholds(edition.households)} homes`],
+              ["Artwork due", edition.artworkDueAt ? formatTimestamp(edition.artworkDueAt) : "Same as reservation deadline"],
+              ["Mailing window", edition.mailingWindowStart ? `${formatDay(edition.mailingWindowStart)} – ${formatDay(edition.mailingWindowEnd ?? edition.mailingWindowStart)}` : edition.mailDate ? formatDay(edition.mailDate) : "Not set"],
+              ["Target mailing quantity", `≈ ${formatHouseholds(edition.households)} homes`],
+              ["Layout", findTemplate(edition.layoutTemplate ?? "")?.label ?? (edition.layoutTemplate ? edition.layoutTemplate : "Created before templates (provisional grid)")],
+              ["Prices (new bookings)", `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""}`],
               ["Artwork approval", `${stats.artworkAwaitingReview} awaiting review of ${stats.reservations} reservations`],
               ["Payment methods ready", `${stats.paymentMethodsReady} of ${stats.reservations}`],
               ["Advertisers", String(stats.advertisers)],

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { EmptyState, LoadError, PageHeader, PanelSkeleton } from "@/components/admin/ui";
 import { DataTable } from "@/components/ui/data-table";
+import { ButtonLink } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
@@ -13,7 +14,9 @@ const STATUSES = ["all", "open", "draft", "closed", "approved_to_print", "printe
 export default function CampaignsPage({ searchParams }: PageProps<"/admin/campaigns">) {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Campaigns" description="Every edition in the database. Read-only for now." />
+      <PageHeader title="Campaigns" description="Every campaign (edition) in the database.">
+        <ButtonLink href="/admin/campaigns/new">New campaign</ButtonLink>
+      </PageHeader>
       <Suspense fallback={<PanelSkeleton />}>
         <Campaigns searchParams={searchParams} />
       </Suspense>
@@ -59,12 +62,15 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
           columns={["Campaign", "Edition", "Mail date", "Reserve by", "Status", "Reserved", "Advertisers", "Reserved value"]}
           rows={rows.map(({ edition: e, stats }) => [
             <Link key="n" href={`/admin/campaigns/${e.id}`} className="font-medium underline-offset-4 hover:underline">
-              {e.zoneName}
+              {e.name ?? e.zoneName}
             </Link>,
-            formatIssueMonth(e.issueMonth),
+            `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}`,
             e.mailDate ? formatDay(e.mailDate) : "Not set",
             formatDeadline(e.artworkDeadline),
-            <StatusBadge key="s" tone={e.status === "open" ? "success" : "neutral"}>{e.status.replaceAll("_", " ")}</StatusBadge>,
+            <StatusBadge key="s" tone={e.status === "open" && !e.pausedAt ? "success" : e.pausedAt ? "warning" : "neutral"}>
+              {e.status.replaceAll("_", " ")}
+              {e.pausedAt ? " · paused" : ""}
+            </StatusBadge>,
             `${stats.reservedUnits} of ${stats.totalUnits}`,
             String(stats.advertisers),
             formatPrice(stats.reservedValueCents),

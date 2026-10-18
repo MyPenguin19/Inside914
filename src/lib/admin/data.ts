@@ -72,6 +72,17 @@ function fail(what: string, error: { message: string } | null): never {
 
 type EditionRow = {
   id: string;
+  zone_id: string;
+  name: string | null;
+  target_quantity: number | null;
+  layout_template: string | null;
+  reservations_open_at: string | null;
+  reservations_paused_at: string | null;
+  artwork_due_at: string | null;
+  mailing_window_start: string | null;
+  mailing_window_end: string | null;
+  unit_price_cents: number;
+  double_unit_price_cents: number | null;
   issue_month: string;
   artwork_deadline: string;
   mail_date: string | null;
@@ -81,8 +92,19 @@ type EditionRow = {
 
 const toEdition = (e: EditionRow): AdminEdition => ({
   id: e.id,
+  zoneId: e.zone_id,
+  name: e.name,
+  targetQuantity: e.target_quantity,
+  layoutTemplate: e.layout_template,
+  reservationsOpenAt: e.reservations_open_at,
+  pausedAt: e.reservations_paused_at,
+  artworkDueAt: e.artwork_due_at,
+  mailingWindowStart: e.mailing_window_start,
+  mailingWindowEnd: e.mailing_window_end,
+  unitPriceCents: e.unit_price_cents,
+  doublePriceCents: e.double_unit_price_cents,
   zoneName: e.zones?.name ?? "Unknown area",
-  households: e.zones?.household_count ?? 0,
+  households: e.target_quantity ?? e.zones?.household_count ?? 0, // the campaign's own target when set
   issueMonth: e.issue_month,
   artworkDeadline: e.artwork_deadline,
   mailDate: e.mail_date,
@@ -92,18 +114,32 @@ const toEdition = (e: EditionRow): AdminEdition => ({
 export async function listEditions(db: Db): Promise<AdminEdition[]> {
   const { data, error } = await db
     .from("editions")
-    .select("id, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)")
+    .select(
+      "id, zone_id, name, target_quantity, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)",
+    )
     .order("issue_month", { ascending: false })
     .returns<EditionRow[]>();
   if (error) fail("campaigns", error);
   return data.map(toEdition);
 }
 
+export async function listZones(db: Db) {
+  const { data, error } = await db.from("zones").select("id, name").order("name");
+  if (error) fail("areas", error);
+  return data;
+}
+
+export async function hasBookings(db: Db, editionId: string) {
+  const { count, error } = await db.from("bookings").select("id", { count: "exact", head: true }).eq("edition_id", editionId).neq("status", "released");
+  if (error) fail("bookings", error);
+  return (count ?? 0) > 0;
+}
+
 export async function listSlots(db: Db, editionIds: string[]): Promise<AdminSlot[]> {
   if (!editionIds.length) return [];
   const { data, error } = await db
     .from("slots")
-    .select("id, edition_id, side, label, x_in, y_in, width_in, height_in")
+    .select("id, edition_id, side, label, x_in, y_in, width_in, height_in, blocked_at, blocked_reason")
     .in("edition_id", editionIds)
     .order("side", { ascending: false })
     .order("y_in")
@@ -118,6 +154,8 @@ export async function listSlots(db: Db, editionIds: string[]): Promise<AdminSlot
     y: Number(s.y_in),
     width: Number(s.width_in),
     height: Number(s.height_in),
+    blockedAt: s.blocked_at,
+    blockedReason: s.blocked_reason,
   }));
 }
 

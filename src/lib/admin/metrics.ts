@@ -1,7 +1,18 @@
 // Pure counting rules for the admin dashboard. Everything is derived from database rows passed in;
 // nothing here knows a price or invents a value. Kept free of I/O so the rules are unit-tested.
 
-export type AdminSlot = { id: string; editionId: string; side: "front" | "back"; label: string; x: number; y: number; width: number; height: number };
+export type AdminSlot = {
+  id: string;
+  editionId: string;
+  side: "front" | "back";
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  blockedAt?: string | null; // admin block: not for sale, and never counted as sold
+  blockedReason?: string | null;
+};
 
 export type AdminBooking = {
   id: string;
@@ -26,6 +37,17 @@ export type AdminBooking = {
 
 export type AdminEdition = {
   id: string;
+  zoneId?: string;
+  name?: string | null; // campaign name (older editions have none)
+  targetQuantity?: number | null;
+  layoutTemplate?: string | null;
+  reservationsOpenAt?: string | null;
+  pausedAt?: string | null;
+  artworkDueAt?: string | null;
+  mailingWindowStart?: string | null;
+  mailingWindowEnd?: string | null;
+  unitPriceCents?: number;
+  doublePriceCents?: number | null;
   zoneName: string;
   households: number;
   issueMonth: string;
@@ -44,12 +66,22 @@ export const isConfirmed = (b: AdminBooking) => b.status !== "pending" && !ENDED
 export const isLiveHold = (b: AdminBooking, now: number) =>
   b.status === "pending" && b.holdExpiresAt !== null && Date.parse(b.holdExpiresAt) > now;
 
-export type SlotState = { state: "available" | "held" | "reserved" | "closed"; booking: AdminBooking | null };
+export type SlotState = { state: "available" | "held" | "reserved" | "blocked" | "closed"; booking: AdminBooking | null };
 
 // Who occupies each slot right now: a live claim of a confirmed booking (reserved) or of an
 // unexpired hold (held). Released claims and expired holds leave the slot free.
+// Same rule as private.edition_is_bookable(): open, not paused, opened, before the deadline.
+export function isBookable(edition: AdminEdition, now: number) {
+  return (
+    edition.status === "open" &&
+    !edition.pausedAt &&
+    (!edition.reservationsOpenAt || Date.parse(edition.reservationsOpenAt) <= now) &&
+    Date.parse(edition.artworkDeadline) > now
+  );
+}
+
 export function slotStates(edition: AdminEdition, slots: AdminSlot[], bookings: AdminBooking[], now: number) {
-  const open = edition.status === "open" && Date.parse(edition.artworkDeadline) > now;
+  const open = isBookable(edition, now);
   const holder = new Map<string, AdminBooking>();
   for (const b of bookings) {
     if (b.editionId !== edition.id || !(isConfirmed(b) || isLiveHold(b, now))) continue;
@@ -59,17 +91,20 @@ export function slotStates(edition: AdminEdition, slots: AdminSlot[], bookings: 
   for (const s of slots) {
     if (s.editionId !== edition.id) continue;
     const b = holder.get(s.id) ?? null;
-    states.set(s.id, { state: b ? (isConfirmed(b) ? "reserved" : "held") : open ? "available" : "closed", booking: b });
+    states.set(s.id, { state: b ? (isConfirmed(b) ? "reserved" : "held") : s.blockedAt ? "blocked" : open ? "available" : "closed", booking: b });
   }
   return states;
 }
 
 export type CampaignStats = {
   totalUnits: number;
+  blockedUnits: number; // taken off sale by an admin: not sold, not sellable
+  sellableUnits: number; // total minus blocked
   reservedUnits: number; // a double ad counts as two units
   heldUnits: number;
   availableUnits: number;
-  filledPercent: number; // reserved units / total units
+  filledPercent: number; // reserved units / sellable units
+  fullyReserved: boolean; // every sellable unit has a confirmed reservation (says nothing about payment)
   reservations: number; // a double ad counts as one reservation
   advertisers: number; // distinct businesses with a confirmed reservation
   reservedValueCents: number; // sum of the confirmed bookings' stored amounts (not collected revenue)
@@ -83,12 +118,17 @@ export function campaignStats(edition: AdminEdition, slots: AdminSlot[], booking
   const confirmed = bookings.filter((b) => b.editionId === edition.id && isConfirmed(b));
   const reservedUnits = states.filter((s) => s.state === "reserved").length;
   const totalUnits = states.length;
+  const blockedUnits = states.filter((s) => s.state === "blocked").length;
+  const sellableUnits = totalUnits - blockedUnits;
   return {
     totalUnits,
+    blockedUnits,
+    sellableUnits,
     reservedUnits,
     heldUnits: states.filter((s) => s.state === "held").length,
     availableUnits: states.filter((s) => s.state === "available").length,
-    filledPercent: totalUnits ? Math.round((reservedUnits / totalUnits) * 100) : 0,
+    filledPercent: sellableUnits ? Math.round((reservedUnits / sellableUnits) * 100) : 0,
+    fullyReserved: sellableUnits > 0 && reservedUnits === sellableUnits,
     reservations: confirmed.length,
     advertisers: new Set(confirmed.map(advertiserKey)).size,
     reservedValueCents: confirmed.reduce((sum, b) => sum + b.priceCents, 0),
