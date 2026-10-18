@@ -18,7 +18,11 @@ function fakeStripe(confirm: () => Promise<ConfirmResult>) {
   let onChange: (e: { complete: boolean }) => void = () => {};
   const stripe = {
     elements: vi.fn(() => ({
-      create: vi.fn(() => ({ on: (_: string, cb: typeof onChange) => (onChange = cb), mount: vi.fn() })),
+      create: vi.fn(() => ({
+        on: (_: string, cb: typeof onChange) => (onChange = cb),
+        // Like Stripe.js: mounting replaces whatever is inside the container.
+        mount: vi.fn((el: HTMLElement) => el.replaceChildren(document.createElement("iframe"))),
+      })),
     })),
     confirmSetup: vi.fn(confirm),
   };
@@ -58,6 +62,13 @@ async function readyAndFilled(s: ReturnType<typeof setup>) {
 }
 
 describe("PaymentStep", () => {
+  test("mounting Stripe's card form doesn't crash the page (React owns nothing inside the mount box)", async () => {
+    const s = setup();
+    await waitFor(() => expect(s.stripe.elements).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByText("Loading secure card form…")).toBeNull());
+    expect(screen.getByRole("checkbox")).toBeTruthy();
+  });
+
   test("the consent box starts unticked and the button stays disabled until it's ticked", async () => {
     const s = setup();
     await waitFor(() => expect(s.stripe.elements).toHaveBeenCalled());
