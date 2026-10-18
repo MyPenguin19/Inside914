@@ -1,5 +1,3 @@
-// Generated from the Supabase schema. Do not edit by hand; regenerate with `npm run db:types`.
-
 export type Json =
   | string
   | number
@@ -16,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_events: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: number
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: never
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: never
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       admins: {
         Row: {
           created_at: string
@@ -30,6 +58,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      artwork_reviews: {
+        Row: {
+          admin_user_id: string
+          artwork_id: string | null
+          booking_id: string
+          created_at: string
+          decision: string
+          id: string
+          note: string | null
+          storage_path: string
+        }
+        Insert: {
+          admin_user_id: string
+          artwork_id?: string | null
+          booking_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          note?: string | null
+          storage_path: string
+        }
+        Update: {
+          admin_user_id?: string
+          artwork_id?: string | null
+          booking_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          note?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artwork_reviews_artwork_id_fkey"
+            columns: ["artwork_id"]
+            isOneToOne: false
+            referencedRelation: "booking_artwork"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artwork_reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       booking_access_tokens: {
         Row: {
@@ -78,6 +154,10 @@ export type Database = {
           crop_y: number | null
           height_px: number | null
           id: string
+          review_note: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: string
           storage_path: string
           updated_at: string
@@ -95,6 +175,10 @@ export type Database = {
           crop_y?: number | null
           height_px?: number | null
           id?: string
+          review_note?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
           storage_path: string
           updated_at?: string
@@ -112,6 +196,10 @@ export type Database = {
           crop_y?: number | null
           height_px?: number | null
           id?: string
+          review_note?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
           storage_path?: string
           updated_at?: string
@@ -167,6 +255,38 @@ export type Database = {
             foreignKeyName: "booking_contacts_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_notes: {
+        Row: {
+          author_id: string
+          body: string
+          booking_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          booking_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          booking_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_notes_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
@@ -228,9 +348,15 @@ export type Database = {
       }
       bookings: {
         Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           confirmed_at: string | null
           created_at: string
           edition_id: string
+          flag_reason: string | null
+          flagged_at: string | null
+          flagged_by: string | null
           hold_expires_at: string | null
           hold_extensions: number
           hold_token_hash: string
@@ -248,9 +374,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           confirmed_at?: string | null
           created_at?: string
           edition_id: string
+          flag_reason?: string | null
+          flagged_at?: string | null
+          flagged_by?: string | null
           hold_expires_at?: string | null
           hold_extensions?: number
           hold_token_hash: string
@@ -268,9 +400,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           confirmed_at?: string | null
           created_at?: string
           edition_id?: string
+          flag_reason?: string | null
+          flagged_at?: string | null
+          flagged_by?: string | null
           hold_expires_at?: string | null
           hold_extensions?: number
           hold_token_hash?: string
@@ -314,35 +452,62 @@ export type Database = {
       editions: {
         Row: {
           artwork_deadline: string
+          artwork_due_at: string | null
           created_at: string
           double_unit_price_cents: number | null
           id: string
           issue_month: string
+          layout_template: string | null
           mail_date: string | null
+          mailing_window_end: string | null
+          mailing_window_start: string | null
+          name: string | null
+          reservations_open_at: string | null
+          reservations_paused_at: string | null
           status: string
+          target_quantity: number | null
           unit_price_cents: number
+          updated_at: string
           zone_id: string
         }
         Insert: {
           artwork_deadline: string
+          artwork_due_at?: string | null
           created_at?: string
           double_unit_price_cents?: number | null
           id?: string
           issue_month: string
+          layout_template?: string | null
           mail_date?: string | null
+          mailing_window_end?: string | null
+          mailing_window_start?: string | null
+          name?: string | null
+          reservations_open_at?: string | null
+          reservations_paused_at?: string | null
           status?: string
+          target_quantity?: number | null
           unit_price_cents?: number
+          updated_at?: string
           zone_id: string
         }
         Update: {
           artwork_deadline?: string
+          artwork_due_at?: string | null
           created_at?: string
           double_unit_price_cents?: number | null
           id?: string
           issue_month?: string
+          layout_template?: string | null
           mail_date?: string | null
+          mailing_window_end?: string | null
+          mailing_window_start?: string | null
+          name?: string | null
+          reservations_open_at?: string | null
+          reservations_paused_at?: string | null
           status?: string
+          target_quantity?: number | null
           unit_price_cents?: number
+          updated_at?: string
           zone_id?: string
         }
         Relationships: [
@@ -399,6 +564,82 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bookings"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      mailing_evidence: {
+        Row: {
+          byte_size: number | null
+          content_type: string | null
+          edition_id: string
+          event_date: string | null
+          id: string
+          kind: string
+          notes: string | null
+          published_at: string | null
+          published_by: string | null
+          quantity_accepted: number | null
+          quantity_printed: number | null
+          storage_path: string | null
+          title: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          byte_size?: number | null
+          content_type?: string | null
+          edition_id: string
+          event_date?: string | null
+          id?: string
+          kind: string
+          notes?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          quantity_accepted?: number | null
+          quantity_printed?: number | null
+          storage_path?: string | null
+          title: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          byte_size?: number | null
+          content_type?: string | null
+          edition_id?: string
+          event_date?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          quantity_accepted?: number | null
+          quantity_printed?: number | null
+          storage_path?: string | null
+          title?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailing_evidence_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mailing_evidence_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "slot_availability"
+            referencedColumns: ["edition_id"]
+          },
+          {
+            foreignKeyName: "mailing_evidence_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "slot_pairs"
+            referencedColumns: ["edition_id"]
           },
         ]
       }
@@ -469,6 +710,9 @@ export type Database = {
       }
       slots: {
         Row: {
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           created_at: string
           edition_id: string
           height_in: number
@@ -480,6 +724,9 @@ export type Database = {
           y_in: number
         }
         Insert: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           created_at?: string
           edition_id: string
           height_in: number
@@ -491,6 +738,9 @@ export type Database = {
           y_in: number
         }
         Update: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           created_at?: string
           edition_id?: string
           height_in?: number
@@ -603,6 +853,47 @@ export type Database = {
       }
     }
     Functions: {
+      admin_add_booking_note: {
+        Args: { p_body: string; p_booking_id: string }
+        Returns: string
+      }
+      admin_add_evidence: {
+        Args: { p: Json; p_edition_id: string }
+        Returns: string
+      }
+      admin_cancel_booking: {
+        Args: { p_booking_id: string; p_reason: string }
+        Returns: string
+      }
+      admin_create_campaign: {
+        Args: { p: Json; p_slots: Json }
+        Returns: string
+      }
+      admin_flag_booking: {
+        // p_reason null clears the flag (hand-corrected: the generator types it as string only)
+        Args: { p_booking_id: string; p_reason: string | null }
+        Returns: string
+      }
+      admin_publish_evidence: {
+        Args: { p_id: string; p_publish: boolean }
+        Returns: string
+      }
+      admin_review_artwork: {
+        Args: { p_artwork_id: string; p_decision: string; p_note?: string }
+        Returns: string
+      }
+      admin_set_campaign_status: {
+        Args: { p_action: string; p_id: string }
+        Returns: string
+      }
+      admin_set_slot_block: {
+        Args: { p_block: boolean; p_reason?: string; p_slot_id: string }
+        Returns: string
+      }
+      admin_update_campaign: {
+        Args: { p: Json; p_id: string }
+        Returns: string
+      }
       confirm_booking: {
         Args: {
           p_booking_id: string
@@ -613,16 +904,9 @@ export type Database = {
         Returns: string
       }
       extend_hold: { Args: { p_token_hash: string }; Returns: string }
-      note_hold_attempt: {
-        Args: {
-          p_max: number
-          p_visitor_hash: string
-          p_window_seconds: number
-        }
-        Returns: boolean
-      }
       hold_slots: {
         Args: {
+          // null when the edition offers no double (hand-corrected: the generator types it as number)
           p_double_price_cents: number | null
           p_pricing_mode: string
           p_slot_ids: string[]
@@ -635,6 +919,14 @@ export type Database = {
           price_cents: number
           size: string
         }[]
+      }
+      note_hold_attempt: {
+        Args: {
+          p_max: number
+          p_visitor_hash: string
+          p_window_seconds: number
+        }
+        Returns: boolean
       }
     }
     Enums: {

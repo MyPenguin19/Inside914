@@ -196,3 +196,12 @@ Standard verify = `npm run typecheck && npm run lint && npm test`.
   - Migrations applied to dev (approved): `20261017041155_server_pricing_and_setup_status`, `20261017041706_consent_amount_any_price`.
   - Server pricing config (explicit `INSIDE914_PRICING_MODE`), priced `hold_slots()`, test labels in checkout, emails and summaries; webhook records setup status; checkout pages restyled to the approved look; confirmation never claims an unsent email.
   - Blocked on keys: real-Stripe tests and preview checkout need Stripe TEST keys + `INSIDE914_PRICING_MODE=test` in `.env.local` and Vercel Preview.
+
+- [x] **Task 14.1: Admin dashboard foundation**, 2026-10-17 on `task-14-1/admin-foundation`
+  - Login/logout, protected admin area, Overview, Campaigns (+detail with postcard map), Advertisers (+detail), Artwork (+detail, read-only), Payments, Settings; real data via RLS; no migration.
+  - Pending: owner creates their Supabase user; then grant admin (insert into `admins`) with approval.
+
+- [x] **Task 14.2: Admin operations**, 2026-10-18 on `task-14-2/admin-operations` (plan: `tasks/plan-14-2.md`)
+  - Migration `20261018000221_admin_operations` applied to the shared project (approved).
+  - Campaign create/edit/status lifecycle, slot blocking, notes/flags/protected cancellation, artwork content review, payment readiness, production page, private mailing evidence, audit log.
+  - Not built: customer re-upload after "changes requested", showing published evidence to advertisers, payment collection, print-ready checks (printer specs), campaign rescheduling with consent.
