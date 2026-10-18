@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 
-// REAL admin UI against the dev project: a throwaway admin (owner-approved) works on a throwaway
+// REAL admin UI against the LOCAL Supabase stack: a throwaway admin (owner-approved) works on a throwaway
 // far-future campaign it creates; everything is removed afterwards. The live campaign isn't touched.
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

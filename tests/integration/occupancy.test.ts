@@ -11,7 +11,7 @@ const url = process.env.SUPABASE_URL!;
 const secretKey = process.env.SUPABASE_SECRET_KEY;
 const OPEN_EDITION = "00000000-0000-4000-8000-000000000101";
 
-// REAL dev database (no mocks). Writes test bookings and removes them after each test.
+// REAL local database (no mocks). Writes test bookings and removes them after each test.
 describe.skipIf(!secretKey)("public occupancy and hold rate limit", () => {
   let admin: SupabaseClient<Database>;
   let anon: SupabaseClient<Database>;

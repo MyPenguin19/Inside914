@@ -1,18 +1,18 @@
 // Deletes development TEST reservations (fake "devtest" Stripe ids) and their artwork files.
-// Refuses to run against any database except the Inside914 DEV project or a local stack.
+// Refuses to run against anything but a local Supabase stack (the hosted project is production).
 // Usage: npm run dev:clear-test-reservations
 import { existsSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const allowed = ["uobiwanrxifqwdnouzxj.supabase.co", "127.0.0.1", "localhost"];
+const allowed = ["127.0.0.1", "localhost"];
 let host = "";
 try {
   host = new URL(url).hostname;
 } catch {}
 if (!allowed.includes(host)) {
-  console.error(`Refusing: ${host || "no database"} is not the development database.`);
+  console.error(`Refusing: ${host || "no database"} is not a local development database.`);
   process.exit(1);
 }
 if (!process.env.SUPABASE_SECRET_KEY) {

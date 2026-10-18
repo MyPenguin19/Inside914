@@ -1,8 +1,8 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-// Integration tests run against a Supabase project: the local stack (`npx supabase start`),
-// or the dev project when SUPABASE_URL / SUPABASE_ANON_KEY are set.
+// Integration tests run ONLY against the local Supabase stack (`npx supabase start`); the setup
+// file refuses any hosted project, which is production.
 export default defineConfig({
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },

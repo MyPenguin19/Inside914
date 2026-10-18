@@ -2,7 +2,7 @@ import type { AreaCard } from "@/components/booking/area-cards";
 import type { EditionSummary } from "@/lib/catalog/queries";
 import { formatIssueMonth } from "@/lib/format";
 
-// The campaign details in the dev database (dates, household count, layout) are PLACEHOLDERS
+// The campaign details in the database (dates, household count, layout) are PLACEHOLDERS
 // seeded in Task 2, not confirmed facts. While true, live pages say so. Set to false only once
 // real campaign values are configured.
 export const CAMPAIGN_DETAILS_PROVISIONAL = true;

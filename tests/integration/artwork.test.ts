@@ -12,7 +12,7 @@ const url = process.env.SUPABASE_URL!;
 const secretKey = process.env.SUPABASE_SECRET_KEY;
 const OPEN_EDITION = "00000000-0000-4000-8000-000000000101";
 
-// REAL Supabase Storage + database (dev project). Needs SUPABASE_SECRET_KEY; cleans up after itself.
+// REAL Supabase Storage + database (local stack). Needs SUPABASE_SECRET_KEY; cleans up after itself.
 describe.skipIf(!secretKey)("artwork storage", () => {
   let admin: SupabaseClient<Database>;
   let anon: SupabaseClient<Database>;

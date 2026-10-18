@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 
-// REAL dev database + Supabase Auth (no mocks): throwaway admin and non-admin users (owner-approved),
+// REAL local database + Supabase Auth (no mocks): throwaway admin and non-admin users (owner-approved),
 // a throwaway campaign far in the future (year 2090+), all removed afterwards.
 vi.mock("server-only", () => ({}));
 const { placeHold } = await import("@/lib/booking/place-hold");

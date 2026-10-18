@@ -1,8 +1,17 @@
 // Development-only TEST reservations (simulated card, no Stripe). Fails closed: every condition
 // must hold, so a stray environment variable can never enable it in production or on Vercel.
 
-// Databases test reservations may ever touch: the Inside914 DEV project and a local stack.
-const ALLOWED_SUPABASE_HOSTS = new Set(["uobiwanrxifqwdnouzxj.supabase.co", "127.0.0.1", "localhost"]);
+// Test reservations, integration/e2e tests and dev scripts may only ever touch a LOCAL Supabase
+// stack (`npx supabase start`). The hosted Inside914 project is PRODUCTION.
+const LOCAL_SUPABASE_HOSTS = new Set(["127.0.0.1", "localhost"]);
+
+export function isLocalSupabaseUrl(url: string | undefined) {
+  try {
+    return LOCAL_SUPABASE_HOSTS.has(new URL(url ?? "").hostname);
+  } catch {
+    return false;
+  }
+}
 
 export const DEV_TEST_PREFIX = "devtest";
 export const DEV_TEST_FLAG = "INSIDE914_DEV_TEST_RESERVATIONS";
@@ -19,7 +28,7 @@ export function devTestMode(env: Env = process.env): { active: boolean; reason: 
   } catch {
     return { active: false, reason: "unknown_database" };
   }
-  if (!ALLOWED_SUPABASE_HOSTS.has(host)) return { active: false, reason: "not_dev_database" };
+  if (!LOCAL_SUPABASE_HOSTS.has(host)) return { active: false, reason: "not_dev_database" };
   return { active: true, reason: "ok" };
 }
 

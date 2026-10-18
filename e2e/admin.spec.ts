@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 
-// REAL Supabase Auth on the dev project: throwaway admin and non-admin users (approved by the
+// REAL Supabase Auth on the LOCAL stack: throwaway admin and non-admin users (approved by the
 // owner), created for this file and deleted afterwards.
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -1,11 +1,22 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+import { isLocalSupabaseUrl } from "./src/lib/dev/test-mode";
+
+// e2e specs place holds, create users and campaigns: they run ONLY against a local Supabase stack
+// (`npx supabase start`). The hosted Inside914 project is production. Shell values win over .env.local.
+if (existsSync(".env.local")) process.loadEnvFile(".env.local");
+if (!isLocalSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL)) {
+  throw new Error(
+    `Refusing to run e2e tests against ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? "no database"}: point NEXT_PUBLIC_SUPABASE_URL at the local stack (the hosted project is production).`,
+  );
+}
 
 const baseURL = "http://localhost:3000";
 
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
-  workers: 1, // specs place real holds on one shared dev database; run them one at a time
+  workers: 1, // specs place real holds on one database; run them one at a time
   retries: process.env.CI ? 2 : 0,
   use: { baseURL, trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

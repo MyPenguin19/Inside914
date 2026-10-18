@@ -39,16 +39,13 @@ Work is ordered by dependency and risk: stop the harm first, then infrastructure
 - After deploy, with your approval, re-send the failed confirmation for the existing reservation.
 - **Accept when:** a real reservation's email arrives, and its link opens `/reservation` on the public domain.
 
-### Phase 2: Separate production database (C4), medium
-Depends on Phase 0.
-- Create the production project and apply all migrations. Each remote migration needs your approval.
-- Create the storage buckets with the same limits as today.
-- No seed data in production: campaigns are created in admin.
-- Grant admin to the user you create (you approve).
-- Point the Vercel Production env vars at the new project. Preview and local keep the dev project.
-- Decide what happens to the one real reservation in the old project: recreate it, or cancel it and remove the card.
-- Update `CLAUDE.md` so tests can never target production. Add a guard to the test setup that refuses the production project ref.
-- **Accept when:** production `/areas` reads the new project, and an integration test run leaves production untouched.
+### Phase 2: Separate production database (C4), revised 2026-10-18
+The Supabase org is on the Free plan with two active projects (the limit). Owner's decision: the existing `Inside914` project becomes **production only**, and dev and tests move to the local stack.
+- [x] `isLocalSupabaseUrl()` is the single rule. The integration setup, `playwright.config.ts`, dev TEST reservations and `dev:clear-test-reservations` refuse any hosted project.
+- [x] `CLAUDE.md` names the hosted project as production.
+- [ ] Delete released test holds and their leftover artwork from production, after the owner approves the exact rows.
+- [ ] **You:** install OrbStack, run `npx supabase start`, and point `.env.local`'s Supabase values at it.
+- **Accept when:** integration and e2e runs refuse the hosted project, and production contains only real data plus the placeholder campaign (replaced in Phase 7).
 
 ### Phase 3: Error pages and monitoring (R3), small
 - Add branded `src/app/error.tsx`, `global-error.tsx` and `not-found.tsx`, with Retry and Back actions and no internal details.

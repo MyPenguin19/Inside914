@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 import { makeImage } from "../fixtures/images";
 
-// REAL Supabase (dev project: database, Storage, RLS, confirm_booking()) with a FAKE Stripe client
+// REAL Supabase (local stack: database, Storage, RLS, confirm_booking()) with a FAKE Stripe client
 // and a FAKE email sender, so every database rule is exercised without network calls to Stripe or
 // Resend. Real Stripe test-mode behavior is in stripe.test.ts.
 vi.mock("server-only", () => ({}));
