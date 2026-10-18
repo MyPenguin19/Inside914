@@ -43,7 +43,7 @@ Work is ordered by dependency and risk: stop the harm first, then infrastructure
 The Supabase org is on the Free plan with two active projects (the limit). Owner's decision: the existing `Inside914` project becomes **production only**, and dev and tests move to the local stack.
 - [x] `isLocalSupabaseUrl()` is the single rule. The integration setup, `playwright.config.ts`, dev TEST reservations and `dev:clear-test-reservations` refuse any hosted project.
 - [x] `CLAUDE.md` names the hosted project as production.
-- [ ] Delete released test holds and their leftover artwork from production, after the owner approves the exact rows.
+- [x] Deleted 11 released test holds and 2 leftover artwork files from production (owner-approved, 2026-10-18). Both reserved bookings were kept.
 - [ ] **You:** install OrbStack, run `npx supabase start`, and point `.env.local`'s Supabase values at it.
 - **Accept when:** integration and e2e runs refuse the hosted project, and production contains only real data plus the placeholder campaign (replaced in Phase 7).
 
