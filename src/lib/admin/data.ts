@@ -13,7 +13,7 @@ import type { AdminBooking, AdminEdition, AdminSlot } from "./metrics";
 type Db = SupabaseClient<Database>;
 
 const BOOKING_COLUMNS =
-  "id, edition_id, status, size, price_cents, pricing_mode, hold_expires_at, reference, created_at, confirmed_at, stripe_customer_id, stripe_setup_intent_id, stripe_payment_method_id, stripe_setup_status, stripe_setup_status_at, booking_contacts(business_name, contact_name, email, phone), booking_artwork(status, crop_width, updated_at), booking_slots(slot_id, released_at)";
+  "id, edition_id, status, size, price_cents, pricing_mode, hold_expires_at, reference, created_at, confirmed_at, stripe_customer_id, stripe_setup_intent_id, stripe_payment_method_id, stripe_setup_status, stripe_setup_status_at, flagged_at, flag_reason, cancelled_at, cancellation_reason, booking_contacts(business_name, contact_name, email, phone), booking_artwork(id, status, crop_width, updated_at, review_status, review_note), booking_slots(slot_id, released_at)";
 
 type BookingRow = {
   id: string;
@@ -31,8 +31,12 @@ type BookingRow = {
   stripe_payment_method_id: string | null;
   stripe_setup_status: string | null;
   stripe_setup_status_at: string | null;
+  flagged_at: string | null;
+  flag_reason: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
   booking_contacts: { business_name: string; contact_name: string; email: string; phone: string } | null;
-  booking_artwork: { status: string; crop_width: number | null; updated_at: string } | null;
+  booking_artwork: { id: string; status: string; crop_width: number | null; updated_at: string; review_status: string; review_note: string | null } | null;
   booking_slots: { slot_id: string; released_at: string | null }[];
 };
 
@@ -62,6 +66,11 @@ export function toAdminBooking(r: BookingRow): AdminBooking {
       ? { status: r.booking_artwork.status, cropped: r.booking_artwork.crop_width !== null, updatedAt: r.booking_artwork.updated_at }
       : null,
     claims: r.booking_slots.map((s) => ({ slotId: s.slot_id, released: s.released_at !== null })),
+    flag: r.flagged_at ? { at: r.flagged_at, reason: r.flag_reason ?? "" } : null,
+    cancellation: r.cancelled_at ? { at: r.cancelled_at, reason: r.cancellation_reason ?? "" } : null,
+    artworkId: r.booking_artwork?.id ?? null,
+    artworkReview: (r.booking_artwork?.review_status as AdminBooking["artworkReview"]) ?? undefined,
+    artworkReviewNote: r.booking_artwork?.review_note ?? null,
   };
 }
 
@@ -215,6 +224,38 @@ export async function getBooking(db: Db, id: string) {
   const { data, error } = await db.from("bookings").select(BOOKING_COLUMNS).eq("id", id).returns<BookingRow[]>().maybeSingle();
   if (error) fail("booking", error);
   return data ? toAdminBooking(data) : null;
+}
+
+export async function listNotes(db: Db, bookingId: string) {
+  const { data, error } = await db.from("booking_notes").select("id, body, created_at, author_id").eq("booking_id", bookingId).order("created_at", { ascending: false });
+  if (error) fail("notes", error);
+  return data;
+}
+
+// The customer's private reservation link: issued / expires / revoked. Never the token itself.
+export async function getAccessStatus(db: Db, bookingId: string) {
+  const { data, error } = await db
+    .from("booking_access_tokens")
+    .select("created_at, expires_at, revoked_at")
+    .eq("booking_id", bookingId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) fail("access link", error);
+  return data;
+}
+
+export async function listEvents(db: Db, targetType: string, targetIds: string[], limit = 20) {
+  if (!targetIds.length) return [];
+  const { data, error } = await db
+    .from("admin_events")
+    .select("id, event_type, target_type, target_id, details, created_at, admin_user_id")
+    .eq("target_type", targetType)
+    .in("target_id", targetIds)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) fail("audit log", error);
+  return data;
 }
 
 export async function getConsent(db: Db, bookingId: string) {

@@ -150,4 +150,75 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
     expect((await admin.rpc("admin_set_campaign_status", { p_id: id, p_action: "cancel" })).data).toBe("done");
     expect((await admin.rpc("admin_set_campaign_status", { p_id: id, p_action: "open" })).error?.message).toBe("cannot_open_from_cancelled");
   });
+
+  describe("inventory and reservations", () => {
+    const slotId = async (label: string) => (await service.from("slots").select("id").eq("edition_id", OPEN_EDITION).eq("label", label).single()).data!.id;
+    const claims = async (bookingId: string) =>
+      (await service.from("booking_slots").select("slot_id").eq("booking_id", bookingId).is("released_at", null)).data ?? [];
+
+    test("blocking: only free spaces; blocked spaces can't be held; unblocking restores them; audited and repeatable", async () => {
+      await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);
+      const f1 = await slotId("F1");
+      const f2 = await slotId("F2");
+      expect((await admin.rpc("admin_set_slot_block", { p_slot_id: f1, p_block: true })).error?.message).toBe("reason_required");
+      expect((await admin.rpc("admin_set_slot_block", { p_slot_id: f1, p_block: true, p_reason: "Printer test area" })).data).toBe("done");
+      expect((await admin.rpc("admin_set_slot_block", { p_slot_id: f1, p_block: true, p_reason: "again" })).data).toBe("already");
+      expect(await placeHold(service, { slotIds: [f1] })).toEqual({ ok: false, reason: "slot_unavailable" });
+      expect(await placeHold(service, { slotIds: [f1, f2] })).toEqual({ ok: false, reason: "slot_unavailable" }); // a double can't include it either
+      const anon = createClient<Database>(url, anonKey, { auth: { persistSession: false } });
+      expect((await anon.from("slot_availability").select("occupancy, available").eq("slot_id", f1).single()).data).toEqual({ occupancy: "blocked", available: false });
+
+      const held = await placeHold(service, { slotIds: [f2] });
+      expect(held.ok).toBe(true);
+      expect((await admin.rpc("admin_set_slot_block", { p_slot_id: f2, p_block: true, p_reason: "x" })).error?.message).toBe("slot_occupied");
+
+      expect((await admin.rpc("admin_set_slot_block", { p_slot_id: f1, p_block: false })).data).toBe("done");
+      expect((await placeHold(service, { slotIds: [f1] })).ok).toBe(true);
+      expect((await events(f1)).map((e) => e.event_type)).toEqual(["slot.blocked", "slot.unblocked"]);
+    });
+
+    test("canceling a double releases both spaces atomically, keeps the record, and repeats safely (even concurrently)", async () => {
+      await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);
+      const hold = await placeHold(service, { slotIds: [await slotId("B1"), await slotId("B2")] });
+      if (!hold.ok) throw new Error("hold failed");
+      await service.from("bookings").update({ status: "reserved", confirmed_at: new Date().toISOString(), reference: "IN914-CNCLTS", stripe_payment_method_id: "pm_canceltest" }).eq("id", hold.bookingId);
+      expect(await claims(hold.bookingId)).toHaveLength(2);
+
+      expect((await admin.rpc("admin_cancel_booking", { p_booking_id: hold.bookingId, p_reason: "" })).error?.message).toBe("reason_required");
+      const results = await Promise.all([1, 2, 3].map(() => admin.rpc("admin_cancel_booking", { p_booking_id: hold.bookingId, p_reason: "Advertiser asked to cancel" })));
+      expect(results.map((r) => r.data).sort()).toEqual(["already", "already", "done"]);
+      expect(await claims(hold.bookingId)).toEqual([]); // both units free, in one step
+      const { data: row } = await service.from("bookings").select("status, cancellation_reason, cancelled_by, reference").eq("id", hold.bookingId).single();
+      expect(row).toMatchObject({ status: "cancelled", cancellation_reason: "Advertiser asked to cancel", reference: "IN914-CNCLTS" }); // kept, not deleted
+      const cancelled = (await events(hold.bookingId)).filter((e) => e.event_type === "booking.cancelled");
+      expect(cancelled).toHaveLength(1);
+      expect(cancelled[0].details).toMatchObject({ slots_released: 2, size: "double" });
+      expect((await placeHold(service, { slotIds: [await slotId("B1"), await slotId("B2")] })).ok).toBe(true); // available again
+    });
+
+    test("a reservation with a payment state, or one that already ended, can't be canceled here", async () => {
+      await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);
+      const paid = await placeHold(service, { slotIds: [await slotId("B3")] });
+      const ended = await placeHold(service, { slotIds: [await slotId("B4")] });
+      if (!paid.ok || !ended.ok) throw new Error("hold failed");
+      await service.from("bookings").update({ status: "charged", confirmed_at: new Date().toISOString(), reference: "IN914-PAYDTS", stripe_payment_method_id: "pm_paidtest" }).eq("id", paid.bookingId);
+      await service.from("bookings").update({ status: "released" }).eq("id", ended.bookingId);
+      expect((await admin.rpc("admin_cancel_booking", { p_booking_id: paid.bookingId, p_reason: "test" })).error?.message).toBe("payment_state_needs_resolution");
+      expect((await admin.rpc("admin_cancel_booking", { p_booking_id: ended.bookingId, p_reason: "test" })).error?.message).toBe("already_released");
+      expect(await claims(paid.bookingId)).toHaveLength(1); // untouched
+      expect((await member.rpc("admin_cancel_booking", { p_booking_id: paid.bookingId, p_reason: "x" })).error?.message).toBe("not_admin");
+    });
+
+    test("notes and flags are recorded and audited; non-admins can't read them", async () => {
+      await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);
+      const hold = await placeHold(service, { slotIds: [await slotId("B5")] });
+      if (!hold.ok) throw new Error("hold failed");
+      expect((await admin.rpc("admin_add_booking_note", { p_booking_id: hold.bookingId, p_body: "  Called the owner, will confirm Monday.  " })).error).toBeNull();
+      expect((await admin.rpc("admin_flag_booking", { p_booking_id: hold.bookingId, p_reason: "Business name looks misspelled" })).data).toBe("done");
+      expect((await admin.rpc("admin_flag_booking", { p_booking_id: hold.bookingId, p_reason: null })).data).toBe("done");
+      expect((await admin.from("booking_notes").select("body").eq("booking_id", hold.bookingId)).data).toEqual([{ body: "Called the owner, will confirm Monday." }]);
+      expect((await member.from("booking_notes").select("body"))).toMatchObject({ data: [] });
+      expect((await events(hold.bookingId)).map((e) => e.event_type)).toEqual(["booking.note_added", "booking.flagged", "booking.unflagged"]);
+    });
+  });
 });

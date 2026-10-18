@@ -33,6 +33,11 @@ export type AdminBooking = {
   contact: { businessName: string; contactName: string; email: string; phone: string } | null;
   artwork: { status: string; cropped: boolean; updatedAt: string } | null;
   claims: { slotId: string; released: boolean }[];
+  flag?: { at: string; reason: string } | null;
+  cancellation?: { at: string; reason: string } | null;
+  artworkId?: string | null;
+  artworkReview?: "pending" | "approved" | "rejected" | "changes_requested";
+  artworkReviewNote?: string | null;
 };
 
 export type AdminEdition = {
@@ -143,7 +148,9 @@ export function advertiserKey(b: AdminBooking) {
   return b.contact?.email.trim().toLowerCase() || `booking:${b.id}`;
 }
 
-export const artworkAwaitingReview = (b: AdminBooking) => isConfirmed(b) && b.artwork?.status === "ready" && b.artwork.cropped;
+// Uploaded, positioned, on a confirmed reservation, and not yet reviewed (any decision ends the wait).
+export const artworkAwaitingReview = (b: AdminBooking) =>
+  isConfirmed(b) && b.artwork?.status === "ready" && b.artwork.cropped && (b.artworkReview ?? "pending") === "pending";
 
 export type PaymentReadiness = "ready" | "failed" | "canceled" | "in_progress" | "not_started";
 

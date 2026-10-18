@@ -14,6 +14,9 @@ export function artworkLabel(b: AdminBooking): { text: string; tone: Tone } {
   if (!b.artwork) return { text: "No artwork", tone: "neutral" };
   if (b.artwork.status !== "ready") return { text: "Uploading", tone: "neutral" };
   if (!b.artwork.cropped) return { text: "Not positioned", tone: "warning" };
+  if (b.artworkReview === "approved") return { text: "Content approved", tone: "success" };
+  if (b.artworkReview === "rejected") return { text: "Rejected", tone: "danger" };
+  if (b.artworkReview === "changes_requested") return { text: "Changes requested", tone: "warning" };
   if (artworkAwaitingReview(b)) return { text: "Awaiting review", tone: "warning" };
   return { text: "Submitted", tone: "neutral" };
 }
@@ -35,3 +38,31 @@ export function positionLabel(b: AdminBooking, labels: Map<string, { label: stri
 }
 
 export const editionLabel = (e: { zoneName: string; issueMonth: string }, month: (iso: string) => string) => `${e.zoneName} · ${month(e.issueMonth)}`;
+
+const EVENTS: Record<string, string> = {
+  "campaign.created": "Campaign created",
+  "campaign.updated": "Campaign details changed",
+  "campaign.open": "Opened for reservations",
+  "campaign.pause": "New reservations paused",
+  "campaign.resume": "Reservations resumed",
+  "campaign.close": "Reservations closed",
+  "campaign.cancel": "Campaign canceled",
+  "campaign.approve_for_print": "Approved for print",
+  "campaign.mark_printed": "Marked as printed",
+  "campaign.mark_mailed": "Marked as mailed",
+  "campaign.complete": "Completed",
+  "slot.blocked": "Space blocked",
+  "slot.unblocked": "Space unblocked",
+  "booking.cancelled": "Reservation canceled",
+  "booking.note_added": "Note added",
+  "booking.flagged": "Flagged for investigation",
+  "booking.unflagged": "Flag cleared",
+  "artwork.approved": "Artwork content approved",
+  "artwork.rejected": "Artwork rejected",
+  "artwork.changes_requested": "Artwork changes requested",
+  "evidence.uploaded": "Evidence uploaded",
+  "evidence.published": "Evidence published",
+  "evidence.unpublished": "Evidence unpublished",
+};
+
+export const eventLabel = (type: string) => EVENTS[type] ?? type;

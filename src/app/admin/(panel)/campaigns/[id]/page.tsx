@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
+import { InventoryTable } from "@/components/admin/inventory-table";
 import { PostcardMap } from "@/components/admin/postcard-map";
 import { Badge, DetailList, EmptyState, LoadError, PageHeader, PanelSkeleton, Stat } from "@/components/admin/ui";
 import type { SlotView } from "@/components/postcard/postcard-side";
@@ -53,7 +54,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
       .map((s) => {
         const st = states.get(s.id)!;
         const who = st.booking?.contact?.businessName;
-        const note = st.state === "reserved" ? (who ?? "Reserved") : st.state === "held" ? `On hold${who ? `: ${who}` : ""}` : st.state === "closed" ? "Closed" : "Available";
+        const note =
+          st.state === "reserved" ? (who ?? "Reserved") : st.state === "held" ? `On hold${who ? `: ${who}` : ""}` : st.state === "blocked" ? "Blocked" : st.state === "closed" ? "Closed" : "Available";
         return { slot: { ...s, available: st.state === "available" }, selected: false, selectable: false, note };
       });
 
@@ -143,6 +145,15 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
             ))}
           </div>
         )}
+      </section>
+
+      <section aria-labelledby="spaces-title">
+        <h2 id="spaces-title" className="text-lg font-semibold">
+          Spaces
+        </h2>
+        <div className="mt-3">
+          <InventoryTable slots={slots} states={states} expired={bookings.filter((b) => b.status === "pending" && !isLiveHold(b, now) && b.claims.some((c) => !c.released))} />
+        </div>
       </section>
 
       <section aria-labelledby="reservations-title">

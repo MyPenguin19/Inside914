@@ -7,7 +7,10 @@ import { Badge, DetailList, LoadError, PageHeader, PanelSkeleton } from "@/compo
 import { DataTable } from "@/components/ui/data-table";
 import { Card, Notice } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
-import { getBooking, getConsent, listEditions, listSlots, searchBookings, signArtwork } from "@/lib/admin/data";
+import { NoteForm } from "@/components/admin/note-form";
+import { ReservationActions } from "@/components/admin/reservation-actions";
+import { getAccessStatus, getBooking, getConsent, listEditions, listEvents, listNotes, listSlots, searchBookings, signArtwork } from "@/lib/admin/data";
+import { eventLabel } from "@/lib/admin/labels";
 import { artworkLabel, paymentLabel, positionLabel, reservationLabel } from "@/lib/admin/labels";
 import { formatDeadline, formatIssueMonth, formatPhone, formatPrice, formatTimestamp } from "@/lib/format-admin";
 
@@ -28,21 +31,24 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
   try {
     const booking = await getBooking(supabase, id);
     if (!booking) notFound();
-    const [editions, slots, consent, artwork, history] = await Promise.all([
+    const [editions, slots, consent, artwork, history, notes, access, events] = await Promise.all([
       listEditions(supabase),
       listSlots(supabase, [booking.editionId]),
       getConsent(supabase, id),
       signArtwork(id),
       booking.contact ? searchBookings(supabase, { filter: "all", q: booking.contact.email, page: 1 }) : null,
+      listNotes(supabase, id),
+      getAccessStatus(supabase, id),
+      listEvents(supabase, "booking", [id], 10),
     ]);
-    data = { booking, edition: editions.find((e) => e.id === booking.editionId) ?? null, slots, consent, artwork, history: history?.rows ?? [] };
+    data = { booking, edition: editions.find((e) => e.id === booking.editionId) ?? null, slots, consent, artwork, history: history?.rows ?? [], notes, access, events };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error; // notFound()
     console.error(error instanceof Error ? error.message : "admin advertiser failed");
     return <LoadError what="this advertiser" />;
   }
 
-  const { booking: b, edition, slots, consent, artwork, history } = data;
+  const { booking: b, edition, slots, consent, artwork, history, notes, access, events } = data;
   const labels = new Map(slots.map((s) => [s.id, { label: s.label, side: s.side }]));
   const own = slots.filter((s) => b.claims.some((c) => c.slotId === s.id));
   const others = history.filter((h) => h.id !== b.id);
@@ -65,6 +71,8 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
           This booking uses the temporary test price ({formatPrice(b.priceCents)}).
         </Notice>
       )}
+
+      <ReservationActions booking={b} spaces={own.map((s) => s.label)} now={now} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -95,6 +103,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
                   ["Status", <Badge key="s" label={reservationLabel(b, now)} />],
                   ["Hold started", formatTimestamp(b.createdAt)],
                   ["Confirmed", formatTimestamp(b.confirmedAt)],
+                  ["Customer's private link", access ? (access.revoked_at ? `Revoked ${formatTimestamp(access.revoked_at)}` : Date.parse(access.expires_at) < now ? `Expired ${formatTimestamp(access.expires_at)}` : `Active until ${formatTimestamp(access.expires_at)}`) : "Not issued"],
                 ]}
               />
             </div>
@@ -116,6 +125,39 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
               />
             </div>
           </Card>
+
+          <Card>
+            <h2 className="text-lg font-semibold">Internal notes</h2>
+            {notes.length ? (
+              <ul className="mt-3 grid gap-3">
+                {notes.map((n) => (
+                  <li key={n.id} className="rounded-xl bg-background-soft px-3 py-2 text-sm">
+                    <p className="whitespace-pre-wrap">{n.body}</p>
+                    <p className="mt-1 text-xs text-muted">{formatTimestamp(n.created_at)}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-muted">No notes yet.</p>
+            )}
+            <div className="mt-4">
+              <NoteForm bookingId={b.id} />
+            </div>
+          </Card>
+
+          {events.length > 0 && (
+            <Card>
+              <h2 className="text-lg font-semibold">Admin history</h2>
+              <ul className="mt-3 grid gap-2 text-sm">
+                {events.map((ev) => (
+                  <li key={ev.id} className="flex justify-between gap-3">
+                    <span>{eventLabel(ev.event_type)}</span>
+                    <span className="text-xs text-muted">{formatTimestamp(ev.created_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
           {others.length > 0 && (
             <section aria-labelledby="history-title">
