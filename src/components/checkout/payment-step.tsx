@@ -168,8 +168,10 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
       ) : (
         <div>
           <p className="mb-2 text-sm font-medium">Card details</p>
-          <div ref={mountRef} className="min-h-[120px] rounded-xl border border-line bg-surface p-4">
+          <div className="min-h-[120px] rounded-xl border border-line bg-surface p-4">
             {phase === "loading" && <p className="text-sm text-muted">Loading secure card form…</p>}
+            {/* Stripe replaces this element's contents on mount, so React must render nothing inside it. */}
+            <div ref={mountRef} />
           </div>
           <p className="mt-2 text-xs text-muted">Card details go straight to Stripe, our payment processor. Inside914 never sees or stores your card number.</p>
         </div>
