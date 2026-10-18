@@ -2,8 +2,8 @@ import { timingSafeEqual } from "node:crypto";
 import { processDueOutbox } from "@/lib/email/outbox";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Retries due confirmation emails. Meant for a scheduled job (Vercel Cron sends
-// "Authorization: Bearer $CRON_SECRET"). Not scheduled yet; disabled without CRON_SECRET.
+// Retries due confirmation emails. Scheduled by Vercel Cron (vercel.json; once a day on the Hobby
+// plan), which sends "Authorization: Bearer $CRON_SECRET". Disabled without CRON_SECRET.
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   const given = request.headers.get("authorization") ?? "";

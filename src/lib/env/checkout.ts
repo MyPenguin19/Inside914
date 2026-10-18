@@ -45,9 +45,18 @@ export function getEmailEnv() {
   };
 }
 
-// Absolute site URL for links in emails (webhooks have no request to read it from).
+// Absolute site URL for links in emails (webhooks have no request to read it from). Production
+// requires an https APP_URL: the per-deployment VERCEL_URL changes on every deploy and can sit
+// behind Vercel's login, so a customer's link would break. Throwing leaves the email queued.
 export function getAppUrl() {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  const appUrl = process.env.APP_URL?.replace(/\/$/, "");
+  if (process.env.VERCEL_ENV === "production") {
+    if (!appUrl?.startsWith("https://")) {
+      throw new Error("Invalid environment configuration:\n  - APP_URL: is required in production (https://..., the public site address)");
+    }
+    return appUrl;
+  }
+  if (appUrl) return appUrl;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }
