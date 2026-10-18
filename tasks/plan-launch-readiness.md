@@ -72,7 +72,7 @@ Depends on Phase 0.
   - (recommended) turn on MFA for your admin account
 - **Accept when:** the headers are present on production, the card form works on Preview, and the advisor no longer warns about leaked-password protection.
 
-### Phase 5: Cancellation side effects (R1), medium. Code done 2026-10-18; migration awaits approval
+### Phase 5: Cancellation side effects (R1), medium. Done 2026-10-18 (migration applied to production)
 - Write a migration: canceling a booking queues a `reservation_canceled` email in `email_outbox`, in the same transaction. It applies to admin cancel and to campaign cancel.
 - After a successful cancel, the server action detaches the card in Stripe. It's idempotent, and failures are logged and retried by the cron.
 - Tests:
