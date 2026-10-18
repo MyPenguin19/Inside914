@@ -102,7 +102,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           </p>
         )}
         <div className="mt-3">
-          <CampaignStatusControls edition={edition} stats={stats} />
+          <CampaignStatusControls edition={edition} stats={stats} now={now} />
         </div>
       </section>
 

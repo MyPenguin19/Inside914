@@ -163,7 +163,7 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
           ))}
         </ul>
         <div className="mt-4">
-          <CampaignStatusControls edition={e} stats={stats} />
+          <CampaignStatusControls edition={e} stats={stats} now={now} />
         </div>
       </section>
 
