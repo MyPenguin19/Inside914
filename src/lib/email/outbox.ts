@@ -5,6 +5,7 @@ import { getReservationView } from "@/lib/checkout/reservation";
 import { isDevTestModeActive } from "@/lib/dev/test-mode";
 import { getAppUrl, getEmailEnv } from "@/lib/env/checkout";
 import type { Database } from "@/lib/supabase/database.types";
+import { reservationCancelledEmail } from "./reservation-cancelled";
 import { reservationConfirmedEmail } from "./reservation-confirmed";
 
 // Transactional email outbox. Rows are queued inside confirm_booking() (same transaction as the
@@ -65,6 +66,26 @@ async function claim(admin: Admin, rowId: string): Promise<OutboxRow | null> {
   return data;
 }
 
+// Sends one claimed row's email and marks it sent. Throws on failure (the caller records it).
+async function deliver(
+  admin: Admin,
+  row: OutboxRow,
+  to: string,
+  isTest: boolean,
+  email: { subject: string; html: string; text: string },
+  send: SendEmail,
+) {
+  const message = { to, ...email, idempotencyKey: `${row.id}:${row.attempts + 1}` };
+  // Checked on the reservation itself (not the current mode), so a test reservation can never
+  // reach Resend, even if it's processed later somewhere test mode is off.
+  const sent = isTest ? (await writeTestPreview(row.id, message), { id: TEST_NOT_DELIVERED }) : await send(message);
+  await admin
+    .from("email_outbox")
+    .update({ status: "sent", attempts: row.attempts + 1, provider_message_id: sent.id, sent_at: new Date().toISOString(), last_error: null })
+    .eq("id", row.id);
+  return "sent" as const;
+}
+
 export async function processOutboxRow(admin: Admin, rowId: string, send: SendEmail = sendWithResend) {
   const row = await claim(admin, rowId);
   if (!row) return "skipped" as const;
@@ -72,12 +93,30 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
   let accessTokenId: string | null = null;
   try {
     const view = await getReservationView(admin, row.booking_id);
+    const { supportEmail } = getEmailEnv();
+
+    // Sent when Inside914 cancels a confirmed reservation (queued by admin_cancel_booking).
+    if (row.kind === "reservation_cancelled") {
+      if (!view || view.status !== "cancelled" || !view.reference || !view.email) throw new Error("reservation_not_cancelled");
+      const email = reservationCancelledEmail({
+        businessName: view.businessName ?? "",
+        contactName: view.contactName ?? "",
+        reference: view.reference,
+        zoneName: view.zoneName,
+        issueMonth: view.issueMonth,
+        side: view.area.side,
+        positions: view.positions.map((p) => p.label),
+        supportEmail,
+        test: view.isTest,
+      });
+      return await deliver(admin, row, view.email, view.isTest, email, send);
+    }
+
     if (!view || view.status !== "reserved" || !view.reference || !view.email) throw new Error("reservation_not_ready");
 
     // A fresh link per attempt; a failed attempt's link is revoked below.
     const access = await issueAccessToken(admin, row.booking_id);
     accessTokenId = access.id;
-    const { supportEmail } = getEmailEnv();
     const email = reservationConfirmedEmail({
       businessName: view.businessName ?? "",
       contactName: view.contactName ?? "",
@@ -96,15 +135,7 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
       testPricing: view.pricingMode === "test",
     });
 
-    const message = { to: view.email, ...email, idempotencyKey: `${row.id}:${row.attempts + 1}` };
-    // Checked on the reservation itself (not the current mode), so a test reservation can never
-    // reach Resend, even if it's processed later somewhere test mode is off.
-    const sent = view.isTest ? (await writeTestPreview(row.id, message), { id: TEST_NOT_DELIVERED }) : await send(message);
-    await admin
-      .from("email_outbox")
-      .update({ status: "sent", attempts: row.attempts + 1, provider_message_id: sent.id, sent_at: new Date().toISOString(), last_error: null })
-      .eq("id", row.id);
-    return "sent" as const;
+    return await deliver(admin, row, view.email, view.isTest, email, send);
   } catch (error) {
     if (accessTokenId) await revokeAccessToken(admin, accessTokenId).catch(() => {});
     const attempts = row.attempts + 1;

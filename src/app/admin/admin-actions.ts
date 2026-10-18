@@ -7,11 +7,15 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
 import { adminErrorMessage, parseCampaignForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
 import { findTemplate } from "@/lib/admin/layouts";
+import { removeSavedCard } from "@/lib/checkout/card-removal";
+import { getStripe } from "@/lib/checkout/stripe";
+import { processOutboxForBooking } from "@/lib/email/outbox";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Every admin change goes through here: requireAdmin() first, input validated, then ONE admin_*
 // database function called AS THE SIGNED-IN ADMIN (it re-checks admin rights, locks, audits).
-// Nothing here can charge a card or touch Stripe.
+// Nothing here can charge a card. The only Stripe call is removing a cancelled customer's saved
+// card (detach), which can't charge anything.
 
 export type ActionResult = { ok?: boolean; message?: string; errors?: CampaignFieldErrors; values?: Record<string, string> };
 
@@ -94,7 +98,24 @@ export async function cancelBooking(_prev: ActionResult, form: FormData): Promis
   if (!why.success) return { message: why.error.issues[0].message };
   const { data, error } = await supabase.rpc("admin_cancel_booking", { p_booking_id: booking.data, p_reason: why.data });
   if (error) return { message: adminErrorMessage(error) };
-  return done(data === "already" ? "Already canceled: nothing changed." : "Canceled. Its spaces are available again.");
+  if (data === "already") return done("Already canceled: nothing changed.");
+  const followUp = await afterCancel(booking.data);
+  return done(`Canceled. Its spaces are available again.${followUp}`);
+}
+
+// Tells the customer and removes their saved card (secret-key client, only after requireAdmin()
+// and a successful admin_cancel_booking). Failures are retried by the email-outbox cron.
+async function afterCancel(bookingId: string) {
+  const admin = createAdminClient();
+  const [emails, card] = await Promise.all([
+    processOutboxForBooking(admin, bookingId).catch((): string[] => []),
+    (async () => removeSavedCard(admin, getStripe(), bookingId))().catch(() => "failed" as const),
+  ]);
+  const notes = [
+    emails.includes("sent") ? " The customer was emailed." : emails.includes("failed") ? " The email will be retried." : "",
+    card === "removed" ? " Their saved card was removed." : card === "failed" ? " Removing their saved card will be retried." : "",
+  ];
+  return notes.join("");
 }
 
 export async function addBookingNote(_prev: ActionResult, form: FormData): Promise<ActionResult> {

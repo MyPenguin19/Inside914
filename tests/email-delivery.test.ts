@@ -4,6 +4,9 @@ vi.mock("server-only", () => ({}));
 const processDueOutbox = vi.fn(async () => []);
 vi.mock("@/lib/email/outbox", () => ({ processDueOutbox }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
+const processDueCardRemovals = vi.fn(async () => ["removed"]);
+vi.mock("@/lib/checkout/card-removal", () => ({ processDueCardRemovals }));
+vi.mock("@/lib/checkout/stripe", () => ({ getStripe: () => ({}) }));
 
 const { getAppUrl } = await import("@/lib/env/checkout");
 const { GET } = await import("@/app/api/internal/email-outbox/route");
@@ -11,6 +14,7 @@ const { GET } = await import("@/app/api/internal/email-outbox/route");
 afterEach(() => {
   vi.unstubAllEnvs();
   processDueOutbox.mockClear();
+  processDueCardRemovals.mockClear();
 });
 
 describe("getAppUrl (links in emails)", () => {
@@ -58,6 +62,7 @@ describe("email retry route (Vercel Cron)", () => {
     expect((await call()).status).toBe(401);
     expect((await call("Bearer wrong-value")).status).toBe(401);
     expect(processDueOutbox).not.toHaveBeenCalled();
+    expect(processDueCardRemovals).not.toHaveBeenCalled();
   });
 
   test("processes due emails with the right secret", async () => {
@@ -65,5 +70,7 @@ describe("email retry route (Vercel Cron)", () => {
     const response = await call("Bearer s3cret-value");
     expect(response.status).toBe(200);
     expect(processDueOutbox).toHaveBeenCalledTimes(1);
+    expect(processDueCardRemovals).toHaveBeenCalledTimes(1); // retries saved-card removal for cancelled reservations
+    expect(await response.json()).toMatchObject({ cardRemovals: ["removed"] });
   });
 });
