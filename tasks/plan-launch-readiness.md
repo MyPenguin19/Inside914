@@ -47,7 +47,7 @@ The Supabase org is on the Free plan with two active projects (the limit). Owner
 - [ ] **You:** install OrbStack, run `npx supabase start`, and point `.env.local`'s Supabase values at it.
 - **Accept when:** integration and e2e runs refuse the hosted project, and production contains only real data plus the placeholder campaign (replaced in Phase 7).
 
-### Phase 3: Error pages and monitoring (R3), small
+### Phase 3: Error pages and monitoring (R3), small. Pages done 2026-10-18; monitoring deferred by the owner
 - Add branded `src/app/error.tsx`, `global-error.tsx` and `not-found.tsx`, with Retry and Back actions and no internal details.
 - Monitoring:
   - Recommended: Sentry. It's a new dependency, so it needs your approval.
