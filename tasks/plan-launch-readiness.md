@@ -50,7 +50,7 @@ Depends on Phase 0.
 - Update `CLAUDE.md` so tests can never target production. Add a guard to the test setup that refuses the production project ref.
 - **Accept when:** production `/areas` reads the new project, and an integration test run leaves production untouched.
 
-### Phase 3: Error pages and monitoring (R3), small. Pages done 2026-10-18; monitoring awaits a decision
+### Phase 3: Error pages and monitoring (R3), small. Pages done 2026-10-18; monitoring deferred by the owner
 - Add branded `src/app/error.tsx`, `global-error.tsx` and `not-found.tsx`, with Retry and Back actions and no internal details.
 - Monitoring:
   - Recommended: Sentry. It's a new dependency, so it needs your approval.
