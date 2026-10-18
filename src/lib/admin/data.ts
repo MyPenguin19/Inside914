@@ -196,13 +196,13 @@ export type BookingFilter = "confirmed" | "pending" | "ended" | "all";
 // in the database. Search matches business, contact name, email or reference.
 export async function searchBookings(
   db: Db,
-  opts: { filter: BookingFilter; q?: string; editionId?: string; page: number; extra?: "artwork" | "payment" },
+  opts: { filter: BookingFilter; q?: string; editionId?: string; page: number; extra?: "artwork" | "payment"; review?: string },
 ) {
   const contacts = "booking_contacts!inner(business_name, contact_name, email, phone)";
-  let query = db
-    .from("bookings")
-    .select(BOOKING_COLUMNS.replace("booking_contacts(business_name, contact_name, email, phone)", contacts), { count: "exact" })
-    .order("created_at", { ascending: false });
+  let columns = BOOKING_COLUMNS.replace("booking_contacts(business_name, contact_name, email, phone)", contacts);
+  if (opts.review) columns = columns.replace("booking_artwork(", "booking_artwork!inner(");
+  let query = db.from("bookings").select(columns, { count: "exact" }).order("created_at", { ascending: false });
+  if (opts.review) query = query.eq("booking_artwork.review_status", opts.review);
 
   if (opts.filter === "confirmed") query = query.not("status", "in", "(pending,released,cancelled)");
   if (opts.filter === "pending") query = query.eq("status", "pending");
@@ -256,6 +256,20 @@ export async function listEvents(db: Db, targetType: string, targetIds: string[]
     .limit(limit);
   if (error) fail("audit log", error);
   return data;
+}
+
+export async function listArtworkReviews(db: Db, bookingId: string) {
+  const { data, error } = await db.from("artwork_reviews").select("id, artwork_id, decision, note, created_at").eq("booking_id", bookingId).order("created_at", { ascending: false });
+  if (error) fail("artwork reviews", error);
+  return data;
+}
+
+// Latest consent per booking: the amount the customer agreed to, to check against the stored price.
+export async function listConsents(db: Db, bookingIds: string[]) {
+  if (!bookingIds.length) return new Map<string, { amountCents: number; pricingMode: string }>();
+  const { data, error } = await db.from("payment_consents").select("booking_id, amount_cents, pricing_mode, consented_at").in("booking_id", bookingIds).order("consented_at");
+  if (error) fail("consents", error);
+  return new Map(data.map((c) => [c.booking_id, { amountCents: c.amount_cents, pricingMode: c.pricing_mode }]));
 }
 
 export async function getConsent(db: Db, bookingId: string) {

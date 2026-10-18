@@ -221,4 +221,52 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
       expect((await events(hold.bookingId)).map((e) => e.event_type)).toEqual(["booking.note_added", "booking.flagged", "booking.unflagged"]);
     });
   });
+
+  describe("artwork review", () => {
+    async function bookingWithArtwork(label: string, ready = true) {
+      const { data: slot } = await service.from("slots").select("id").eq("edition_id", OPEN_EDITION).eq("label", label).single();
+      const hold = await placeHold(service, { slotIds: [slot!.id] });
+      if (!hold.ok) throw new Error("hold failed");
+      const { data: art } = await service
+        .from("booking_artwork")
+        .insert({ booking_id: hold.bookingId, storage_path: `${hold.bookingId}/${randomUUID()}`, status: ready ? "ready" : "uploading", content_type: ready ? "image/png" : null, byte_size: ready ? 1000 : null, width_px: ready ? 900 : null, height_px: ready ? 900 : null, crop_x: 0, crop_y: 0, crop_width: ready ? 900 : null, crop_height: ready ? 830 : null, zoom: 1 })
+        .select("id")
+        .single();
+      return { bookingId: hold.bookingId, artworkId: art!.id };
+    }
+
+    test("approve, request changes and reject one specific upload; reasons required; history kept; audited", async () => {
+      await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);
+      const { bookingId, artworkId } = await bookingWithArtwork("F3");
+      const review = (decision: string, note?: string) => admin.rpc("admin_review_artwork", { p_artwork_id: artworkId, p_decision: decision, p_note: note });
+      expect((await review("rejected")).error?.message).toBe("reason_required");
+      expect((await review("approved")).data).toBe("done");
+      expect((await review("approved")).data).toBe("already");
+      expect((await review("changes_requested", "Phone number is cut off")).data).toBe("done");
+      const { data: row } = await service.from("booking_artwork").select("review_status, review_note").eq("id", artworkId).single();
+      expect(row).toEqual({ review_status: "changes_requested", review_note: "Phone number is cut off" });
+      expect((await admin.from("artwork_reviews").select("decision").eq("booking_id", bookingId).order("created_at")).data?.map((r) => r.decision)).toEqual(["approved", "changes_requested"]);
+      expect((await events(artworkId)).map((e) => e.event_type)).toEqual(["artwork.approved", "artwork.changes_requested"]);
+      expect((await member.rpc("admin_review_artwork", { p_artwork_id: artworkId, p_decision: "approved" })).error?.message).toBe("not_admin");
+    });
+
+    test("a new upload never inherits approval, and incomplete artwork can't be approved", async () => {
+      await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);
+      const first = await bookingWithArtwork("F4");
+      expect((await admin.rpc("admin_review_artwork", { p_artwork_id: first.artworkId, p_decision: "approved" })).data).toBe("done");
+      // The customer replaces the file (the app deletes the old row and inserts a new one).
+      await service.from("booking_artwork").delete().eq("id", first.artworkId);
+      const { data: replacement } = await service
+        .from("booking_artwork")
+        .insert({ booking_id: first.bookingId, storage_path: `${first.bookingId}/${randomUUID()}`, status: "ready", content_type: "image/png", byte_size: 1000, width_px: 900, height_px: 900, crop_x: 0, crop_y: 0, crop_width: 900, crop_height: 830, zoom: 1 })
+        .select("id, review_status")
+        .single();
+      expect(replacement?.review_status).toBe("pending");
+      const history = (await admin.from("artwork_reviews").select("decision, artwork_id").eq("booking_id", first.bookingId)).data;
+      expect(history).toEqual([{ decision: "approved", artwork_id: null }]); // the old decision is kept, detached from the new file
+
+      const incomplete = await bookingWithArtwork("F5", false);
+      expect((await admin.rpc("admin_review_artwork", { p_artwork_id: incomplete.artworkId, p_decision: "approved" })).error?.message).toBe("artwork_incomplete");
+    });
+  });
 });

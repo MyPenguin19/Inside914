@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
+  artworkAwaitingReview,
   attentionItems,
+  paymentReadinessDetail,
   campaignStats,
   paymentReadiness,
   recentActivity,
@@ -151,5 +153,49 @@ describe("recent activity", () => {
     const events = recentActivity([confirmed, failed], [{ bookingId: confirmed.id, sentAt: "2026-11-30T10:11:00Z" }]);
     expect(events.map((e) => e.title)).toEqual(["Card setup failed", "Confirmation email sent", "Reservation confirmed"]);
     expect(recentActivity([], [])).toEqual([]);
+  });
+});
+
+describe("blocked spaces and fullness", () => {
+  test("blocked spaces are neither sold nor sellable; full = every sellable unit reserved", () => {
+    const blocked = slots.map((s) => (s.label === "F8" ? { ...s, blockedAt: "2026-11-01T00:00:00Z", blockedReason: "test" } : s));
+    const all = ["s1", "s2", "s3", "s4", "s5", "s6", "s7"].map((id) => booking({ slotIds: [id] }));
+    const stats = campaignStats(edition, blocked, all, NOW);
+    expect(stats).toMatchObject({ totalUnits: 8, blockedUnits: 1, sellableUnits: 7, reservedUnits: 7, availableUnits: 0, fullyReserved: true, filledPercent: 100 });
+    expect(slotStates(edition, blocked, all, NOW).get("s8")?.state).toBe("blocked");
+    const notFull = campaignStats(edition, slots, all, NOW); // without the block, one space is still open
+    expect(notFull.fullyReserved).toBe(false);
+  });
+
+  test("a paused campaign has no available spaces", () => {
+    expect(campaignStats({ ...edition, pausedAt: "2026-11-30T00:00:00Z" }, slots, [], NOW).availableUnits).toBe(0);
+  });
+});
+
+describe("artwork review state", () => {
+  test("only unreviewed, positioned artwork on confirmed reservations awaits review", () => {
+    expect(artworkAwaitingReview(booking({ slotIds: ["s1"] }))).toBe(true);
+    for (const review of ["approved", "rejected", "changes_requested"] as const) {
+      expect(artworkAwaitingReview(booking({ slotIds: ["s1"], artworkReview: review }))).toBe(false);
+    }
+  });
+});
+
+describe("payment readiness", () => {
+  const consent = (b: AdminBooking) => ({ amountCents: b.priceCents });
+
+  test("ready only when confirmed, allocated, consented for the stored amount, card saved, not flagged", () => {
+    const b = booking({ slotIds: ["s1", "s2"] });
+    expect(paymentReadinessDetail(b, consent(b))).toEqual({ ready: true, blockers: [] });
+  });
+
+  test("each failing rule is named", () => {
+    const b = booking({ slotIds: ["s1"] });
+    expect(paymentReadinessDetail(b, undefined).blockers).toEqual(["No future-charge consent on record"]);
+    expect(paymentReadinessDetail(b, { amountCents: 50000 }).blockers).toEqual(["Consent amount differs from the reservation amount"]);
+    expect(paymentReadinessDetail({ ...b, stripePaymentMethodId: null, stripeSetupStatus: "failed" }, consent(b)).blockers).toEqual(["Card setup failed"]);
+    expect(paymentReadinessDetail({ ...b, claims: [] }, consent(b)).blockers).toEqual(["Its spaces aren't all allocated"]);
+    expect(paymentReadinessDetail({ ...b, flag: { at: "x", reason: "y" } }, consent(b)).blockers).toEqual(["Flagged for investigation"]);
+    expect(paymentReadinessDetail({ ...b, status: "pending" }, consent(b)).ready).toBe(false);
   });
 });

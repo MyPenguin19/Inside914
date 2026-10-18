@@ -127,7 +127,7 @@ export async function reviewArtwork(_prev: ActionResult, form: FormData): Promis
   const artwork = uuid.safeParse(form.get("artwork_id"));
   const decision = z.enum(["approved", "rejected", "changes_requested"]).safeParse(form.get("decision"));
   if (!artwork.success || !decision.success) return { message: "That review isn't possible." };
-  const note = String(form.get("note") ?? "").trim();
+  const note = String(form.get("note") ?? form.get("reason") ?? "").trim();
   if (decision.data !== "approved" && !note) return { message: "Please give a reason the advertiser can act on." };
   const { data, error } = await supabase.rpc("admin_review_artwork", { p_artwork_id: artwork.data, p_decision: decision.data, p_note: note || undefined });
   if (error) return { message: adminErrorMessage(error) };
