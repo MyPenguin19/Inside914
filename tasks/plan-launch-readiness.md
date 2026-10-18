@@ -55,7 +55,7 @@ The Supabase org is on the Free plan with two active projects (the limit). Owner
   - Either way, scrub customer data before sending.
 - **Accept when:** a forced client error shows the branded page and appears in monitoring.
 
-### Phase 4: Security hardening (R5, R6), small
+### Phase 4: Security hardening (R5, R6), small. Headers done 2026-10-18 (CSP report-only until a clean live booking; then set `CSP_ENFORCED`)
 - Add `headers()` in `next.config.ts`:
   - a CSP that allows Stripe (`js.stripe.com`, `*.stripe.com` frames and API) and the Supabase storage origin
   - `frame-ancestors 'none'`
