@@ -133,7 +133,7 @@ export function adminErrorMessage(error: { code?: string; message?: string } | n
     no_pricing: "Set prices before opening.",
     another_open_campaign_in_area: "Another campaign in this area is already open. Close it first.",
     not_open: "This campaign isn't open.",
-    has_reservations: "This campaign has confirmed reservations, so it can't be canceled here.",
+    has_reservations: "This campaign has confirmed reservations. It can only be canceled after its deadline passes without filling.",
     close_reservations_first: "Close reservations first.",
     artwork_not_all_approved: "Every confirmed reservation needs approved artwork first.",
     needs_printer_confirmation: "Upload the printer's confirmation as evidence first.",
@@ -148,8 +148,34 @@ export function adminErrorMessage(error: { code?: string; message?: string } | n
     artwork_incomplete: "This artwork isn't fully uploaded and positioned, so it can't be reviewed.",
     booking_ended: "This booking has ended, so its artwork can't be reviewed.",
     note_required: "Write a note first.",
+    not_full: "Every sellable space must be reserved before printing. If the deadline passed, extend it or cancel the campaign.",
+    campaign_is_full: "This campaign is fully reserved, so it can't be canceled for not filling.",
+    deadline_must_be_future: "The new deadline must be in the future.",
+    deadline_must_be_later: "The new deadline must be later than the current one.",
   };
   if (m.startsWith("cannot_open_from_")) return `A campaign that's ${m.replace("cannot_open_from_", "").replaceAll("_", " ")} can't be opened.`;
+  if (m.startsWith("cannot_extend_from_")) return `A campaign that's ${m.replace("cannot_extend_from_", "").replaceAll("_", " ")} can't get a new deadline.`;
   if (m.startsWith("cannot_cancel_from_")) return `A campaign that's ${m.replace("cannot_cancel_from_", "").replaceAll("_", " ")} can't be canceled.`;
   return known[m] ?? "Something went wrong. Nothing was changed.";
+}
+
+// "Extend deadline" form: a later reservation deadline, plus later artwork/mailing dates when the
+// new deadline needs them (blank = unchanged). The database re-checks the order of all dates.
+export function parseExtendDeadlineForm(form: FormData): { ok: true; payload: Record<string, string> } | { ok: false; message: string } {
+  const text = (key: string) => String(form.get(key) ?? "").trim();
+  const deadline = nyLocalToIso(text("reservation_deadline"));
+  if (!deadline) return { ok: false, message: "Choose the new reservation deadline." };
+  const payload: Record<string, string> = { reservation_deadline: deadline };
+  if (text("artwork_due_at")) {
+    const due = nyLocalToIso(text("artwork_due_at"));
+    if (!due) return { ok: false, message: "The artwork due date isn't valid." };
+    payload.artwork_due_at = due;
+  }
+  for (const key of ["mailing_window_start", "mailing_window_end"]) {
+    const day = text(key);
+    if (!day) continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { ok: false, message: "The mailing window dates aren't valid." };
+    payload[key] = day;
+  }
+  return { ok: true, payload };
 }

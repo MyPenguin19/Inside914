@@ -3,7 +3,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const processDueOutbox = vi.fn(async () => []);
 vi.mock("@/lib/email/outbox", () => ({ processDueOutbox }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
+const rpc = vi.fn(async () => ({ data: 1, error: null }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc }) }));
 const processDueCardRemovals = vi.fn(async () => ["removed"]);
 vi.mock("@/lib/checkout/card-removal", () => ({ processDueCardRemovals }));
 vi.mock("@/lib/checkout/stripe", () => ({ getStripe: () => ({}) }));
@@ -15,6 +16,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   processDueOutbox.mockClear();
   processDueCardRemovals.mockClear();
+  rpc.mockClear();
 });
 
 describe("getAppUrl (links in emails)", () => {
@@ -63,6 +65,7 @@ describe("email retry route (Vercel Cron)", () => {
     expect((await call("Bearer wrong-value")).status).toBe(401);
     expect(processDueOutbox).not.toHaveBeenCalled();
     expect(processDueCardRemovals).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   test("processes due emails with the right secret", async () => {
@@ -71,6 +74,7 @@ describe("email retry route (Vercel Cron)", () => {
     expect(response.status).toBe(200);
     expect(processDueOutbox).toHaveBeenCalledTimes(1);
     expect(processDueCardRemovals).toHaveBeenCalledTimes(1); // retries saved-card removal for cancelled reservations
-    expect(await response.json()).toMatchObject({ cardRemovals: ["removed"] });
+    expect(rpc).toHaveBeenCalledWith("close_past_deadline_campaigns"); // closes campaigns whose deadline passed
+    expect(await response.json()).toMatchObject({ campaignsClosed: 1, cardRemovals: ["removed"] });
   });
 });

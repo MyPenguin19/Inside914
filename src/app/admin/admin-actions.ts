@@ -5,9 +5,9 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
-import { adminErrorMessage, parseCampaignForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
+import { adminErrorMessage, parseCampaignForm, parseExtendDeadlineForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
 import { findTemplate } from "@/lib/admin/layouts";
-import { removeSavedCard } from "@/lib/checkout/card-removal";
+import { processDueCardRemovals, removeSavedCard } from "@/lib/checkout/card-removal";
 import { getStripe } from "@/lib/checkout/stripe";
 import { processOutboxForBooking } from "@/lib/email/outbox";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -71,7 +71,36 @@ export async function setCampaignStatus(_prev: ActionResult, form: FormData): Pr
   if (!id.success || !action.success) return { message: "That action isn't available." };
   const { data, error } = await supabase.rpc("admin_set_campaign_status", { p_id: id.data, p_action: action.data });
   if (error) return { message: adminErrorMessage(error) };
-  return done(data === "already" ? "Already done: nothing changed." : "Done.");
+  if (data === "already") return done("Already done: nothing changed.");
+  if (action.data === "cancel") return done(`Campaign canceled.${await afterCampaignCancel(id.data)}`);
+  return done("Done.");
+}
+
+// Reservations cancelled with the campaign: email each customer and remove their saved cards
+// (secret-key client, only after requireAdmin() and a successful cancel). The daily job retries.
+async function afterCampaignCancel(editionId: string) {
+  const admin = createAdminClient();
+  const { data: bookings } = await admin.from("bookings").select("id").eq("edition_id", editionId).eq("status", "cancelled");
+  if (!bookings?.length) return "";
+  const emails = (await Promise.all(bookings.map((b) => processOutboxForBooking(admin, b.id).catch((): string[] => [])))).flat();
+  const cards = await (async () => processDueCardRemovals(admin, getStripe(), 50))().catch((): string[] => ["failed"]);
+  const sent = emails.filter((r) => r === "sent").length;
+  return [
+    sent ? ` ${sent} ${sent === 1 ? "customer was" : "customers were"} emailed.` : "",
+    emails.includes("failed") ? " Some emails will be retried." : "",
+    cards.includes("failed") ? " Removing some saved cards will be retried." : cards.length ? " Saved cards were removed." : "",
+  ].join("");
+}
+
+export async function extendDeadline(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const { supabase } = await requireAdmin();
+  const id = uuid.safeParse(form.get("id"));
+  if (!id.success) return { message: "That campaign doesn't exist." };
+  const parsed = parseExtendDeadlineForm(form);
+  if (!parsed.ok) return { message: parsed.message };
+  const { error } = await supabase.rpc("admin_extend_deadline", { p_id: id.data, p: parsed.payload });
+  if (error) return { message: adminErrorMessage(error) };
+  return done("Deadline extended. The campaign is open for reservations again.");
 }
 
 // ---- Inventory ---------------------------------------------------------------------------

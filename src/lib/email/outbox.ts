@@ -95,8 +95,9 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
     const view = await getReservationView(admin, row.booking_id);
     const { supportEmail } = getEmailEnv();
 
-    // Sent when Inside914 cancels a confirmed reservation (queued by admin_cancel_booking).
-    if (row.kind === "reservation_cancelled") {
+    // Sent when Inside914 cancels a confirmed reservation (queued by admin_cancel_booking), or the
+    // whole campaign because it didn't fill by its deadline (queued by admin_set_campaign_status).
+    if (row.kind === "reservation_cancelled" || row.kind === "campaign_cancelled_not_full") {
       if (!view || view.status !== "cancelled" || !view.reference || !view.email) throw new Error("reservation_not_cancelled");
       const email = reservationCancelledEmail({
         businessName: view.businessName ?? "",
@@ -108,6 +109,7 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
         positions: view.positions.map((p) => p.label),
         supportEmail,
         test: view.isTest,
+        notFull: row.kind === "campaign_cancelled_not_full",
       });
       return await deliver(admin, row, view.email, view.isTest, email, send);
     }

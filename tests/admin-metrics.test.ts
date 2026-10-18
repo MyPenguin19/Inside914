@@ -4,6 +4,7 @@ import {
   attentionItems,
   paymentReadinessDetail,
   campaignStats,
+  deadlineMissed,
   paymentReadiness,
   recentActivity,
   slotStates,
@@ -197,5 +198,29 @@ describe("payment readiness", () => {
     expect(paymentReadinessDetail({ ...b, claims: [] }, consent(b)).blockers).toEqual(["Its spaces aren't all allocated"]);
     expect(paymentReadinessDetail({ ...b, flag: { at: "x", reason: "y" } }, consent(b)).blockers).toEqual(["Flagged for investigation"]);
     expect(paymentReadinessDetail({ ...b, status: "pending" }, consent(b)).ready).toBe(false);
+  });
+});
+
+describe("missed reservation deadline (Phase 6A)", () => {
+  const past = { ...edition, artworkDeadline: "2026-11-30T00:00:00Z" }; // before NOW
+  const half = ["s1", "s2", "s3", "s4"].map((id) => booking({ slotIds: [id] }));
+
+  test("an open or closed campaign past its deadline and not full asks the admin to decide", () => {
+    for (const status of ["open", "closed"]) {
+      const e = { ...past, status };
+      expect(deadlineMissed(e, campaignStats(e, slots, half, NOW), NOW)).toBe(true);
+      const item = attentionItems(e, campaignStats(e, slots, half, NOW), half, NOW).find((i) => i.key === "deadline-missed");
+      expect(item).toMatchObject({ tone: "danger", href: "/admin/campaigns/e1", title: "Deadline passed: 4 of 8 spaces reserved" });
+    }
+  });
+
+  test("not flagged before the deadline, when full, or once the campaign moved on", () => {
+    const full = slots.map((s) => booking({ slotIds: [s.id] }));
+    expect(deadlineMissed(edition, campaignStats(edition, slots, half, NOW), NOW)).toBe(false); // deadline still ahead
+    expect(deadlineMissed(past, campaignStats(past, slots, full, NOW), NOW)).toBe(false); // full
+    for (const status of ["approved_to_print", "cancelled", "draft"]) {
+      const e = { ...past, status };
+      expect(deadlineMissed(e, campaignStats(e, slots, half, NOW), NOW)).toBe(false);
+    }
   });
 });

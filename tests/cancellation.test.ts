@@ -34,6 +34,15 @@ describe("cancellation email", () => {
     expect(email.text).not.toMatch(/reason|http/i);
   });
 
+  test("a campaign that didn't fill says so", () => {
+    const email = reservationCancelledEmail({ ...base, notFull: true });
+    expect(email.subject).toBe("Your Inside914 campaign didn't fill, so your reservation was canceled (IN914-ABC234)");
+    for (const body of [email.text, email.html]) {
+      expect(body).toMatch(/fully reserved by its deadline/i);
+      expect(body).toMatch(/not been charged/i);
+    }
+  });
+
   test("test reservations are labeled", () => {
     expect(reservationCancelledEmail({ ...base, test: true }).subject).toMatch(/^\[TEST\] /);
   });

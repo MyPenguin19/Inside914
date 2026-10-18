@@ -14,6 +14,7 @@ export type CancellationEmailData = {
   positions: string[];
   supportEmail: string;
   test?: boolean; // development TEST reservation: preview only, never delivered
+  notFull?: boolean; // the whole campaign was cancelled because it didn't fill by its deadline
 };
 
 const escape = (value: string) =>
@@ -28,13 +29,16 @@ export function reservationCancelledEmail(d: CancellationEmailData) {
     ["Position", position],
     ["Charged", "Nothing"],
   ];
-  const subject = `${d.test ? "[TEST] " : ""}Your Inside914 reservation was canceled (${d.reference})`;
+  const subject = d.notFull
+    ? `${d.test ? "[TEST] " : ""}Your Inside914 campaign didn't fill, so your reservation was canceled (${d.reference})`
+    : `${d.test ? "[TEST] " : ""}Your Inside914 reservation was canceled (${d.reference})`;
   const summary = "You have not been charged, and your saved card has been removed from our payment processor.";
+  const why = d.notFull ? " The campaign wasn't fully reserved by its deadline, so it won't be printed." : "";
 
   const text = [
     `Hi ${d.contactName},`,
     "",
-    `Your Inside914 reservation for ${d.businessName} has been canceled. ${summary}`,
+    `Your Inside914 reservation for ${d.businessName} has been canceled.${why} ${summary}`,
     "",
     ...rows.map(([k, v]) => `${k}: ${v}`),
     "",
@@ -46,8 +50,8 @@ export function reservationCancelledEmail(d: CancellationEmailData) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border:1px solid #e4e0d7;border-radius:16px">
 <tr><td style="padding:28px 32px 8px;font-size:18px;font-weight:600">Inside<span style="color:#1f5c4a">914</span></td></tr>
-<tr><td style="padding:8px 32px 0"><h1 style="margin:0;font-size:24px">Your reservation was canceled</h1>
-<p style="color:#5f5b53;font-size:15px;line-height:22px">Hi ${escape(d.contactName)}, the reservation for <strong>${escape(d.businessName)}</strong> has been canceled. <strong>${summary}</strong></p></td></tr>
+<tr><td style="padding:8px 32px 0"><h1 style="margin:0;font-size:24px">${d.notFull ? "Your campaign didn&#39;t fill" : "Your reservation was canceled"}</h1>
+<p style="color:#5f5b53;font-size:15px;line-height:22px">Hi ${escape(d.contactName)}, the reservation for <strong>${escape(d.businessName)}</strong> has been canceled.${escape(why)} <strong>${summary}</strong></p></td></tr>
 <tr><td style="padding:8px 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">
 ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#5f5b53;width:42%">${escape(k)}</td><td style="padding:6px 0;font-weight:600">${escape(v)}</td></tr>`).join("")}
 </table></td></tr>

@@ -4,7 +4,8 @@ import { getStripe } from "@/lib/checkout/stripe";
 import { processDueOutbox } from "@/lib/email/outbox";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Retries due emails and removes saved cards still attached to cancelled reservations. Scheduled
+// Daily job: closes campaigns whose reservation deadline passed, retries due emails, and removes
+// saved cards still attached to cancelled reservations. Scheduled
 // by Vercel Cron (vercel.json; once a day on the Hobby plan), which sends
 // "Authorization: Bearer $CRON_SECRET". Disabled without CRON_SECRET.
 export async function GET(request: Request) {
@@ -15,6 +16,8 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
   const admin = createAdminClient();
+  const { data: campaignsClosed, error: closeError } = await admin.rpc("close_past_deadline_campaigns");
+  if (closeError) console.error("closing past-deadline campaigns failed", closeError.code);
   const results = await processDueOutbox(admin);
   let cardRemovals: string[] = [];
   try {
@@ -22,5 +25,5 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("card removal job failed", error instanceof Error ? error.message.slice(0, 80) : "unknown");
   }
-  return Response.json({ processed: results.length, results, cardRemovals });
+  return Response.json({ campaignsClosed: campaignsClosed ?? 0, processed: results.length, results, cardRemovals });
 }
