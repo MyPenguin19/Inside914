@@ -269,4 +269,65 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
       expect((await admin.rpc("admin_review_artwork", { p_artwork_id: incomplete.artworkId, p_decision: "approved" })).error?.message).toBe("artwork_incomplete");
     });
   });
+
+  describe("production and mailing evidence", () => {
+    test("approve for print needs all artwork approved; printed and mailed need genuine evidence; all audited", async () => {
+      const id = await create(7);
+      await service.from("editions").update({ status: "closed" }).eq("id", id); // as if it had been open and filled
+      const { data: s } = await service.from("slots").select("id").eq("edition_id", id).eq("label", "F1").single();
+      const { data: b } = await service
+        .from("bookings")
+        .insert({ edition_id: id, size: "standard", price_cents: 50000, status: "reserved", hold_token_hash: randomBytes(32).toString("hex"), hold_expires_at: new Date().toISOString(), confirmed_at: new Date().toISOString(), reference: "IN914-PRDCTN", stripe_payment_method_id: "pm_prodtest" })
+        .select("id")
+        .single();
+      await service.from("booking_slots").insert({ booking_id: b!.id, slot_id: s!.id });
+      const { data: art } = await service
+        .from("booking_artwork")
+        .insert({ booking_id: b!.id, storage_path: `${b!.id}/${randomUUID()}`, status: "ready", content_type: "image/png", byte_size: 1000, width_px: 900, height_px: 900, crop_x: 0, crop_y: 0, crop_width: 900, crop_height: 830, zoom: 1 })
+        .select("id")
+        .single();
+      const status = (action: string) => admin.rpc("admin_set_campaign_status", { p_id: id, p_action: action });
+
+      expect((await status("approve_for_print")).error?.message).toBe("artwork_not_all_approved");
+      await admin.rpc("admin_review_artwork", { p_artwork_id: art!.id, p_decision: "approved" });
+      expect((await status("approve_for_print")).data).toBe("done");
+      expect((await status("mark_printed")).error?.message).toBe("needs_printer_confirmation");
+
+      const add = (kind: string, title: string) => admin.rpc("admin_add_evidence", { p_edition_id: id, p: { kind, title, quantity_printed: kind === "printer_confirmation" ? 5000 : null } });
+      expect((await add("printer_confirmation", "Printer invoice")).error).toBeNull();
+      expect((await status("mark_printed")).data).toBe("done");
+      expect((await status("mark_mailed")).error?.message).toBe("needs_mailing_evidence");
+      const { data: receipt } = await add("postal_acceptance", "PS Form 3602");
+      expect((await status("mark_mailed")).data).toBe("done");
+      expect((await status("complete")).data).toBe("done");
+
+      expect((await admin.rpc("admin_publish_evidence", { p_id: receipt!, p_publish: true })).data).toBe("done");
+      expect((await admin.rpc("admin_publish_evidence", { p_id: receipt!, p_publish: true })).data).toBe("already");
+      expect((await events(receipt!)).map((e) => e.event_type)).toEqual(["evidence.uploaded", "evidence.published"]);
+      expect((await events(id)).map((e) => e.event_type)).toEqual([
+        "campaign.created", "campaign.approve_for_print", "campaign.mark_printed", "campaign.mark_mailed", "campaign.complete",
+      ]);
+      expect((await member.rpc("admin_add_evidence", { p_edition_id: id, p: { kind: "other", title: "x" } })).error?.message).toBe("not_admin");
+      expect((await member.from("mailing_evidence").select("id")).data).toEqual([]);
+      await service.from("mailing_evidence").delete().eq("edition_id", id);
+    });
+
+    test("evidence files are private: nobody but the server can read them", async () => {
+      const path = `${OPEN_EDITION}/${randomUUID()}.pdf`;
+      const pdf = new TextEncoder().encode("%PDF-1.4 test evidence");
+      expect((await service.storage.from("mailing-evidence").upload(path, pdf, { contentType: "application/pdf" })).error).toBeNull();
+      try {
+        const anon = createClient<Database>(url, anonKey, { auth: { persistSession: false } });
+        for (const client of [anon, member, admin]) {
+          expect((await client.storage.from("mailing-evidence").download(path)).data).toBeNull();
+          expect((await client.storage.from("mailing-evidence").createSignedUrl(path, 60)).data?.signedUrl).toBeUndefined();
+          expect((await client.storage.from("mailing-evidence").upload(`${OPEN_EDITION}/${randomUUID()}.pdf`, pdf, { contentType: "application/pdf" })).error).not.toBeNull();
+        }
+        // The bucket itself refuses other file types.
+        expect((await service.storage.from("mailing-evidence").upload(`${OPEN_EDITION}/${randomUUID()}.txt`, pdf, { contentType: "text/plain" })).error).not.toBeNull();
+      } finally {
+        await service.storage.from("mailing-evidence").remove([path]);
+      }
+    });
+  });
 });

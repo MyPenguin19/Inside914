@@ -143,43 +143,69 @@ const EVIDENCE_TYPES: Record<string, { ext: string; magic: (b: Uint8Array) => bo
   "image/png": { ext: "png", magic: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 },
 };
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
+const BUCKET = "mailing-evidence";
+
+export type EvidenceTicket = { ok: true; path: string; uploadUrl: string } | { ok: false; message: string };
+
+// Step 1: a one-time signed upload URL into the PRIVATE bucket (the browser uploads straight to
+// storage; files never pass through this server, which also avoids request-size limits).
+export async function startEvidenceUpload(input: { editionId: string; contentType: string; size: number }): Promise<EvidenceTicket> {
+  await requireAdmin();
+  const edition = uuid.safeParse(input.editionId);
+  const type = EVIDENCE_TYPES[input.contentType];
+  if (!edition.success) return { ok: false, message: "That campaign doesn't exist." };
+  if (!type) return { ok: false, message: "Upload a PDF, JPG or PNG file." };
+  if (!(input.size > 0 && input.size <= MAX_EVIDENCE_BYTES)) return { ok: false, message: "Files can be up to 10 MB." };
+  const path = `${edition.data}/${randomUUID()}.${type.ext}`;
+  const { data, error } = await createAdminClient().storage.from(BUCKET).createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, message: "The upload couldn't be started. Nothing was saved." };
+  return { ok: true, path, uploadUrl: data.signedUrl };
+}
 
 const EvidenceInput = z.object({
   edition_id: z.uuid(),
   kind: z.enum(["printer_confirmation", "final_proof", "postal_acceptance", "mailing_confirmation", "other"]),
   title: z.string().trim().min(1, "Give the document a title.").max(200),
+  storage_path: z.string().trim(),
   quantity_printed: z.string().trim().transform((v) => (v === "" ? null : Number(v))).pipe(z.number().int().min(0).nullable()),
   quantity_accepted: z.string().trim().transform((v) => (v === "" ? null : Number(v))).pipe(z.number().int().min(0).nullable()),
   event_date: z.string().trim().transform((v) => (v === "" ? null : v)).pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable()),
   notes: z.string().trim().max(2000),
 });
 
-// The file is checked (type by its first bytes, size), stored privately, then recorded by the
-// database function as the signed-in admin. If recording fails, the stored file is removed.
+// Step 2: verify the stored file (its real type from its first bytes, its size, its folder) and
+// record the evidence as the signed-in admin. A file that fails is deleted, never recorded.
 export async function uploadEvidence(_prev: ActionResult, form: FormData): Promise<ActionResult> {
   const { supabase } = await requireAdmin();
-  const input = EvidenceInput.safeParse(Object.fromEntries(["edition_id", "kind", "title", "quantity_printed", "quantity_accepted", "event_date", "notes"].map((k) => [k, String(form.get(k) ?? "")])));
+  const input = EvidenceInput.safeParse(
+    Object.fromEntries(["edition_id", "kind", "title", "storage_path", "quantity_printed", "quantity_accepted", "event_date", "notes"].map((k) => [k, String(form.get(k) ?? "")])),
+  );
   if (!input.success) return { message: input.error.issues[0].message.startsWith("Invalid") ? "Some details are missing or invalid." : input.error.issues[0].message };
+  const { edition_id, storage_path } = input.data;
 
-  const file = form.get("file");
-  let stored: { path: string; type: string; size: number } | null = null;
-  if (file instanceof File && file.size > 0) {
-    if (file.size > MAX_EVIDENCE_BYTES) return { message: "Files can be up to 10 MB." };
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const type = Object.entries(EVIDENCE_TYPES).find(([, t]) => t.magic(bytes));
-    if (!type) return { message: "Upload a PDF, JPG or PNG file." };
-    const path = `${input.data.edition_id}/${randomUUID()}.${type[1].ext}`;
-    const { error } = await createAdminClient().storage.from("mailing-evidence").upload(path, bytes, { contentType: type[0], upsert: false });
-    if (error) return { message: "The file couldn't be stored. Nothing was saved." };
-    stored = { path, type: type[0], size: file.size };
+  let stored: { type: string; size: number } | null = null;
+  if (storage_path) {
+    const storage = createAdminClient().storage.from(BUCKET);
+    const discard = async (message: string) => {
+      await storage.remove([storage_path]);
+      return { message };
+    };
+    if (!new RegExp(`^${edition_id}/[0-9a-f-]{36}\\.(pdf|jpg|png)$`).test(storage_path)) return { message: "That upload doesn't belong to this campaign." };
+    const { data: blob, error } = await storage.download(storage_path);
+    if (error || !blob) return { message: "The uploaded file wasn't found. Please upload it again." };
+    if (blob.size > MAX_EVIDENCE_BYTES) return discard("Files can be up to 10 MB.");
+    const head = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+    const type = Object.entries(EVIDENCE_TYPES).find(([, t]) => t.magic(head));
+    if (!type || !storage_path.endsWith(`.${type[1].ext}`)) return discard("Upload a PDF, JPG or PNG file.");
+    stored = { type: type[0], size: blob.size };
   }
 
   const { error } = await supabase.rpc("admin_add_evidence", {
-    p_edition_id: input.data.edition_id,
+    p_edition_id: edition_id,
     p: {
       kind: input.data.kind,
       title: input.data.title,
-      storage_path: stored?.path ?? null,
+      storage_path: storage_path || null,
       content_type: stored?.type ?? null,
       byte_size: stored?.size ?? null,
       quantity_printed: input.data.quantity_printed,
@@ -189,7 +215,7 @@ export async function uploadEvidence(_prev: ActionResult, form: FormData): Promi
     },
   });
   if (error) {
-    if (stored) await createAdminClient().storage.from("mailing-evidence").remove([stored.path]);
+    if (storage_path) await createAdminClient().storage.from(BUCKET).remove([storage_path]);
     return { message: adminErrorMessage(error) };
   }
   return done("Evidence saved (not published).");

@@ -9,6 +9,7 @@ export const ADMIN_NAV = [
   { href: "/admin/advertisers", label: "Advertisers" },
   { href: "/admin/artwork", label: "Artwork" },
   { href: "/admin/payments", label: "Payments" },
+  { href: "/admin/production", label: "Production" },
 ];
 
 const isActive = (pathname: string, href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));

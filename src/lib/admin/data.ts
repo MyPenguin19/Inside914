@@ -284,6 +284,18 @@ export async function getConsent(db: Db, bookingId: string) {
   return data;
 }
 
+export async function listEvidence(db: Db, editionId: string) {
+  const { data, error } = await db.from("mailing_evidence").select("*").eq("edition_id", editionId).order("uploaded_at", { ascending: false });
+  if (error) fail("evidence", error);
+  return data;
+}
+
+// Private evidence file, viewable through a short-lived signed URL. ONLY call after requireAdmin().
+export async function signEvidence(path: string) {
+  const { data } = await createAdminClient().storage.from("mailing-evidence").createSignedUrl(path, 300);
+  return data?.signedUrl ?? null;
+}
+
 // Private artwork, viewable through a short-lived signed URL. ONLY call after requireAdmin().
 export async function signArtwork(bookingId: string) {
   return getArtwork(createAdminClient(), bookingId);
