@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-// Small shared building blocks: cards, section headings, status badges, price summaries, notes.
+// Small shared building blocks: cards, section headings, status badges, notes.
 
 export function Card({
   children,
@@ -61,28 +61,6 @@ export function StatusBadge({ tone = "neutral", children }: { tone?: Tone; child
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
       {children}
     </span>
-  );
-}
-
-export function PriceSummary({ rows, total, note }: { rows: [string, string][]; total: [string, string]; note?: ReactNode }) {
-  return (
-    <div>
-      <dl className="grid gap-2 text-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-4">
-            <dt className="text-muted">{label}</dt>
-            <dd className="text-right font-medium">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
-        <span className="text-sm text-muted">{total[0]}</span>
-        <span data-testid="price-total" className="font-display text-3xl font-medium">
-          {total[1]}
-        </span>
-      </div>
-      {note && <p className="mt-1 text-xs text-muted">{note}</p>}
-    </div>
   );
 }
 

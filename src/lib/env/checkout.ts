@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { SUPPORT_EMAIL } from "@/lib/support";
 import { parseEnv } from "./parse";
 
 // Test or LIVE Stripe keys (live approved by the owner, 2026-10-17). Either way the app only saves
@@ -41,7 +42,7 @@ export function getEmailEnv() {
   return {
     resendApiKey: process.env.RESEND_API_KEY || null,
     from: process.env.EMAIL_FROM || "Inside914 <onboarding@resend.dev>",
-    supportEmail: process.env.SUPPORT_EMAIL || "support@inside914.com",
+    supportEmail: process.env.SUPPORT_EMAIL || SUPPORT_EMAIL,
   };
 }
 

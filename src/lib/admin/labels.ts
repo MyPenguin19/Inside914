@@ -37,8 +37,6 @@ export function positionLabel(b: AdminBooking, labels: Map<string, { label: stri
   return `${own[0].side === "front" ? "Front" : "Back"} · ${own.map((s) => s.label).sort().join(" + ")}`;
 }
 
-export const editionLabel = (e: { zoneName: string; issueMonth: string }, month: (iso: string) => string) => `${e.zoneName} · ${month(e.issueMonth)}`;
-
 const EVENTS: Record<string, string> = {
   "campaign.created": "Campaign created",
   "campaign.updated": "Campaign details changed",

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { TERMS_VERSION } from "@/lib/checkout/terms";
@@ -37,10 +38,7 @@ export function generateStaticParams() {
   return Object.keys(DOCS).map((doc) => ({ doc }));
 }
 
-export default async function LegalPage({ params }: PageProps<"/legal/[doc]">) {
-  const { doc } = await params;
-  const page = DOCS[doc];
-  if (!page) notFound();
+export default function LegalPage({ params }: PageProps<"/legal/[doc]">) {
   return (
     <>
       <SiteHeader />
@@ -48,15 +46,29 @@ export default async function LegalPage({ params }: PageProps<"/legal/[doc]">) {
         <p className="rounded-lg border border-dashed border-line px-4 py-3 text-sm text-muted">
           <strong className="text-foreground">Draft, pending legal review.</strong> Version {TERMS_VERSION}.
         </p>
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight">{page.title}</h1>
-        {page.sections.map(([heading, body]) => (
-          <section key={heading} className="mt-6">
-            <h2 className="text-lg font-semibold">{heading}</h2>
-            <p className="mt-2 text-muted">{body}</p>
-          </section>
-        ))}
+        <Suspense fallback={<div className="mt-6 h-64 animate-pulse rounded-2xl bg-surface" />}>
+          <LegalDoc params={params} />
+        </Suspense>
       </main>
       <SiteFooter />
+    </>
+  );
+}
+
+// Reads the URL inside <Suspense>, so navigating to a policy page shows the shell instantly.
+async function LegalDoc({ params }: { params: PageProps<"/legal/[doc]">["params"] }) {
+  const { doc } = await params;
+  const page = DOCS[doc];
+  if (!page) notFound();
+  return (
+    <>
+      <h1 className="mt-6 text-3xl font-semibold tracking-tight">{page.title}</h1>
+      {page.sections.map(([heading, body]) => (
+        <section key={heading} className="mt-6">
+          <h2 className="text-lg font-semibold">{heading}</h2>
+          <p className="mt-2 text-muted">{body}</p>
+        </section>
+      ))}
     </>
   );
 }

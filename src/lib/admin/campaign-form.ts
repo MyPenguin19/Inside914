@@ -95,7 +95,6 @@ export const CampaignForm = z
     }
   });
 
-export type CampaignInput = z.output<typeof CampaignForm>;
 export type CampaignFieldErrors = Partial<Record<keyof z.input<typeof CampaignForm>, string>>;
 
 export const CAMPAIGN_FIELDS = [

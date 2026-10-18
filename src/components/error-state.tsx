@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-
-export const SUPPORT_EMAIL = "support@inside914.com"; // matches the footer and SUPPORT_EMAIL default
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 // Shared body of the error and not-found pages: a calm message, optional support reference and
 // actions. Never shows internal error details.
