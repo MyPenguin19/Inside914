@@ -52,13 +52,13 @@ declare
   v_count integer := 0;
 begin
   for v in
-    select id, private.edition_is_full(id) as full from public.editions
+    select id, private.edition_is_full(id) as is_full from public.editions
     where status = 'open' and artwork_deadline <= now()
     for update
   loop
     update public.editions set status = 'closed', updated_at = now() where id = v.id;
     insert into public.admin_events (admin_user_id, event_type, target_type, target_id, details)
-    values (null, 'system.campaign_auto_closed', 'campaign', v.id::text, jsonb_build_object('reason', 'deadline_passed', 'full', v.full));
+    values (null, 'system.campaign_auto_closed', 'campaign', v.id::text, jsonb_build_object('reason', 'deadline_passed', 'full', v.is_full));
     v_count := v_count + 1;
   end loop;
   return v_count;
