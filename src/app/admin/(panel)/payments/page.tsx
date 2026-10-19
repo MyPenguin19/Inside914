@@ -86,7 +86,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
               Readiness: {sel.name ?? `${sel.zoneName} · ${formatIssueMonth(sel.issueMonth)}`}
             </h2>
             {data.editionList.length > 1 && (
-              <form action="/admin/payments" className="flex items-center gap-2 text-sm">
+              <form action="/admin/payments" className="flex min-w-0 max-w-full items-center gap-2 text-sm">
                 <label htmlFor="pay-campaign" className="sr-only">Campaign</label>
                 <select id="pay-campaign" name="campaign" defaultValue={sel.id} className="min-w-0 rounded-xl border border-line bg-surface px-3 py-2">
                   {data.editionList.map((e) => (

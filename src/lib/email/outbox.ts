@@ -9,8 +9,8 @@ import { reservationCancelledEmail } from "./reservation-cancelled";
 import { reservationConfirmedEmail } from "./reservation-confirmed";
 
 // Transactional email outbox. Rows are queued inside confirm_booking() (same transaction as the
-// reservation), so an email problem can never undo or corrupt a reservation. Each row is claimed
-// atomically before sending, and marked sent once, so retries never send it twice.
+// reservation), so an email problem cannot undo it. Atomic claims prevent concurrent sends.
+// Ambiguous provider failures still require reconciliation: retries currently use new keys.
 
 type Admin = SupabaseClient<Database>;
 
@@ -37,6 +37,7 @@ export const sendWithResend: SendEmail = async (message) => {
   if (!resendApiKey) throw new Error("email_not_configured");
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(30_000),
     headers: {
       Authorization: `Bearer ${resendApiKey}`,
       "Content-Type": "application/json",
@@ -46,7 +47,8 @@ export const sendWithResend: SendEmail = async (message) => {
   });
   if (!response.ok) throw new Error(`resend_${response.status}`);
   const body = (await response.json()) as { id?: string };
-  return { id: body.id ?? "unknown" };
+  if (!body.id || typeof body.id !== "string") throw new Error("resend_missing_message_id");
+  return { id: body.id };
 };
 
 type OutboxRow = Database["public"]["Tables"]["email_outbox"]["Row"];
