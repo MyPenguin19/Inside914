@@ -1,0 +1,134 @@
+Inside914 — AmazingMail geometry foundation
+2026-10-19 | Local branch: revision/shared-postcard-mvp
+
+RESULT
+
+The labeled source dimensions support ten unchanged 2.5-inch paid squares:
+six on the front and four on the back, plus two separate house-ad regions
+above the back postal exclusion. This is a nominal mathematical candidate,
+not a printer-approved layout or final artwork proof.
+
+The candidate remains approved: false and is absent from LAYOUT_TEMPLATES.
+It does not create inventory, modify campaigns or alter the website design.
+No database approval was added. The existing PRINT_SPEC remains unchanged.
+
+SOURCE AND MEASUREMENT ORIGIN
+
+Owner-provided source images, inspected directly in the browser:
+Front: https://assets.xpressdocs.com/dserv/tpl/1500/2/566132.jpg
+Back:  https://assets.xpressdocs.com/dserv/tpl/1500/1/566132.jpg
+
+Both are 1500 x 1006 JPEG template illustrations. Front/back assignment comes
+from their PHOTO labels, not the numeric path segment. The back dimension
+arrows extend to the outer file's right and bottom edges. Accordingly, the
+3.925 x 3.33 postal panel is anchored to the bleed file, not the trimmed card.
+
+Use labeled inch dimensions for nominal geometry. Do not use JPEG pixel edges
+as manufacturing tolerances. The source does not specify an additional postal
+clearance or provide approval of Inside914's final artwork.
+
+This resolves the earlier audit's alternative trim-edge calculation: its
+4.950-inch left width and 2.475-inch square upper bound do not describe the
+file-edge anchor illustrated in this source. No size reduction is needed
+for nominal fit in the current zero-gutter candidate.
+
+BOUNDS — INCHES FROM THE UPLOAD FILE'S TOP-LEFT
+
+Region             x         y         width       height
+Bleed file         0         0         9.125       6.125
+Trim               0.0625    0.0625    9           6
+Live               0.1875    0.1875    8.75        5.75
+Postal (back)      5.2       2.795     3.925       3.33
+
+Bleed is 0.0625 inch per edge. Live inset from trim is 0.125 inch per edge.
+Postal left = 9.125 - 3.925 = 5.200.
+Postal top = 6.125 - 3.330 = 2.795.
+Internal arithmetic uses integer millionths of an inch before returning inches.
+
+These are FILE-origin coordinates. A future integration with trim-origin
+campaign slot coordinates must explicitly translate them by the bleed inset;
+they must not be copied into legacy campaigns as-is.
+
+PAID POSITIONS — ALL 2.5 x 2.5 INCHES
+
+Front: F1 (0.8125, 0.5625)  F2 (3.3125, 0.5625)  F3 (5.8125, 0.5625)
+       F4 (0.8125, 3.0625)  F5 (3.3125, 3.0625)  F6 (5.8125, 3.0625)
+Back:  B1 (0.1875, 0.5625)  B2 (2.6875, 0.5625)
+       B3 (0.1875, 3.0625)  B4 (2.6875, 3.0625)
+
+The front grid is centered in the live rectangle. The back grid is aligned
+to its left edge and centered vertically. Rows and columns meet edge-to-edge;
+this candidate does not invent an inter-ad gutter or resize any paid tile.
+
+Back live width left of postal = 5.2 - 0.1875 = 5.0125 inches.
+Two paid columns use 5 inches, leaving 0.0125 inch before postal: 0.3175 mm.
+That remaining width is the entire allowance for any horizontal gutter plus
+extra postal clearance. A required combined allowance larger than 0.0125 inch
+would invalidate this arrangement at 2.5 inches per tile.
+
+For this two-column arrangement, the square upper bound is:
+(5.0125 - column_gap - extra_postal_clearance) / 2.
+At zero additional gap/clearance the bound is 2.50625 inches. This is not a
+recommendation to enlarge the paid tiles or a maximum over all arrangements.
+
+HOUSE REGIONS — NEVER PAID INVENTORY
+
+The live rectangle directly above postal is 3.7375 x 2.6075 inches.
+The candidate divides it into two equal stacked region allocations:
+
+Inside914:           x=5.2, y=0.1875,  width=3.7375, height=1.30375.
+Inside Diagnostics:  x=5.2, y=1.49125, width=3.7375, height=1.30375.
+
+The lower house region ends exactly at the postal boundary; there is no
+additional vertical clearance. These are available regions, not approved
+house-ad designs or a claim that final text/logos have been checked.
+Both regions must be reviewed with actual artwork before a print proof is
+approved. The house artwork may use smaller bounds within these allocations.
+
+IMPLEMENTATION
+
+src/lib/print/spec.ts
+  Adds a separate AMAZINGMAIL_9X6_SPEC with source URLs and labeled dimensions.
+  Preserves the active legacy PRINT_SPEC and its users.
+
+src/lib/print/amazingmail-layout.ts
+  Derives file/trim/live/postal bounds, ten paid squares and two separate house
+  regions. Keeps the candidate unapproved and disconnected from campaign setup.
+
+tests/amazingmail-geometry.test.ts
+  Adds 11 tests for source dimensions/anchor, exact square sizes, inventory
+  labels/counts, live containment, pairwise non-overlap, postal exclusion,
+  front grid, tight back clearance, house regions and unapproved isolation.
+  Negative checks prove that widening into postal is detected: a 1/64-inch
+  back-tile shift or 0.001-inch lower-house extension overlaps the exclusion.
+
+docs/mvp-amazingmail-geometry.txt
+  This source, derivation, verification and limitations record.
+
+VERIFICATION
+
+npm run typecheck: PASS.
+npm run lint: PASS.
+npm test: PASS — 262 tests in 30 files, including all 11 new geometry tests.
+git diff --check: PASS.
+Standalone geometry diagram: generated from the same TypeScript candidate
+and visually inspected; it is a schematic, not a change to the website.
+
+No tests failed or were skipped in the unit run. Integration, E2E and build
+were not run for this isolated geometry slice. No database-backed workflow,
+UI component or external integration changed. This result does not establish
+completion of the broader MVP acceptance criteria.
+
+REMAINING BEFORE THIS LAYOUT CAN OPEN FOR RESERVATIONS / PRINT
+
+- Confirm printer acceptance of edge-to-edge paid tiles and the stated postal
+  clearances. If more clearance is required, stop before changing printed size.
+- Supply and review final Inside914 and Inside Diagnostics house artwork.
+- Complete the separate MVP product/customer/admin integration: ten-position
+  inventory, $399 pricing, one square artwork, account-free flow and readiness
+  controls. Existing product flows have not been switched by this slice.
+- Retain the existing database approval gate. Mathematical test success does
+  not authorize an approved-layout registry entry or opening a campaign.
+
+No production system, database, Stripe, Resend or Vercel configuration was
+changed. No push or deployment occurred. Changes are local only.

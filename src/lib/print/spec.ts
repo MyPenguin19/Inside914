@@ -13,3 +13,21 @@ export const PRINT_SPEC = {
   recommendedPpi: 300,
   minimumPpi: 150,
 } as const;
+
+// Separately versioned source dimensions for the new MVP. Do not change the legacy
+// PRINT_SPEC above: existing campaign geometry has not been migrated to this product.
+// The source dimension arrows anchor the postal panel at the BLEED FILE edges.
+// These labeled dimensions establish nominal geometry, not approval of a print run.
+export const AMAZINGMAIL_9X6_SPEC = {
+  status: "provisional",
+  sources: {
+    front: "https://assets.xpressdocs.com/dserv/tpl/1500/2/566132.jpg",
+    back: "https://assets.xpressdocs.com/dserv/tpl/1500/1/566132.jpg",
+  },
+  trimInches: { width: 9, height: 6 },
+  fileInches: { width: 9.125, height: 6.125 },
+  liveInches: { width: 8.75, height: 5.75 },
+  postalPanelInches: { width: 3.925, height: 3.33 },
+  postalAnchor: "file-bottom-right",
+  paidTileInches: 2.5,
+} as const;
