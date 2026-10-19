@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { SUPPORT_EMAIL } from "@/lib/support";
 import { Logo } from "@/components/site-header";
 
-// Contact address matches the SUPPORT_EMAIL default; confirm before launch.
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-background-soft">
@@ -16,8 +16,8 @@ export function SiteFooter() {
           <h2 className="text-sm font-semibold">Contact</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted">
             <li>
-              <a href="mailto:support@inside914.com" className="hover:text-foreground">
-                support@inside914.com
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-foreground">
+                {SUPPORT_EMAIL}
               </a>
             </li>
             <li>Westchester County, NY</li>

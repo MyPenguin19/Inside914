@@ -29,9 +29,3 @@ export async function requireAdmin() {
   // `now` is this request's clock for hold/deadline rules, read once so a page is self-consistent.
   return { supabase: session.supabase, user: session.user, now: Date.now() };
 }
-
-// For server actions that must answer instead of redirecting.
-export async function isCurrentUserAdmin() {
-  const session = await loadAdmin();
-  return Boolean(session.user && session.isAdmin);
-}

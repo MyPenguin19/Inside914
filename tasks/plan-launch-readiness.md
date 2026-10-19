@@ -39,18 +39,15 @@ Work is ordered by dependency and risk: stop the harm first, then infrastructure
 - After deploy, with your approval, re-send the failed confirmation for the existing reservation.
 - **Accept when:** a real reservation's email arrives, and its link opens `/reservation` on the public domain.
 
-### Phase 2: Separate production database (C4), medium
-Depends on Phase 0.
-- Create the production project and apply all migrations. Each remote migration needs your approval.
-- Create the storage buckets with the same limits as today.
-- No seed data in production: campaigns are created in admin.
-- Grant admin to the user you create (you approve).
-- Point the Vercel Production env vars at the new project. Preview and local keep the dev project.
-- Decide what happens to the one real reservation in the old project: recreate it, or cancel it and remove the card.
-- Update `CLAUDE.md` so tests can never target production. Add a guard to the test setup that refuses the production project ref.
-- **Accept when:** production `/areas` reads the new project, and an integration test run leaves production untouched.
+### Phase 2: Separate production database (C4), revised 2026-10-18
+The Supabase org is on the Free plan with two active projects (the limit). Owner's decision: the existing `Inside914` project becomes **production only**, and dev and tests move to the local stack.
+- [x] `isLocalSupabaseUrl()` is the single rule. The integration setup, `playwright.config.ts`, dev TEST reservations and `dev:clear-test-reservations` refuse any hosted project.
+- [x] `CLAUDE.md` names the hosted project as production.
+- [x] Deleted 11 released test holds and 2 leftover artwork files from production (owner-approved, 2026-10-18). Both reserved bookings were kept.
+- [ ] **You:** install OrbStack, run `npx supabase start`, and point `.env.local`'s Supabase values at it.
+- **Accept when:** integration and e2e runs refuse the hosted project, and production contains only real data plus the placeholder campaign (replaced in Phase 7).
 
-### Phase 3: Error pages and monitoring (R3), small
+### Phase 3: Error pages and monitoring (R3), small. Pages done 2026-10-18; monitoring deferred by the owner
 - Add branded `src/app/error.tsx`, `global-error.tsx` and `not-found.tsx`, with Retry and Back actions and no internal details.
 - Monitoring:
   - Recommended: Sentry. It's a new dependency, so it needs your approval.
@@ -58,7 +55,7 @@ Depends on Phase 0.
   - Either way, scrub customer data before sending.
 - **Accept when:** a forced client error shows the branded page and appears in monitoring.
 
-### Phase 4: Security hardening (R5, R6), small
+### Phase 4: Security hardening (R5, R6), small. Headers done 2026-10-18 (CSP report-only until a clean live booking; then set `CSP_ENFORCED`)
 - Add `headers()` in `next.config.ts`:
   - a CSP that allows Stripe (`js.stripe.com`, `*.stripe.com` frames and API) and the Supabase storage origin
   - `frame-ancestors 'none'`
@@ -72,7 +69,7 @@ Depends on Phase 0.
   - (recommended) turn on MFA for your admin account
 - **Accept when:** the headers are present on production, the card form works on Preview, and the advisor no longer warns about leaked-password protection.
 
-### Phase 5: Cancellation side effects (R1), medium
+### Phase 5: Cancellation side effects (R1), medium. Done 2026-10-18 (migration applied to production)
 - Write a migration: canceling a booking queues a `reservation_canceled` email in `email_outbox`, in the same transaction. It applies to admin cancel and to campaign cancel.
 - After a successful cancel, the server action detaches the card in Stripe. It's idempotent, and failures are logged and retried by the cron.
 - Tests:
@@ -80,7 +77,7 @@ Depends on Phase 0.
   - unit: detach is called once
 - **Accept when:** canceling in admin frees the space, emails the customer once, and removes the card.
 
-### Phase 6: Deadline handling (R2), spec first
+### Phase 6: Deadline handling (R2). Spec approved 2026-10-18 (tasks/spec-phase-6-deadlines-and-charging.md); 6A migration applied to production
 - Write a short spec covering:
   - auto-cancel of reservations when a campaign misses its deadline (cron plus the Phase 5 path)
   - the charge flow, only if you choose it in Phase 0: off-session PaymentIntent for the consented amount, failure and retry emails, and an admin view

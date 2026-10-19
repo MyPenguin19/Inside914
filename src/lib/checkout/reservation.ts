@@ -15,6 +15,7 @@ export type ReservationView = {
   bookingId: string;
   status: string;
   isTest: boolean; // development TEST reservation (simulated card, no payment method, no authorization)
+  card: "removed" | "pending" | "none"; // saved card: removed in Stripe, still attached, or never saved
   pricingMode: "launch" | "test"; // test = temporary $1 / $2 prices (with test or live Stripe keys)
   editionId: string;
   campaign: { taken: number; total: number }; // spaces held or reserved on this edition
@@ -46,6 +47,8 @@ type Row = {
   pricing_mode: string;
   edition_id: string;
   stripe_customer_id: string | null;
+  stripe_payment_method_id: string | null;
+  card_removed_at: string | null;
   booking_contacts: { business_name: string; contact_name: string; email: string } | null;
   booking_slots: { released_at: string | null; slots: { label: string; side: string; x_in: number; y_in: number; width_in: number; height_in: number } | null }[];
 };
@@ -54,7 +57,7 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id, status, reference, confirmed_at, size, price_cents, pricing_mode, edition_id, stripe_customer_id, booking_contacts(business_name, contact_name, email), booking_slots(released_at, slots(label, side, x_in, y_in, width_in, height_in))",
+      "id, status, reference, confirmed_at, size, price_cents, pricing_mode, edition_id, stripe_customer_id, stripe_payment_method_id, card_removed_at, booking_contacts(business_name, contact_name, email), booking_slots(released_at, slots(label, side, x_in, y_in, width_in, height_in))",
     )
     .eq("id", bookingId)
     .returns<Row[]>()
@@ -79,6 +82,7 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
     bookingId: data.id,
     status: data.status,
     isTest: isTestStripeId(data.stripe_customer_id),
+    card: !data.stripe_payment_method_id ? "none" : data.card_removed_at ? "removed" : "pending",
     pricingMode: data.pricing_mode === "test" ? "test" : "launch",
     editionId: data.edition_id,
     campaign: { taken: catalog.slots.filter((s) => !s.available).length, total: catalog.slots.length },

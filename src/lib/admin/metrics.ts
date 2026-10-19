@@ -34,7 +34,7 @@ export type AdminBooking = {
   artwork: { status: string; cropped: boolean; updatedAt: string } | null;
   claims: { slotId: string; released: boolean }[];
   flag?: { at: string; reason: string } | null;
-  cancellation?: { at: string; reason: string } | null;
+  cancellation?: { at: string; reason: string; cardRemovedAt: string | null } | null;
   artworkId?: string | null;
   artworkReview?: "pending" | "approved" | "rejected" | "changes_requested";
   artworkReviewNote?: string | null;
@@ -168,6 +168,12 @@ export type AttentionItem = { key: string; title: string; detail: string; href: 
 
 const DAY = 24 * 60 * 60 * 1000;
 
+// The reservation deadline passed and the campaign isn't full: the admin must extend the deadline
+// or cancel the campaign (spec D2). Nothing happens to customers until they choose.
+export function deadlineMissed(edition: AdminEdition, stats: CampaignStats, now: number) {
+  return ["open", "closed"].includes(edition.status) && Date.parse(edition.artworkDeadline) <= now && !stats.fullyReserved;
+}
+
 export function attentionItems(edition: AdminEdition | null, stats: CampaignStats | null, bookings: AdminBooking[], now: number): AttentionItem[] {
   const items: AttentionItem[] = [];
   const awaiting = bookings.filter(artworkAwaitingReview).length;
@@ -187,6 +193,9 @@ export function attentionItems(edition: AdminEdition | null, stats: CampaignStat
   const lostInventory = bookings.filter((b) => isConfirmed(b) && b.claims.filter((c) => !c.released).length !== (b.size === "double" ? 2 : 1)).length;
   if (orphaned + lostInventory) {
     items.push({ key: "investigate", tone: "danger", href: "/admin/advertisers", title: `${orphaned + lostInventory} ${orphaned + lostInventory === 1 ? "booking needs" : "bookings need"} investigation`, detail: [orphaned && `${orphaned} saved a card after the hold expired`, lostInventory && `${lostInventory} confirmed without all of their spaces`].filter(Boolean).join("; ") + "." });
+  }
+  if (edition && stats && deadlineMissed(edition, stats, now)) {
+    items.push({ key: "deadline-missed", tone: "danger", href: `/admin/campaigns/${edition.id}`, title: `Deadline passed: ${stats.reservedUnits} of ${stats.sellableUnits} spaces reserved`, detail: "Extend the deadline or cancel the campaign. Customers aren't told anything until you choose." });
   }
   if (edition && stats && edition.status === "open") {
     const left = Date.parse(edition.artworkDeadline) - now;

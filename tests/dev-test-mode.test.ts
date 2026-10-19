@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { devTestMode, isTestStripeId } from "@/lib/dev/test-mode";
+import { devTestMode, isLocalSupabaseUrl, isTestStripeId } from "@/lib/dev/test-mode";
 
 vi.mock("server-only", () => ({}));
 const { fakeStripe, isFakeStripe } = await import("@/lib/dev/fake-stripe");
@@ -9,14 +9,22 @@ const { stripeModeConflict } = await import("@/lib/checkout/service");
 const DEV = {
   INSIDE914_DEV_TEST_RESERVATIONS: "true",
   NODE_ENV: "development",
-  NEXT_PUBLIC_SUPABASE_URL: "https://uobiwanrxifqwdnouzxj.supabase.co",
+  NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
 };
 
 describe("development TEST reservation guard (fails closed)", () => {
-  test("on only for a dev build, off Vercel, against the dev or local database", () => {
+  test("on only for a dev build, off Vercel, against a local database", () => {
     expect(devTestMode(DEV)).toEqual({ active: true, reason: "ok" });
     expect(devTestMode({ ...DEV, NODE_ENV: "test" }).active).toBe(true);
-    expect(devTestMode({ ...DEV, NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321" }).active).toBe(true);
+    expect(devTestMode({ ...DEV, NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321" }).active).toBe(true);
+  });
+
+  test("only a local Supabase stack counts as local (the hosted project is production)", () => {
+    expect(isLocalSupabaseUrl("http://127.0.0.1:54321")).toBe(true);
+    expect(isLocalSupabaseUrl("http://localhost:54321")).toBe(true);
+    for (const url of ["https://uobiwanrxifqwdnouzxj.supabase.co", "https://localhost.evil.com", "not a url", undefined]) {
+      expect(isLocalSupabaseUrl(url)).toBe(false);
+    }
   });
 
   test.each([
@@ -27,8 +35,8 @@ describe("development TEST reservation guard (fails closed)", () => {
     ["Vercel production", { ...DEV, VERCEL: "1", VERCEL_ENV: "production" }, "running_on_vercel"],
     ["Vercel preview", { ...DEV, VERCEL_ENV: "preview" }, "running_on_vercel"],
     ["any Vercel URL", { ...DEV, VERCEL_URL: "inside914.vercel.app" }, "running_on_vercel"],
-    ["another Supabase project", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "https://prodprojectref.supabase.co" }, "not_dev_database"],
-    ["lookalike host", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "https://uobiwanrxifqwdnouzxj.supabase.co.evil.com" }, "not_dev_database"],
+    ["the hosted production project", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "https://uobiwanrxifqwdnouzxj.supabase.co" }, "not_dev_database"],
+    ["lookalike host", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1.evil.com" }, "not_dev_database"],
     ["missing database", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: undefined }, "unknown_database"],
   ])("stays OFF: %s", (_, env, reason) => {
     expect(devTestMode(env)).toEqual({ active: false, reason });
@@ -59,7 +67,7 @@ describe("the fake Stripe client", () => {
 describe("getStripe picks the fake only when the guard allows", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  test("dev + flag + dev database: fake", () => {
+  test("dev + flag + local database: fake", () => {
     for (const [k, v] of Object.entries(DEV)) vi.stubEnv(k, v);
     expect(isFakeStripe(getStripe())).toBe(true);
   });

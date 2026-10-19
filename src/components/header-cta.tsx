@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/ui/button";
 
 // Hidden while someone is already reserving: one obvious next step per screen.
-const FOCUSED = /^\/(areas|demo\/(areas|postcard|artwork|checkout)|book\/|editions\/)/;
+const FOCUSED = /^\/(areas|book\/|editions\/)/;
 
 export function HeaderCta() {
   const pathname = usePathname();

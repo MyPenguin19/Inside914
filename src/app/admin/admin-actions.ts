@@ -5,13 +5,16 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
-import { adminErrorMessage, parseCampaignForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
+import { adminErrorMessage, parseCampaignForm, parseExtendDeadlineForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
 import { findTemplate } from "@/lib/admin/layouts";
+import { followUpCancellations } from "@/lib/checkout/cancellation-followup";
+import { getStripe } from "@/lib/checkout/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Every admin change goes through here: requireAdmin() first, input validated, then ONE admin_*
 // database function called AS THE SIGNED-IN ADMIN (it re-checks admin rights, locks, audits).
-// Nothing here can charge a card or touch Stripe.
+// Nothing here can charge a card. The only Stripe call is removing a cancelled customer's saved
+// card (detach), which can't charge anything.
 
 export type ActionResult = { ok?: boolean; message?: string; errors?: CampaignFieldErrors; values?: Record<string, string> };
 
@@ -67,7 +70,35 @@ export async function setCampaignStatus(_prev: ActionResult, form: FormData): Pr
   if (!id.success || !action.success) return { message: "That action isn't available." };
   const { data, error } = await supabase.rpc("admin_set_campaign_status", { p_id: id.data, p_action: action.data });
   if (error) return { message: adminErrorMessage(error) };
-  return done(data === "already" ? "Already done: nothing changed." : "Done.");
+  if (data === "already") return done("Already done: nothing changed.");
+  if (action.data === "cancel") return done(`Campaign canceled.${await afterCampaignCancel(id.data)}`);
+  return done("Done.");
+}
+
+// Reservations cancelled with the campaign: remove saved cards, then email each customer
+// (secret-key client, only after requireAdmin() and a successful cancel). The daily job retries.
+async function afterCampaignCancel(editionId: string) {
+  const admin = createAdminClient();
+  const { data: bookings } = await admin.from("bookings").select("id").eq("edition_id", editionId).eq("status", "cancelled");
+  if (!bookings?.length) return "";
+  const { cards, emails } = await followUpCancellations(admin, getStripe, bookings.map((b) => b.id));
+  const sent = emails.filter((r) => r === "sent").length;
+  return [
+    sent ? ` ${sent} ${sent === 1 ? "customer was" : "customers were"} emailed.` : "",
+    emails.includes("failed") ? " Some emails will be retried." : "",
+    cards.includes("failed") ? " Removing some saved cards will be retried." : cards.includes("removed") ? " Saved cards were removed." : "",
+  ].join("");
+}
+
+export async function extendDeadline(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const { supabase } = await requireAdmin();
+  const id = uuid.safeParse(form.get("id"));
+  if (!id.success) return { message: "That campaign doesn't exist." };
+  const parsed = parseExtendDeadlineForm(form);
+  if (!parsed.ok) return { message: parsed.message };
+  const { error } = await supabase.rpc("admin_extend_deadline", { p_id: id.data, p: parsed.payload });
+  if (error) return { message: adminErrorMessage(error) };
+  return done("Deadline extended. The campaign is open for reservations again.");
 }
 
 // ---- Inventory ---------------------------------------------------------------------------
@@ -94,7 +125,19 @@ export async function cancelBooking(_prev: ActionResult, form: FormData): Promis
   if (!why.success) return { message: why.error.issues[0].message };
   const { data, error } = await supabase.rpc("admin_cancel_booking", { p_booking_id: booking.data, p_reason: why.data });
   if (error) return { message: adminErrorMessage(error) };
-  return done(data === "already" ? "Already canceled: nothing changed." : "Canceled. Its spaces are available again.");
+  if (data === "already") return done("Already canceled: nothing changed.");
+  const followUp = await afterCancel(booking.data);
+  return done(`Canceled. Its spaces are available again.${followUp}`);
+}
+
+// Removes the saved card, then tells the customer (secret-key client, only after requireAdmin()
+// and a successful admin_cancel_booking). Failures are retried by the email-outbox cron.
+async function afterCancel(bookingId: string) {
+  const { cards, emails } = await followUpCancellations(createAdminClient(), getStripe, [bookingId]);
+  return [
+    cards[0] === "removed" ? " Their saved card was removed." : cards[0] === "failed" ? " Removing their saved card will be retried." : "",
+    emails.includes("sent") ? " The customer was emailed." : emails.includes("failed") ? " The email will be retried." : "",
+  ].join("");
 }
 
 export async function addBookingNote(_prev: ActionResult, form: FormData): Promise<ActionResult> {

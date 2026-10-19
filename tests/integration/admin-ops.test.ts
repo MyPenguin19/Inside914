@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 
-// REAL dev database + Supabase Auth (no mocks): throwaway admin and non-admin users (owner-approved),
+// REAL local database + Supabase Auth (no mocks): throwaway admin and non-admin users (owner-approved),
 // a throwaway campaign far in the future (year 2090+), all removed afterwards.
 vi.mock("server-only", () => ({}));
 const { placeHold } = await import("@/lib/booking/place-hold");
@@ -192,8 +192,21 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
       expect(row).toMatchObject({ status: "cancelled", cancellation_reason: "Advertiser asked to cancel", reference: "IN914-CNCLTS" }); // kept, not deleted
       const cancelled = (await events(hold.bookingId)).filter((e) => e.event_type === "booking.cancelled");
       expect(cancelled).toHaveLength(1);
-      expect(cancelled[0].details).toMatchObject({ slots_released: 2, size: "double" });
+      expect(cancelled[0].details).toMatchObject({ slots_released: 2, size: "double", customer_notified: true });
+      // Exactly one cancellation email queued (even with three concurrent cancels); the card is still to be removed by the app.
+      const { data: outbox } = await service.from("email_outbox").select("kind, status").eq("booking_id", hold.bookingId);
+      expect(outbox).toEqual([{ kind: "reservation_cancelled", status: "pending" }]);
+      const { data: card } = await service.from("bookings").select("stripe_payment_method_id, card_removed_at").eq("id", hold.bookingId).single();
+      expect(card).toEqual({ stripe_payment_method_id: "pm_canceltest", card_removed_at: null });
       expect((await placeHold(service, { slotIds: [await slotId("B1"), await slotId("B2")] })).ok).toBe(true); // available again
+    });
+
+    test("releasing an unconfirmed hold doesn't email anyone", async () => {
+      await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);
+      const hold = await placeHold(service, { slotIds: [await slotId("F1")] });
+      if (!hold.ok) throw new Error(hold.reason);
+      expect((await admin.rpc("admin_cancel_booking", { p_booking_id: hold.bookingId, p_reason: "Stale hold" })).data).toBe("done");
+      expect((await service.from("email_outbox").select("id").eq("booking_id", hold.bookingId)).data).toEqual([]);
     });
 
     test("a reservation with a payment state, or one that already ended, can't be canceled here", async () => {

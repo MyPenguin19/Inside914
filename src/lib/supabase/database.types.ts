@@ -16,7 +16,7 @@ export type Database = {
     Tables: {
       admin_events: {
         Row: {
-          admin_user_id: string
+          admin_user_id: string | null
           created_at: string
           details: Json
           event_type: string
@@ -25,7 +25,7 @@ export type Database = {
           target_type: string
         }
         Insert: {
-          admin_user_id: string
+          admin_user_id?: string | null
           created_at?: string
           details?: Json
           event_type: string
@@ -34,7 +34,7 @@ export type Database = {
           target_type: string
         }
         Update: {
-          admin_user_id?: string
+          admin_user_id?: string | null
           created_at?: string
           details?: Json
           event_type?: string
@@ -351,6 +351,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          card_removed_at: string | null
           confirmed_at: string | null
           created_at: string
           edition_id: string
@@ -377,6 +378,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          card_removed_at?: string | null
           confirmed_at?: string | null
           created_at?: string
           edition_id: string
@@ -403,6 +405,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          card_removed_at?: string | null
           confirmed_at?: string | null
           created_at?: string
           edition_id?: string
@@ -869,6 +872,10 @@ export type Database = {
         Args: { p: Json; p_slots: Json }
         Returns: string
       }
+      admin_extend_deadline: {
+        Args: { p: Json; p_id: string }
+        Returns: string
+      }
       admin_flag_booking: {
         // p_reason null clears the flag (hand-corrected: the generator types it as string only)
         Args: { p_booking_id: string; p_reason: string | null }
@@ -894,6 +901,7 @@ export type Database = {
         Args: { p: Json; p_id: string }
         Returns: string
       }
+      close_past_deadline_campaigns: { Args: never; Returns: number }
       confirm_booking: {
         Args: {
           p_booking_id: string

@@ -15,6 +15,10 @@ export function ReservationActions({ booking: b, spaces, now }: { booking: Admin
       {b.cancellation && (
         <Notice tone="neutral" role="note">
           Canceled {formatTimestamp(b.cancellation.at)}: {b.cancellation.reason}
+          {b.stripePaymentMethodId &&
+            (b.cancellation.cardRemovedAt
+              ? ` Saved card removed from Stripe ${formatTimestamp(b.cancellation.cardRemovedAt)}.`
+              : " Saved card removal from Stripe is pending; the daily job retries it. This reservation can't be charged.")}
         </Notice>
       )}
       {b.flag && (
@@ -39,8 +43,8 @@ export function ReservationActions({ booking: b, spaces, now }: { booking: Admin
             consequence={
               <>
                 {spaces.length === 2 ? "Both spaces" : "The space"} {spaces.join(" + ")} will be released together and become available again.
-                The booking, its history and the advertiser&apos;s details are kept. No card is charged or refunded, and the customer
-                isn&apos;t emailed automatically.
+                The booking, its history and the advertiser&apos;s details are kept. No card is charged or refunded.
+                {isConfirmed(b) && <> The customer is emailed that it was canceled, and their saved card is removed from Stripe.</>}
               </>
             }
           />
