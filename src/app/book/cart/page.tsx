@@ -37,11 +37,9 @@ export default function Page() {
   );
 }
 async function Cart() {
+  const token = (await cookies()).get(CART_COOKIE)?.value;
   const admin = createAdminClient();
-  const cart = await ownedCart(
-    admin,
-    (await cookies()).get(CART_COOKIE)?.value,
-  );
+  const cart = await ownedCart(admin, token);
   if (!cart)
     return (
       <p>

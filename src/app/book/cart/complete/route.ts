@@ -4,11 +4,10 @@ import { CART_COOKIE, ownedCart, completeCart } from "@/lib/booking/cart";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/checkout/stripe";
 export async function GET(request: Request) {
+  // Read request data before initializing services: completion must never run at build time.
+  const token = (await cookies()).get(CART_COOKIE)?.value;
   const admin = createAdminClient();
-  const cart = await ownedCart(
-    admin,
-    (await cookies()).get(CART_COOKIE)?.value,
-  );
+  const cart = await ownedCart(admin, token);
   if (cart) {
     const outcome = await completeCart(admin, getStripe(), cart.id);
     if (outcome === "confirmed" || outcome === "already_confirmed")
