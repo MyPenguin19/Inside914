@@ -1,67 +1,21 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { removeArtwork } from "@/lib/artwork/service";
 import { getHeldBooking, releaseHold } from "@/lib/booking/held-booking";
-import { HOLD_COOKIE, placeHold, type HoldFailure } from "@/lib/booking/place-hold";
-import { allowHoldAttempt, clientAddress, visitorHash } from "@/lib/booking/hold-rate-limit";
-import { isSelectionAvailable, type Availability } from "@/lib/booking/selection";
-import { getAvailability } from "@/lib/catalog/queries";
-import { getServerEnv } from "@/lib/env/server";
+import { HOLD_COOKIE, type HoldFailure } from "@/lib/booking/place-hold";
+import type { Availability } from "@/lib/booking/selection";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type HoldSelectionResult =
   | { ok: true }
   | { ok: false; reason: HoldFailure; availability?: Availability };
 
-const HoldSelectionInput = z.object({
-  editionId: z.uuid(),
-  slotIds: z.array(z.uuid()).min(1).max(256),
-  mode: z.enum(["standard", "double", "full_side", "both_sides"]).optional(),
-});
-
-// Rate-limits the visitor, re-checks availability, then places one atomic hold for the selected product. The
-// token goes into an httpOnly cookie; on a lost race the caller gets fresh availability to redraw.
-export async function holdSelection(raw: unknown): Promise<HoldSelectionResult> {
-  const input = HoldSelectionInput.safeParse(raw);
-  if (!input.success) return { ok: false, reason: "invalid_input" };
-  const { editionId, slotIds, mode } = input.data;
-
-  try {
-    const admin = createAdminClient();
-    const visitor = visitorHash(clientAddress(await headers()), getServerEnv().SUPABASE_SECRET_KEY);
-    if (!(await allowHoldAttempt(admin, visitor))) return { ok: false, reason: "rate_limited" };
-
-    const fresh = await getAvailability(editionId);
-    if (!isSelectionAvailable(slotIds, fresh, mode)) return { ok: false, reason: "slot_unavailable", availability: fresh };
-
-    const cookieStore = await cookies();
-    const previous = cookieStore.get(HOLD_COOKIE)?.value;
-    if (previous && !(await getHeldBooking(admin, previous))?.cartId) {
-      await removeArtwork(admin, previous); // a new hold starts with no artwork
-      await releaseHold(admin, previous);
-    }
-
-    const result = await placeHold(admin, { slotIds, mode });
-    if (!result.ok) {
-      const availability = result.reason === "slot_unavailable" ? await getAvailability(editionId) : undefined;
-      return { ok: false, reason: result.reason, availability };
-    }
-
-    cookieStore.set(HOLD_COOKIE, result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: new Date(result.expiresAt),
-    });
-    return { ok: true };
-  } catch (error) {
-    console.error("holdSelection failed", error);
-    return { ok: false, reason: "error" };
-  }
+// Legacy position-first entrypoint is disconnected; existing holds remain readable.
+export async function holdSelection(): Promise<HoldSelectionResult> {
+  return { ok: false, reason: "invalid_selection" };
 }
 
 // "Change selection": gives the held positions back and returns to the edition.

@@ -1,0 +1,79 @@
+Inside914 — Phase E local admin workflow
+2026-10-19 | feature/mvp-square-product
+
+Implemented
+- Four-zone overview, including missing-campaign links. Each card identifies its
+  campaign/month and counts valid confirmed advertisers independently out of ten.
+  Open campaigns take precedence; otherwise the earliest active square campaign
+  is shown. Historical campaigns remain accessible in the existing selectors.
+- Reservations show normalized category and all selected zones, fetched by cart
+  independently of table pagination using the signed-in admin's RLS client.
+- Shared readiness checklist on campaign and production pages: ten exact paid
+  positions, valid reservations, unique categories/claims, approved square art,
+  closed reservations, printer approval, mailing window, house proof and collection.
+- Invalid, cancelled, pending, released, rejected, already charged, failed-payment,
+  flagged, missing-consent/card/customer, wrong-price and duplicate category/slot
+  reservations cannot qualify as valid confirmed advertisers in this checklist.
+- Activate & Charge Zone is visibly disabled. No charge endpoint was implemented.
+  The old print-approval UI and server action are blocked for square campaigns;
+  legacy campaigns retain their prior workflow. This is a local application guard,
+  not a replacement for database enforcement in the future collection phase.
+- Production previews display six front/four back paid positions plus two labeled
+  house-artwork placeholders and the postal exclusion, from the Phase D geometry.
+  Actual house artwork has not been supplied; placeholders are not print assets.
+- Artwork/reservation detail previews use 9x6 dimensions for square campaigns.
+  Existing review actions, administrator authentication, RLS and audit logs remain.
+- Existing components, typography, colors and page structure are reused. The
+  evidence form now fits 320px by allowing its grid/file input to shrink; no global
+  overflow clipping was added.
+
+Phase E files (in addition to earlier uncommitted Phase B–D work)
+src/lib/admin/zone-readiness.ts
+src/lib/admin/metrics.ts
+src/lib/admin/data.ts
+src/components/admin/zone-overview.tsx
+src/components/admin/zone-readiness.tsx
+src/components/admin/campaign-status-controls.tsx
+src/components/admin/assembled-postcard.tsx
+src/components/admin/ad-placement.tsx
+src/components/admin/evidence-form.tsx
+src/app/admin/(panel)/page.tsx
+src/app/admin/(panel)/campaigns/[id]/page.tsx
+src/app/admin/(panel)/advertisers/page.tsx
+src/app/admin/(panel)/advertisers/[id]/page.tsx
+src/app/admin/(panel)/artwork/[id]/page.tsx
+src/app/admin/(panel)/production/page.tsx
+src/app/admin/admin-actions.ts
+tests/zone-readiness.test.ts
+e2e/square-campaign.spec.ts
+e2e/multi-area.spec.ts
+docs/mvp-phase-e.txt
+
+Verification
+- Typecheck, lint, optimized local build and diff whitespace check passed.
+- Unit tests: 300 passed across 33 files, including 22 readiness cases.
+- Seven distinct focused browser tests passed across final targeted runs:
+  four admin authorization/navigation/mobile tests; four-zone checkout with
+  populated admin category/selected-zone assertions; one-zone replacement;
+  square campaign creation/readiness/production-preview test.
+- The initial production-page test exposed 353px document width at a 320px
+  viewport. Its evidence form was corrected; the targeted rerun passed at
+  320,375,390,768,1440px, as did campaign form and inventory checks.
+- The existing local 2 editions, 17 slots and 10 bookings matched the baseline
+  after fixture cleanup. Tests use UUID-scoped disposable local records only.
+- No new database migration, schema change or policy change.
+- No full legacy integration/E2E suite run; obsolete product/account expectations
+  and shared-data cleanup limitations remain documented in Phase C. No omitted
+  or skipped test is counted as passed. Stripe was simulated, not live-tested.
+
+Remaining gates
+Printer approval and final house artwork/proof are still absent. Those checks
+remain blocked; they cannot be toggled through this new display. Phase F must
+implement and revalidate the authoritative per-zone activation/collection flow,
+with consent, idempotency, webhooks and recovery. No automatic charge occurs at
+10/10. This local checklist does not authorize mailing or payment collection.
+
+Boundary
+All work remains local and uncommitted. No production systems, Stripe/Resend
+configuration, environment variables, remote branches, pushes, merges or
+Vercel deployments were changed. Phase F was not started.

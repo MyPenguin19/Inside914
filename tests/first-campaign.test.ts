@@ -10,8 +10,8 @@ const draft = { ...FIRST_CAMPAIGN_DEFAULTS, zone_id: "00000000-0000-4000-8000-00
 describe("first campaign proposal", () => {
   test("stores Eastern deadlines as UTC and launch prices as cents", () => {
     const result = CampaignForm.parse(draft);
-    expect(result).toMatchObject({ issue_month: "2027-01-01", target_quantity: 5000, reservations_open_at: null, reservation_deadline: "2026-12-16T04:59:00.000Z", artwork_due_at: "2026-12-21T04:59:00.000Z", mailing_window_start: "2027-01-11", mailing_window_end: "2027-01-15", unit_price_cents: 50000, double_price_cents: 90000 });
-    expect(pricesFor({ unitPriceCents: result.unit_price_cents, doublePriceCents: result.double_price_cents }, { NODE_ENV: "test", INSIDE914_PRICING_MODE: "launch" })).toEqual({ mode: "launch", unitPriceCents: 50000, doublePriceCents: 90000 });
+    expect(result).toMatchObject({ issue_month: "2027-01-01", target_quantity: 5000, reservations_open_at: null, reservation_deadline: "2026-12-16T04:59:00.000Z", artwork_due_at: "2026-12-21T04:59:00.000Z", mailing_window_start: "2027-01-11", mailing_window_end: "2027-01-15", unit_price_cents: 39900, double_price_cents: null });
+    expect(pricesFor({ unitPriceCents: result.unit_price_cents, doublePriceCents: result.double_price_cents }, { NODE_ENV: "test", INSIDE914_PRICING_MODE: "launch" })).toEqual({ mode: "launch", unitPriceCents: 39900, doublePriceCents: null });
   });
   test.each([{ artwork_due_at: "2026-12-14T23:59" }, { mailing_window_end: "2027-01-10" }, { reservations_open_at: "2026-12-16T00:00" }, { double_price_cents: "400" }])("rejects invalid dates or prices %j", (changes) => {
     expect(CampaignForm.safeParse({ ...draft, ...changes }).success).toBe(false);

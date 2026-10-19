@@ -52,6 +52,8 @@ async function Cart() {
   const views = await Promise.all(
     cart.members.map((b) => getReservationView(admin, b.id)),
   );
+  const square = cart.members.every(b=>b.productModel === "square_v1");
+  const category = cart.members[0].categoryId ? await admin.from("advertising_categories").select("name").eq("id",cart.members[0].categoryId).single() : null;
   const confirmed = cart.members.every((b) => b.status === "reserved");
   const expired = cartExpired(cart.members);
   const gate = cartGate(cart.members);
@@ -70,8 +72,14 @@ async function Cart() {
       <p>
         {confirmed
           ? "Nothing was charged today. Each campaign has its own reservation reference and confirmation."
-          : "Upload artwork for each area, or reuse an image and position it for that area. All areas must be ready before checkout."}
+          : square ? "Upload and position one square ad. The same image and crop will be used in every selected zone." : "Upload artwork for each area, or reuse an image and position it for that area. All areas must be ready before checkout."}
       </p>
+      {category?.data && <p className="font-semibold">Category: {category.data.name}</p>}
+      {square && !confirmed && !expired && <section className="space-y-3">
+        <h2 className="text-xl font-semibold">One square artwork for all selected zones</h2>
+        <form action={editAreaArtwork}><input type="hidden" name="bookingId" value={cart.members[0].id} /><button className={buttonClass("secondary")}>Upload or edit shared artwork</button></form>
+        <p>{!gate ? "Shared artwork ready for all zones." : "Upload once, crop to a square, then save for all zones."}</p>
+      </section>}
       {expired && (
         <p role="alert">
           This group is no longer available. Release the holds and choose your
@@ -82,10 +90,11 @@ async function Cart() {
         {cart.members.map((b, i) => (
           <section className="min-w-0 space-y-3" key={b.id}>
             {views[i] && <ReservationSummary provisional view={views[i]!} />}
+            {confirmed && <p>{views[i]?.campaign.taken ?? 0} of {views[i]?.campaign.total ?? 10} advertisers reserved · {formatPrice(b.priceCents)} authorized · Not charged today</p>}
             {b.reference && (
               <p className="font-semibold">Reference: {b.reference}</p>
             )}
-            {!confirmed && !expired && (
+            {!square && !confirmed && !expired && (
               <>
                 <p>
                   Artwork:{" "}
@@ -128,8 +137,9 @@ async function Cart() {
         ))}
       </div>
       <p className="text-xl font-semibold">
-        Total: {formatPrice(cart.members.reduce((n, b) => n + b.priceCents, 0))}
+        Maximum authorized total: {formatPrice(cart.members.reduce((n, b) => n + b.priceCents, 0))}
       </p>
+      <p>Due today: $0</p>
       {!confirmed && !gate && (
         <section className="max-w-xl">
           <h2 className="mb-4 text-xl font-semibold">
@@ -137,6 +147,7 @@ async function Cart() {
           </h2>
           <ContactForm
             action={submitCartContact}
+            lockedCategory={category?.data?.name}
             initial={{
               businessName: contact?.business_name ?? "",
               contactName: contact?.contact_name ?? "",

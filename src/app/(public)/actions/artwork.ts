@@ -11,13 +11,24 @@ import {
   type ArtworkView,
   type ExtendFailure,
 } from "@/lib/artwork/service";
+import { CART_COOKIE, ownedCart } from "@/lib/booking/cart";
+import { getHeldBooking } from "@/lib/booking/held-booking";
+import { shareCartArtwork } from "@/lib/booking/category-checkout";
 import { HOLD_COOKIE } from "@/lib/booking/place-hold";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Thin wrappers: read the hold cookie, run the service, and never leak internal errors.
 
 async function holdToken() {
-  return (await cookies()).get(HOLD_COOKIE)?.value;
+  const jar = await cookies();
+  const token = jar.get(HOLD_COOKIE)?.value;
+  const admin = createAdminClient();
+  const held = token ? await getHeldBooking(admin,token) : null;
+  if (held?.productModel === "square_v1") {
+    const cart = await ownedCart(admin,jar.get(CART_COOKIE)?.value);
+    if (!cart || cart.members[0].id !== held.id || cart.members.some(b=>b.status!=="pending" || !b.holdExpiresAt || Date.parse(b.holdExpiresAt)<=Date.now())) return undefined;
+  }
+  return token;
 }
 
 async function guarded<T>(label: string, run: () => Promise<T>): Promise<T | { ok: false; reason: "error" }> {
@@ -47,7 +58,15 @@ export async function saveArtworkLayout(input: {
   crop: { x: number; y: number; width: number; height: number };
   zoom: number;
 }): Promise<SimpleResult> {
-  return guarded("saveArtworkLayout", async () => saveLayout(createAdminClient(), await holdToken(), input));
+  return guarded("saveArtworkLayout", async () => {
+    const admin = createAdminClient();
+    const token = await holdToken();
+    const result = await saveLayout(admin,token,input);
+    if (result.ok && token && (await getHeldBooking(admin,token))?.productModel === "square_v1") {
+      await shareCartArtwork(admin,(await cookies()).get(CART_COOKIE)?.value);
+    }
+    return result;
+  });
 }
 
 export async function removeArtwork(): Promise<SimpleResult> {

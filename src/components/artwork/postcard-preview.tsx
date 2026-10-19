@@ -5,6 +5,7 @@ import { PRINT_SPEC } from "@/lib/print/spec";
 import { boxStyle, type PostcardZone } from "@/components/postcard/postcard-side";
 
 type Props = {
+  dimensions?: { width: number; height: number };
   side: "front" | "back";
   otherSlots: SlotGeometry[]; // positions belonging to other advertisers on this side
   area: SlotGeometry; // the customer's ad (one slot, or the union of a double)
@@ -17,7 +18,7 @@ type Props = {
 const pct = (value: number, of: number) => `${(value / of) * 100}%`;
 
 // The whole front or back of the postcard, to scale, with the customer's ad in its position.
-export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, compact = false, zones = [], children }: Props) {
+export function PostcardPreview({ dimensions = POSTCARD_INCHES, side, otherSlots, area, showSafeArea = true, compact = false, zones = [], children }: Props) {
   const inset = PRINT_SPEC.safeMarginInches;
   return (
     <figure className="flex flex-col gap-2">
@@ -25,12 +26,12 @@ export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, c
         role="img"
         aria-label={`Preview of the ${side} of the postcard with your ad in place`}
         className="relative w-full overflow-hidden rounded-lg border border-line bg-surface shadow-sm"
-        style={{ aspectRatio: `${POSTCARD_INCHES.width} / ${POSTCARD_INCHES.height}` }}
+        style={{ aspectRatio: `${dimensions.width} / ${dimensions.height}` }}
       >
         {zones
           .filter((z) => z.side === side)
           .map((zone) => (
-            <div key={zone.kind} aria-hidden="true" className="absolute p-[2%]" style={boxStyle(zone)}>
+            <div key={zone.kind} aria-hidden="true" className="absolute p-[2%]" style={boxStyle(zone, dimensions)}>
               {zone.kind === "masthead" ? (
                 <div className="flex h-full w-full items-end border-b border-foreground/40 pb-[4%]">
                   <span className="h-[22%] w-[34%] rounded-[1px] bg-foreground/30" />
@@ -48,10 +49,10 @@ export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, c
             aria-hidden="true"
             className="absolute p-[2%]"
             style={{
-              left: pct(slot.x, POSTCARD_INCHES.width),
-              top: pct(slot.y, POSTCARD_INCHES.height),
-              width: pct(slot.width, POSTCARD_INCHES.width),
-              height: pct(slot.height, POSTCARD_INCHES.height),
+              left: pct(slot.x, dimensions.width),
+              top: pct(slot.y, dimensions.height),
+              width: pct(slot.width, dimensions.width),
+              height: pct(slot.height, dimensions.height),
             }}
           >
             <div className="h-full w-full rounded-sm bg-reserved" />
@@ -61,10 +62,10 @@ export function PostcardPreview({ side, otherSlots, area, showSafeArea = true, c
         <div
           className="absolute"
           style={{
-            left: pct(area.x, POSTCARD_INCHES.width),
-            top: pct(area.y, POSTCARD_INCHES.height),
-            width: pct(area.width, POSTCARD_INCHES.width),
-            height: pct(area.height, POSTCARD_INCHES.height),
+            left: pct(area.x, dimensions.width),
+            top: pct(area.y, dimensions.height),
+            width: pct(area.width, dimensions.width),
+            height: pct(area.height, dimensions.height),
           }}
         >
           <div className="relative h-full w-full overflow-hidden rounded-sm ring-2 ring-accent">

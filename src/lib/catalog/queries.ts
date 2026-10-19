@@ -4,6 +4,7 @@ import { pricesFor, POSTCARD_PRICES, type PricingMode } from "@/lib/pricing";
 import { createPublicClient } from "@/lib/supabase/public";
 
 export type EditionSummary = {
+  productModel?: string;
   id: string;
   zoneSlug: string;
   zoneName: string;
@@ -24,6 +25,7 @@ export type EditionSummary = {
 export type EditionCatalog = EditionSummary & { slots: CatalogSlot[]; pairs: SlotPair[] };
 
 type EditionRow = {
+  product_model: string;
   id: string;
   issue_month: string;
   artwork_deadline: string;
@@ -35,16 +37,17 @@ type EditionRow = {
 };
 
 const EDITION_COLUMNS =
-  "id, issue_month, artwork_deadline, mail_date, status, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
+  "id, issue_month, artwork_deadline, mail_date, status, product_model, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
 
 // Prices shown are what a hold would cost under the active pricing configuration (lib/pricing).
 // priced=false is ONLY for views that never show these prices (an existing reservation shows its
 // own stored price), so they keep working whatever the current pricing configuration is.
 function toSummary(row: EditionRow, slots: { available: boolean }[], priced = true): EditionSummary {
-  const edition = { unitPriceCents: row.unit_price_cents, doublePriceCents: row.double_unit_price_cents };
+  const edition = { productModel: row.product_model, unitPriceCents: row.unit_price_cents, doublePriceCents: row.double_unit_price_cents };
   const prices = priced ? pricesFor(edition) : { mode: "launch" as const, ...edition };
   return {
     id: row.id,
+    productModel: row.product_model,
     zoneSlug: row.zones?.slug ?? "",
     zoneName: row.zones?.name ?? "",
     households: row.zones?.household_count ?? 0,
@@ -54,7 +57,7 @@ function toSummary(row: EditionRow, slots: { available: boolean }[], priced = tr
     unitPriceCents: prices.unitPriceCents,
     doublePriceCents: prices.doublePriceCents,
     pricingMode: prices.mode,
-    ...POSTCARD_PRICES,
+    ...(row.product_model === "square_v1" ? {} : POSTCARD_PRICES),
     bookable: row.status === "open" && Date.parse(row.artwork_deadline) > Date.now(),
     totalUnits: slots.length,
     availableUnits: slots.filter((s) => s.available).length,

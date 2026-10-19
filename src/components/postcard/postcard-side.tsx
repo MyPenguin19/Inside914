@@ -17,6 +17,7 @@ export type PostcardZone = {
 };
 
 type Props = {
+  dimensions?: { width: number; height: number };
   side: Side;
   views: SlotView[];
   priceCents: number | null;
@@ -27,11 +28,11 @@ type Props = {
 
 const pct = (value: number, of: number) => `${(value / of) * 100}%`;
 
-export const boxStyle = (b: { x: number; y: number; width: number; height: number }) => ({
-  left: pct(b.x, POSTCARD_INCHES.width),
-  top: pct(b.y, POSTCARD_INCHES.height),
-  width: pct(b.width, POSTCARD_INCHES.width),
-  height: pct(b.height, POSTCARD_INCHES.height),
+export const boxStyle = (b: { x: number; y: number; width: number; height: number }, dimensions: { width: number; height: number } = POSTCARD_INCHES) => ({
+  left: pct(b.x, dimensions.width),
+  top: pct(b.y, dimensions.height),
+  width: pct(b.width, dimensions.width),
+  height: pct(b.height, dimensions.height),
 });
 
 // When two side-by-side units are selected (double ad), draw them as one merged space.
@@ -50,7 +51,7 @@ function mergedBox(views: SlotView[]) {
 }
 
 // One face of the postcard, drawn to scale from slot geometry (inches) in the database.
-export function PostcardSide({ side, views, priceCents, onSelect, zones = [], caption = true }: Props) {
+export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceCents, onSelect, zones = [], caption = true }: Props) {
   const title = side === "front" ? "Front" : "Back";
   const merged = mergedBox(views);
   return (
@@ -60,12 +61,12 @@ export function PostcardSide({ side, views, priceCents, onSelect, zones = [], ca
         role="group"
         aria-label={`${title} of the postcard`}
         className="relative w-full rounded-[6px] border border-line-strong/70 bg-paper shadow-[0_1px_2px_rgba(28,27,25,0.06),0_24px_48px_-28px_rgba(28,27,25,0.45)]"
-        style={{ aspectRatio: `${POSTCARD_INCHES.width} / ${POSTCARD_INCHES.height}` }}
+        style={{ aspectRatio: `${dimensions.width} / ${dimensions.height}` }}
       >
         {zones
           .filter((z) => z.side === side)
           .map((zone) => (
-            <Zone key={zone.kind + zone.y} zone={zone} />
+            <Zone key={zone.kind + zone.y} zone={zone} dimensions={dimensions} />
           ))}
         {views.length === 0 && (
           <p className="absolute inset-0 flex items-center justify-center p-4 text-center text-xs text-muted">
@@ -84,7 +85,7 @@ export function PostcardSide({ side, views, priceCents, onSelect, zones = [], ca
               selectable && priceCents !== null && !selected ? `, ${formatPrice(priceCents)}` : ""
             }`}
             className="group absolute p-[2.5%] focus-visible:outline-none"
-            style={boxStyle(slot)}
+            style={boxStyle(slot, dimensions)}
           >
             <span
               className={`relative flex h-full w-full flex-col items-center justify-center rounded-[4px] border text-center transition-[background-color,border-color,box-shadow] group-focus-visible:ring-2 group-focus-visible:ring-accent group-focus-visible:ring-offset-2 ${
@@ -110,7 +111,7 @@ export function PostcardSide({ side, views, priceCents, onSelect, zones = [], ca
           </button>
         ))}
         {merged && (
-          <div aria-hidden="true" className="pointer-events-none absolute p-[1.5%]" style={boxStyle(merged)}>
+          <div aria-hidden="true" className="pointer-events-none absolute p-[1.5%]" style={boxStyle(merged, dimensions)}>
             <div className="flex h-full w-full flex-col items-center justify-center rounded-[4px] bg-accent text-center text-white shadow-lg ring-1 ring-accent">
               <span className="text-[13px] font-semibold">✓ Your double ad</span>
               <span className="mt-0.5 text-[11px] opacity-85">{merged.labels}</span>
@@ -123,10 +124,10 @@ export function PostcardSide({ side, views, priceCents, onSelect, zones = [], ca
 }
 
 // Printed, non-selectable areas. Text is decorative: the slots carry the meaning for assistive tech.
-function Zone({ zone }: { zone: PostcardZone }) {
+function Zone({ zone, dimensions }: { zone: PostcardZone; dimensions: { width: number; height: number } }) {
   if (zone.kind === "masthead") {
     return (
-      <div aria-hidden="true" className="absolute flex flex-col justify-center px-[5%]" style={boxStyle(zone)}>
+      <div aria-hidden="true" className="absolute flex flex-col justify-center px-[5%]" style={boxStyle(zone, dimensions)}>
         <div className="flex items-end justify-between gap-2 border-b-2 border-foreground pb-[3%]">
           <span className="font-display text-[clamp(1rem,5vw,1.6rem)] font-semibold leading-none tracking-tight">
             Inside<span className="text-accent">914</span>
@@ -138,7 +139,7 @@ function Zone({ zone }: { zone: PostcardZone }) {
     );
   }
   return (
-    <div aria-hidden="true" className="absolute p-[2.5%]" style={boxStyle(zone)}>
+    <div aria-hidden="true" className="absolute p-[2.5%]" style={boxStyle(zone, dimensions)}>
       <div className="relative flex h-full w-full gap-[4%] rounded-[4px] border border-line bg-surface/60 p-[4%]">
         <div className="flex flex-1 flex-col justify-between">
           <div className="space-y-1">

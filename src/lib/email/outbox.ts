@@ -1,3 +1,5 @@
+import { getCollectionContext } from "@/lib/payments/environment";
+import { deliverPaymentNotice } from "@/lib/payments/notices";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { issueAccessToken, revokeAccessToken } from "@/lib/access/tokens";
@@ -56,15 +58,16 @@ type OutboxRow = Database["public"]["Tables"]["email_outbox"]["Row"];
 // Atomically take a due row so only one worker sends it. A claim lasts 10 minutes, so a worker
 // that crashed mid-send ("sending" forever) is retried after that.
 async function claim(admin: Admin, rowId: string): Promise<OutboxRow | null> {
-  const { data } = await admin
+  let query = admin
     .from("email_outbox")
     .update({ status: "sending", next_attempt_at: new Date(Date.now() + 10 * 60_000).toISOString() })
     .eq("id", rowId)
     .in("status", ["pending", "failed", "sending"])
     .lte("next_attempt_at", new Date().toISOString())
-    .lt("attempts", MAX_ATTEMPTS)
-    .select("*")
-    .maybeSingle();
+    .lt("attempts", MAX_ATTEMPTS);
+  // A disabled release must not consume attempts or mark live notices delivered.
+  try { getCollectionContext(); } catch { query=query.not("kind","in","(payment_needed,payment_receipt)"); }
+  const {data}=await query.select("*").maybeSingle();
   return data;
 }
 
@@ -94,6 +97,12 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
 
   let accessTokenId: string | null = null;
   try {
+    if (row.kind === "payment_needed" || row.kind === "payment_receipt") {
+      const providerId=await deliverPaymentNotice(admin,row,send);
+      const {error}=await admin.from("email_outbox").update({status:"sent",attempts:row.attempts+1,provider_message_id:providerId,sent_at:new Date().toISOString(),last_error:null}).eq("id",row.id);
+      if(error) throw new Error("Could not record local payment notice preview");
+      return "sent" as const;
+    }
     const view = await getReservationView(admin, row.booking_id);
     const { supportEmail } = getEmailEnv();
 

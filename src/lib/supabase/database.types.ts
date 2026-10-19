@@ -1,3 +1,4 @@
+export type ZoneChargeRow = { stripe_mode: "test" | "live"; stripe_account_id: string | null; id: string; booking_id: string; edition_id: string; consent_id: string; amount_cents: number; customer_id: string; payment_method_id: string; payment_intent_id: string | null; status: string; created_at: string; updated_at: string; created_by: string; recovery_hash: string | null; recovery_expires_at: string | null; last_event_at: number; failure_code: string | null };
 export type Json =
   | string
   | number
@@ -14,6 +15,9 @@ export type Database = {
   }
   public: {
     Tables: {
+      zone_charges: { Row: ZoneChargeRow; Insert: Partial<ZoneChargeRow>; Update: Partial<ZoneChargeRow>; Relationships: [] };
+      zone_payment_events: { Row: {id:string;charge_id:string;created_at:string}; Insert: {id:string;charge_id:string;created_at?:string}; Update: {id?:string;charge_id?:string;created_at?:string}; Relationships: [] };
+
       advertising_categories: {
         Row: { id: string; name: string }
         Insert: { id: string; name: string }
@@ -187,6 +191,7 @@ export type Database = {
       }
       booking_artwork: {
         Row: {
+          shared_source_id: string | null
           booking_id: string
           byte_size: number | null
           content_type: string | null
@@ -208,6 +213,7 @@ export type Database = {
           zoom: number | null
         }
         Insert: {
+          shared_source_id?: string | null
           booking_id: string
           byte_size?: number | null
           content_type?: string | null
@@ -229,6 +235,7 @@ export type Database = {
           zoom?: number | null
         }
         Update: {
+          shared_source_id?: string | null
           booking_id?: string
           byte_size?: number | null
           content_type?: string | null
@@ -506,6 +513,7 @@ export type Database = {
       }
       editions: {
         Row: {
+          product_model: string
           category_exclusivity: boolean
           artwork_deadline: string
           artwork_due_at: string | null
@@ -528,6 +536,7 @@ export type Database = {
         }
         Insert: {
           artwork_deadline: string
+          product_model?: string
           category_exclusivity?: boolean
           artwork_due_at?: string | null
           created_at?: string
@@ -549,6 +558,7 @@ export type Database = {
         }
         Update: {
           artwork_deadline?: string
+          product_model?: string
           category_exclusivity?: boolean
           artwork_due_at?: string | null
           created_at?: string
@@ -915,6 +925,11 @@ export type Database = {
       }
     }
     Functions: {
+      admin_collection_preview: { Args: {p_id:string}; Returns: Json };
+      admin_prepare_zone_collection: { Args: {p_id:string}; Returns: Json };
+      bind_zone_collection: { Args: {p_id:string;p_mode:string;p_account:string}; Returns: undefined };
+      record_zone_payment: { Args: {p_charge:string;p_intent:string;p_status:string;p_event:string;p_created:number;p_failure?:string;p_mode?:string;p_account?:string}; Returns:string };
+
       hold_category_cart: { Args: { p_category_id: string; p_token_hash: string; p_items: Json; p_pricing_mode: string }; Returns: string }
       admin_enable_campaign_categories: { Args: { p_edition_id: string }; Returns: string }
       recurring_plan_manage: { Args: { p_id:string; p_action:string; p:Json }; Returns:string }
@@ -940,6 +955,8 @@ export type Database = {
         Args: { p_id: string | null; p_name: string; p_slug: string; p_household_count: number }
         Returns: string
       }
+      share_square_cart_artwork: { Args: { p_token_hash: string; p_source_id: string; p_version: string; p_targets: Json }; Returns: undefined }
+      admin_create_square_campaign: { Args: { p: Json }; Returns: string }
       admin_create_campaign: {
         Args: { p: Json; p_slots: Json }
         Returns: string

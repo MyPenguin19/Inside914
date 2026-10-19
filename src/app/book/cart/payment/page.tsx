@@ -86,7 +86,7 @@ async function Payment() {
           publishableKey={testMode ? null : getStripePublishableKey()}
           testMode={testMode}
           termsVersion={CART_TERMS}
-          consentText={`I authorize Inside914 to save my card for future off-session payments for these campaigns: ${amounts}. Each amount is charged once only if that campaign fills and is approved for print. If a campaign does not fill by its deadline, that reservation is canceled without charge. The combined maximum is ${formatPrice(total)}. This is not a recurring subscription. Nothing is charged today.`}
+          consentText={`I authorize Inside914 to save my card for future off-session payments for these campaigns: ${amounts}. ${cart.members.every(b=>b.productModel === "square_v1") ? "Each $399 amount is charged once only if that specific zone reaches 10 advertisers and is approved for mailing." : "Each amount is charged once only if that campaign fills and is approved for mailing."} If a campaign does not fill by its deadline, that reservation is canceled without charge. The combined maximum is ${formatPrice(total)}. This is not a recurring subscription. Nothing is charged today.`}
           successHref="/book/cart"
           returnHref="/book/cart/complete"
           actions={{

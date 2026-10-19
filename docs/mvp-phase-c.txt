@@ -1,0 +1,53 @@
+Inside914 — Phase C local handoff
+2026-10-19
+Branch: feature/mvp-square-product. Changes remain local and uncommitted.
+
+Implemented
+- Category-first checkout selects one normalized business category and 1–4 canonical zones. Availability reflects exclusive category occupancy. The server selects inventory and enforces $399 per zone ($0 today); browser-submitted prices are not trusted.
+- One uploaded image and square crop apply to every selected zone. Private per-booking storage copies share a source identity and identical crop metadata. Replacing the shared image works for single-zone checkout as well.
+- One contact form and one SetupIntent cover the cart, with separate consent and authorization amount for each zone. Database confirmation requires complete, matching shared artwork. No automatic collection was added.
+- Existing design components and styling are reused. Product text and controls reflect the simplified flow. Advertiser account/dashboard entry points redirect to area selection per the MVP brief; admin authentication is preserved. Historical schema remains intact.
+- Old direct position-first public booking entry points are disconnected. Existing private reservation links remain available.
+
+Schema
+Two additive Phase C migrations were applied ONLY to the isolated local stack:
+20261019220626_category_checkout_shared_artwork.sql
+20261019221422_validate_shared_artwork_metadata.sql
+They add shared artwork identity, service-only sharing, owned-cart/expiry checks,
+confirmation guards, and explicit crop metadata validation. Existing applied
+migrations were not rewritten. No database reset was performed.
+
+Verification
+- TypeScript and ESLint: passed.
+- Unit: 271 passed, 32 files.
+- Scoped category/multi-area integration: 25 passed.
+- SQL square-product regression: 34 assertions passed.
+- SQL shared-artwork: 23 assertions passed, including shared foundation checks.
+- Focused Playwright: 7 passed (admin authorization/navigation/mobile, draft
+  square campaign creation, four-zone checkout, single-zone artwork replacement).
+- Browser checks cover category conflicts, $798/$1,596 totals, $0 today, shared
+  file bytes and crop across all four reservations, one simulated SetupIntent,
+  four consents, and disabled account routes. Replacement checks actual stored
+  file bytes after each upload.
+- Category selector and admin campaign form/inventory tested at 320, 375, 390,
+  768 and 1440px without document overflow; admin phone checks also passed.
+- Optimized production build: passed locally.
+- Local database advisors/function lint: no findings/errors.
+- Original 2 editions, 17 slots and 10 bookings match the pre-change snapshot.
+  New fixtures cleaned up or rolled back. No layout approval persisted.
+
+Verification limits / remaining work
+The complete legacy E2E suite was not run: it still includes expectations for
+removed position-first/account/recurring flows. The full legacy integration
+suite was not run because some cleanup routines delete shared fixture bookings;
+only scoped suites that preserve existing records were used. No omitted or
+conditionally skipped test is counted as passed. Stripe was simulated locally;
+no real card setup, transaction, charge, or email delivery was tested.
+Printer approval remains pending, including the previously documented back-panel
+clearance. Production migration/release, later launch phases, and real payment
+verification remain separate approval steps. This report does not certify launch
+readiness.
+
+Scope boundary
+No production system, production environment variable, Stripe configuration,
+Resend configuration, GitHub branch, main merge, or deployment was changed.

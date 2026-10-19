@@ -1,3 +1,6 @@
+import { CollectionPanel } from "@/components/admin/collection-panel";
+import { ZoneReadiness } from "@/components/admin/zone-readiness";
+import { zoneReadiness } from "@/lib/admin/zone-readiness";
 import { Suspense } from "react";
 import { publishEvidence } from "@/app/admin/admin-actions";
 import { AssembledSide, type Placement } from "@/components/admin/assembled-postcard";
@@ -93,7 +96,7 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
 
   const blockers = [
     e.status === "open" || e.status === "draft" ? "Reservations aren't closed yet" : null,
-    !stats.fullyReserved ? `${stats.sellableUnits - stats.reservedUnits} of ${stats.sellableUnits} sellable spaces aren't reserved` : null,
+    !stats.fullyReserved ? `${Math.max(0, (e.productModel === "square_v1" ? 10 : stats.sellableUnits) - stats.reservedUnits)} of ${e.productModel === "square_v1" ? 10 : stats.sellableUnits} paid positions aren't reserved` : null,
     confirmed.length - approved > 0
       ? `${confirmed.length - approved} ${confirmed.length - approved === 1 ? "ad needs" : "ads need"} content approval`
       : null,
@@ -150,6 +153,10 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
         </div>
       </Card>
 
+      {e.productModel === "square_v1" && <ZoneReadiness readiness={zoneReadiness(e, slots, bookings, consents)} />}
+
+      {e.productModel === "square_v1" && <CollectionPanel editionId={e.id} />}
+
       <section aria-labelledby="blockers-title">
         <h2 id="blockers-title" className="text-lg font-semibold">
           Production blockers
@@ -177,7 +184,7 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
         <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:max-w-3xl">
           {(["front", "back"] as const).map((side) => (
             <div key={side} className="mx-auto w-full max-w-[340px]">
-              <AssembledSide side={side} slots={slots} placements={placements} />
+              <AssembledSide square={e.productModel === "square_v1"} dimensions={e.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} side={side} slots={slots} placements={placements} />
             </div>
           ))}
         </div>

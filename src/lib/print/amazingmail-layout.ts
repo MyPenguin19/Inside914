@@ -44,8 +44,7 @@ const houseRegions = ["inside914", "inside-diagnostics"].map((id, index) => ({
   ...inches({ x: postal.x, y: live.y + index * houseHeight, width: houseWidth, height: houseHeight }),
 }));
 
-// Deliberately absent from the admin's selectable LAYOUT_TEMPLATES. This candidate
-// neither creates inventory nor grants approval in the database layout registry.
+// Used for draft inventory only. This does not grant printer approval.
 export const AMAZINGMAIL_9X6_LAYOUT = {
   key: "amazingmail-9x6-ten-square-draft",
   approved: false,
@@ -60,3 +59,28 @@ export const AMAZINGMAIL_9X6_LAYOUT = {
   ],
   houseRegions,
 } as const;
+
+// Translate every kind of region through the same origin conversion. Do not clip
+// postal bounds to trim: the exclusion deliberately extends into the bleed.
+export function fileToTrim<T extends PrintRectangle>(region: T): T {
+  return { ...region, x: (units(region.x) - trim.x) / 1_000_000, y: (units(region.y) - trim.y) / 1_000_000 };
+}
+
+// A limit for the existing two-column/two-row back arrangement, not a packing
+// optimizer or permission to resize. Printer-specified allowances must be
+// supplied explicitly; unknown allowances must never be treated as approved zero.
+export function backSquareFit(allowances: {
+  columnGap: number; rowGap: number; postalClearance: number;
+}) {
+  for (const value of Object.values(allowances)) {
+    if (!Number.isFinite(value) || value < 0) throw new RangeError("Clearances must be finite, nonnegative inches");
+  }
+  const width = postal.x - live.x - units(allowances.columnGap) - units(allowances.postalClearance);
+  const height = live.height - units(allowances.rowGap);
+  const maximum = Math.max(0, Math.floor(Math.min(width, height) / 2));
+  return {
+    maximumSquareInches: maximum / 1_000_000,
+    fitsRequestedTile: tile <= maximum,
+    horizontalRemainderInches: (width - 2 * tile) / 1_000_000,
+  };
+}

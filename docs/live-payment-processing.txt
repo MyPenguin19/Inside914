@@ -1,0 +1,98 @@
+Inside914 — Live payment processing and recovery prepared locally
+2026-10-19 | feature/mvp-square-product | local, uncommitted
+
+Status
+Live processing and recovery code is prepared behind the disabled release gate.
+INSIDE914_COLLECTION_MODE=disabled; INSIDE914_TEST_COLLECTION=false;
+LIVE_COLLECTION_RELEASED=false. No live provider requests were made. This is
+not verification of real charges, real bank authentication, or email delivery.
+
+Implementation
+- Every ledger now has a Stripe mode and an optional account binding. New
+  collection binds all ten obligations to a verified account before processing.
+  Bound rows cannot change mode/account. Historical unbound rows remain test-only
+  and cannot be rebound after any intent or processing state exists.
+- Live binding requires launch-priced bookings. The service-only binding RPC
+  locks the campaign; browser/admin clients cannot call it directly.
+- Before creating a payment, the server checks the actual Stripe account, saved
+  customer mode, payment-method mode and customer ownership. Existing intents
+  must match the frozen ledger, amount, currency, customer and metadata.
+- Live/test processing shares the per-booking idempotent PaymentIntent workflow.
+  No new intents are created for recovery; ambiguous creation older than 23 hours
+  still requires reconciliation. Signed events retrieve current Stripe state.
+- Webhook processing rejects wrong modes/accounts, including connected-account
+  events. The SQL recorder now checks account and mode before invoking the
+  private transactional state machine. Duplicate events and succeeded status
+  remain protected. Public/service access to the unscoped recorder is revoked.
+- Recovery route, page and administrator link generation validate ledger mode
+  and account. The existing Payment Element/authentication flow has correct live
+  wording while retaining test labels for test records. Tokens remain hashed,
+  expiring, rotated on reissue and consumed on success.
+- Receipt and recovery notices use the existing outbox and sender. Live notices
+  use HTTPS recovery URLs; test notices only create local previews. Receipts
+  require succeeded status. Stale recovery notices for paid bookings are suppressed.
+  Each notification uses a stable outbox idempotency key. Any attempted delivery
+  failure requires manual reconciliation; it is not automatically resent with a
+  rotated link. Disabled collection leaves payment notices queued without using
+  their delivery attempts.
+- Payments totals exclude test charges from live revenue; rows identify their
+  mode. Existing components, layout and design are retained.
+- A future release also requires the production runtime, HTTPS database/app URLs,
+  matching live key prefixes, launch pricing and no simulated reservations.
+  Environment changes cannot bypass the current hard-coded release gate.
+
+New migration, applied only to localhost
+supabase/migrations/20261019232339_bind_zone_payment_environment.sql
+Historical migrations were not edited. Local apply was transactional; no reset.
+
+Files changed in this continuation
+src/lib/payments/environment.ts
+src/lib/payments/charge.ts
+src/lib/payments/notices.ts
+src/lib/email/outbox.ts
+src/lib/supabase/database.types.ts
+src/app/admin/collection-actions.ts
+src/app/admin/(panel)/payments/page.tsx
+src/app/api/stripe/webhook/route.ts
+src/app/pay/page.tsx and src/app/pay/[token]/route.ts
+src/components/admin/collection-panel.tsx
+src/components/payments/recovery-form.tsx and recovery-link.tsx
+.env.example
+Tests: payments, payment-notices, payment-recovery-form, stripe-webhook-route,
+database/zone-payments and integration/zone-payments.
+
+Verification
+- TypeScript and ESLint: passed.
+- 354 unit/component tests across 37 files: passed; Stripe and delivery mocked.
+- 69 SQL assertions: passed, including synthetic live account binding,
+  authentication-required, success, duplicates and wrong-mode/account rejection.
+  All SQL fixtures rolled back.
+- Four scoped local integration tests: passed, including concurrency, token
+  lifecycle, local previews and disabled-outbox behavior.
+- Seven Chromium regression tests: passed, including mobile admin layouts,
+  four-zone checkout/Payments and unavailable recovery links.
+- Optimized Next.js build: passed with isolated local environment overrides.
+- Local database lint: no schema errors. git diff --check: passed.
+- Original two editions, 17 slots and ten bookings are unchanged. No payment
+  ledger or event fixtures remain.
+
+Environment isolation
+The saved .env.local currently contains production Supabase settings and live
+Stripe keys. The integration guard refused an initial run before any database
+request. Verification then used the native localhost stack credentials privately
+and explicit fake Stripe keys in the child process only. Saved credentials were
+not displayed or changed. Tests did not use production infrastructure.
+An initial SQL test referred to the old recorder signature; the test was updated
+for the additive scoped signature and passed on rerun. No production or Stripe
+write was performed during troubleshooting.
+
+Remaining release requirements
+Real provider success/decline/3-D Secure and webhook delivery remain unverified.
+Account ID, restricted-key permissions (including current account read), matching
+publishable key, webhook subscription/signing secret and delivery configuration
+must be verified before release. Printer/layout approval and final proofs remain
+campaign prerequisites. Email failure reconciliation is manual. Existing Stripe
+client secrets already issued cannot be revoked merely by expiring a recovery
+link or disabling collection; this implementation issued none.
+
+No real charges, production changes, external emails, push, merge or deployment.

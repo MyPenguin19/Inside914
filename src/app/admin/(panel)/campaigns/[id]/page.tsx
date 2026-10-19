@@ -1,3 +1,6 @@
+import { CollectionPanel } from "@/components/admin/collection-panel";
+import { ZoneReadiness } from "@/components/admin/zone-readiness";
+import { zoneReadiness } from "@/lib/admin/zone-readiness";
 import { POSTCARD_PRICES } from "@/lib/pricing";
 import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
@@ -11,7 +14,7 @@ import type { SlotView } from "@/components/postcard/postcard-side";
 import { DataTable } from "@/components/ui/data-table";
 import { Card, StatusBadge } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
-import { listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
+import { listConsents, listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
 import { artworkLabel, paymentLabel, positionLabel, reservationLabel } from "@/lib/admin/labels";
 import { artworkAwaitingReview, campaignStats, isConfirmed, isLiveHold, slotStates } from "@/lib/admin/metrics";
 import { CampaignStatusControls } from "@/components/admin/campaign-status-controls";
@@ -37,7 +40,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
     const edition = (await listEditions(supabase)).find((e) => e.id === id);
     if (!edition) notFound();
     const [slots, bookings] = await Promise.all([listSlots(supabase, [id]), listEditionBookings(supabase, [id])]);
-    data = { edition, slots, bookings };
+    const consents = await listConsents(supabase, bookings.map(b => b.id));
+    data = { edition, slots, bookings, consents };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error; // notFound()
     console.error(error instanceof Error ? error.message : "admin campaign failed");
@@ -91,6 +95,10 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
         <Stat label="Reserved value" value={formatPrice(stats.reservedValueCents)} note="Authorized, not collected" />
       </section>
 
+      {edition.productModel === "square_v1" && <ZoneReadiness readiness={zoneReadiness(edition, slots, bookings, data.consents)} />}
+
+      {edition.productModel === "square_v1" && <CollectionPanel editionId={edition.id} />}
+
       <section aria-labelledby="status-title">
         <h2 id="status-title" className="text-lg font-semibold">
           Status
@@ -121,7 +129,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
               ["Mailing window", edition.mailingWindowStart ? `${formatDay(edition.mailingWindowStart)} – ${formatDay(edition.mailingWindowEnd ?? edition.mailingWindowStart)}` : edition.mailDate ? formatDay(edition.mailDate) : "Not set"],
               ["Target mailing quantity", `≈ ${formatHouseholds(edition.households)} homes`],
               ["Layout", findTemplate(edition.layoutTemplate ?? "")?.label ?? (edition.layoutTemplate ? edition.layoutTemplate : "Created before templates (provisional grid)")],
-              ["Prices (new bookings)", `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
+              ["Prices (new bookings)", edition.productModel === "square_v1" ? "$399 square ad per area · 10 paid positions" : `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
               ["Artwork approval", `${stats.artworkAwaitingReview} awaiting review of ${stats.reservations} reservations`],
               ["Payment methods ready", `${stats.paymentMethodsReady} of ${stats.reservations}`],
               ["Advertisers", String(stats.advertisers)],
@@ -142,7 +150,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           <div className="mt-3 grid gap-6 sm:grid-cols-2 lg:max-w-3xl">
             {(["front", "back"] as const).map((side) => (
               <div key={side} className="mx-auto w-full max-w-[340px]">
-                <PostcardMap side={side} views={views(side)} />
+                <PostcardMap dimensions={edition.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} side={side} views={views(side)} />
               </div>
             ))}
           </div>
@@ -168,17 +176,18 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           ) : (
             <DataTable
               caption="Reservations and active holds in this campaign"
-              columns={["Business", "Position", "Size", "Status", "Artwork", "Payment", "Amount"]}
+              columns={["Business", "Category", "Position", "Product", "Status", "Artwork", "Payment", "Amount"]}
               rows={active.map((b) => [
                 <Link key="b" href={`/admin/advertisers/${b.id}`} className="font-medium underline-offset-4 hover:underline">
                   {b.contact?.businessName ?? "No details yet"}
                 </Link>,
+                b.categoryId ?? "Not recorded",
                 positionLabel(b, labels),
-                bookingSizeLabel(b.size),
+                edition.productModel === "square_v1" ? "Square" : bookingSizeLabel(b.size),
                 <Badge key="s" label={reservationLabel(b, now)} />,
                 <Badge key="a" label={artworkAwaitingReview(b) ? { text: "Awaiting review", tone: "warning" } : artworkLabel(b)} />,
                 <Badge key="p" label={paymentLabel(b)} />,
-                `${formatPrice(b.priceCents)}${b.pricingMode === "test" ? " (test price)" : ""}`,
+                `${formatPrice(b.priceCents)}${b.pricingMode === "test" && edition.productModel !== "square_v1" ? " (test price)" : ""}`,
               ])}
             />
           )}

@@ -4,7 +4,10 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
+const advertiserAccountsEnabled = () => false;
 export async function requireAdvertiser() {
+  // Advertiser accounts are disconnected from the MVP, including direct action calls.
+  if (!advertiserAccountsEnabled()) redirect("/areas");
   await connection();
   const client = await createClient();
   const {

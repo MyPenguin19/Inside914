@@ -18,7 +18,7 @@ import { processOutboxForBooking } from "@/lib/email/outbox";
 
 type Admin = SupabaseClient<Database>;
 export const CART_COOKIE = "inside914_cart";
-export const CART_TERMS = "multi-area-v1";
+export const CART_TERMS = "square-zones-v1";
 export const cartMemberToken = (token: string, edition: string) =>
   createHmac("sha256", token)
     .update(`inside914-area:${edition}`)
@@ -94,6 +94,7 @@ export function cartGate(
   contact = false,
 ) {
   if (!members.length || members.length > 4) return "no_hold";
+  if (members.some(b => b.productModel === "square_v1") && (!members[0].sharedArtwork || members.some(b => b.sharedArtwork !== members[0].sharedArtwork))) return "artwork_missing";
   return members.map((b) => checkoutGate(b, { contact })).find(Boolean) ?? null;
 }
 export async function startCartPayment(

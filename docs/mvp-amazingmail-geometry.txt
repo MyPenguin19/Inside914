@@ -1,4 +1,9 @@
 Inside914 — AmazingMail geometry foundation
+
+Historical foundation report. Phase B subsequently registered this layout for
+draft inventory and Phase D verified the shared coordinate conversion. See
+mvp-phase-d.txt for the current state; approval remains false.
+
 2026-10-19 | Local branch: revision/shared-postcard-mvp
 
 RESULT

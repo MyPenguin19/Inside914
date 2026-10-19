@@ -22,10 +22,10 @@ const FILTERS: [BookingFilter, string][] = [
 export default function PaymentsPage({ searchParams }: PageProps<"/admin/payments">) {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Payments" description="Saved cards and authorized amounts. Visibility only." />
+      <PageHeader title="Payments" description="Saved cards, authorized amounts and per-zone payment status." />
       <Notice tone="info" role="note">
         Reserved value is <strong>not</strong> collected revenue, and a saved card (a Stripe SetupIntent) is not a payment.
-        Nothing is charged until payment collection is built and a campaign is approved.
+        Collection requires explicit zone activation. Live collection remains disabled pending release approval.
       </Notice>
       <Suspense fallback={<PanelSkeleton />}>
         <Payments searchParams={searchParams} />
@@ -53,7 +53,9 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
       selected ? listSlots(supabase, [selected.id]) : Promise.resolve([]),
     ]);
     const consents = await listConsents(supabase, [...new Set([...result.rows, ...all.filter(isConfirmed)].map((b) => b.id))]);
-    data = { ...result, all, slots, consents, selected, editionList: editions, editions: new Map(editions.map((e) => [e.id, e])) };
+    const {data:charges,error:chargeError}=await supabase.from("zone_charges").select("booking_id,amount_cents,status,stripe_mode");
+    if(chargeError) throw new Error("Could not load collection ledger");
+    data = { charges: new Map(charges.map(c=>[c.booking_id,c])), ...result, all, slots, consents, selected, editionList: editions, editions: new Map(editions.map((e) => [e.id, e])) };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin payments failed");
     return <LoadError what="payments" />;
@@ -98,8 +100,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
             )}
           </div>
           <p className="mt-1 text-sm text-muted">
-            Read-only. Fully reserved is not the same as payment-ready, and there is no charge button: collecting payment is a
-            separate, owner-approved task.
+            Fully reserved is not the same as payment-ready. Review and authorize each zone from its campaign or production page.
           </p>
           <div className="mt-4">
             <DetailList
@@ -121,7 +122,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
       <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <Stat label="Authorized (all campaigns)" value={formatPrice(authorized)} note={`${confirmed.length} confirmed reservations`} />
         <Stat label="Cards saved" value={`${ready} of ${confirmed.length}`} />
-        <Stat label="Collected" value={formatPrice(0)} note="Payment collection isn't built yet" />
+        <Stat label="Collected" value={formatPrice([...data.charges.values()].filter(c=>c.status==="succeeded" && c.stripe_mode==="live").reduce((sum,c)=>sum+c.amount_cents,0))} note="Recorded live payments only; test payments excluded" />
       </section>
       <Filters base="/admin/payments" filter={filter} filters={FILTERS} q={q} />
       {data.rows.length === 0 ? (
@@ -130,7 +131,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
         <>
           <DataTable
             caption="Payment authorizations"
-            columns={["Advertiser", "Campaign", "Reference", "Authorized", "Card", "Setup status", "Consent", "Readiness", "Collected", "Reservation", "Updated"]}
+            columns={["Advertiser", "Campaign", "Reference", "Authorized", "Card", "Setup status", "Consent", "Readiness", "Collected", "Collection status", "Reservation", "Updated"]}
             rows={data.rows.map((b) => {
               const e = data.editions.get(b.editionId);
               const devTest = isTestStripeId(b.stripeCustomerId);
@@ -142,7 +143,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
                 b.reference ?? "—",
                 <span key="a" className="whitespace-nowrap">
                   {formatPrice(b.priceCents)}
-                  {b.pricingMode === "test" && <span className="ml-1.5 text-xs text-warning">test price</span>}
+                  {b.pricingMode === "test" && e?.productModel !== "square_v1" && <span className="ml-1.5 text-xs text-warning">test price</span>}
                   {devTest && <span className="ml-1.5 text-xs text-warning">dev TEST</span>}
                 </span>,
                 <Badge key="p" label={paymentLabel(b)} />,
@@ -158,7 +159,8 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
                     </span>
                   );
                 })(),
-                formatPrice(0),
+                formatPrice(data.charges.get(b.id)?.status === "succeeded" ? data.charges.get(b.id)!.amount_cents : 0),
+                data.charges.has(b.id) ? `${data.charges.get(b.id)!.stripe_mode} · ${data.charges.get(b.id)!.status.replaceAll("_"," ")}` : "Not activated",
                 <StatusBadge key="r" tone={reservationLabel(b, now).tone}>{reservationLabel(b, now).text}</StatusBadge>,
                 formatTimestamp(b.stripeSetupStatusAt ?? b.confirmedAt ?? b.createdAt),
               ];

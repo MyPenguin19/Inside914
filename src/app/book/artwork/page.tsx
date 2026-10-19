@@ -42,16 +42,16 @@ async function Studio() {
     <div className="mt-8">
       <header className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Add your artwork</h1>
-        {booking.cartId && <p className="mt-2 font-medium" data-testid="artwork-area">{booking.zoneName}</p>}
+        {booking.cartId && booking.productModel !== "square_v1" && <p className="mt-2 font-medium" data-testid="artwork-area">{booking.zoneName}</p>}
         <p className="mt-2 text-muted">
-          Upload your ad, then drag and zoom until it fits. You&apos;ll see it on the postcard as you go.
+          {booking.productModel === "square_v1" ? "Upload one ad, then crop, drag and zoom to a square. Saving applies the same artwork to all selected zones." : "Upload your ad, then drag and zoom until it fits. You’ll see it on the postcard as you go."}
         </p>
       </header>
       {booking.size === "both_sides" && <p className="mb-4 text-sm text-muted">This image and crop will be used on both front and back. You can review both sides on the next step.</p>}
       <ArtworkStudio
         key={booking.cartId ? `${booking.id}:${artwork?.version ?? "empty"}` : booking.id}
         nextHref={booking.cartId ? "/book/cart" : undefined}
-        continueLabel={booking.cartId ? "Save artwork and return to areas" : undefined}
+        continueLabel={booking.productModel === "square_v1" ? "Save artwork for all zones" : booking.cartId ? "Save artwork and return to areas" : undefined}
         hold={{ expiresAt: booking.expiresAt, extensionsLeft: booking.cartId ? 0 : MAX_EXTENSIONS - booking.holdExtensions }}
         ad={{
           side: area.side,
@@ -60,6 +60,7 @@ async function Studio() {
           size: booking.size,
           priceCents: booking.priceCents,
         }}
+        dimensions={booking.productModel === "square_v1" ? { width: 9, height: 6 } : undefined}
         otherSlots={otherSlots}
         initialArtwork={artwork}
         actions={{

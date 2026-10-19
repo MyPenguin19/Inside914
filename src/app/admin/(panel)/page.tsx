@@ -1,9 +1,10 @@
+import { ZoneOverview } from "@/components/admin/zone-overview";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DetailList, LoadError, PageHeader, PanelSkeleton, Stat } from "@/components/admin/ui";
 import { Card, Notice, StatusBadge } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
-import { listEditionBookings, listEditions, listSentEmails, listSlots } from "@/lib/admin/data";
+import { listConsents, listEditionBookings, listEditions, listSentEmails, listSlots } from "@/lib/admin/data";
 import { attentionItems, campaignStats, recentActivity, type AdminEdition } from "@/lib/admin/metrics";
 import { formatDay, formatDeadline, formatHouseholds, formatIssueMonth, formatPrice } from "@/lib/format";
 
@@ -29,9 +30,12 @@ async function Overview({ searchParams }: { searchParams: PageProps<"/admin">["s
   try {
     const editions = await listEditions(supabase);
     const edition = pickCampaign(editions, typeof requested === "string" ? requested : undefined);
-    const [slots, bookings] = edition ? await Promise.all([listSlots(supabase, [edition.id]), listEditionBookings(supabase, [edition.id])]) : [[], []];
+    const ids = editions.filter(e => e.productModel === "square_v1" || e.id === edition?.id).map(e => e.id);
+    const [allSlots, allBookings] = await Promise.all([listSlots(supabase, ids), listEditionBookings(supabase, ids)]);
+    const consents = await listConsents(supabase, allBookings.map(b => b.id));
+    const slots = allSlots.filter(s => s.editionId === edition?.id), bookings = allBookings.filter(b => b.editionId === edition?.id);
     const emails = await listSentEmails(supabase, bookings.map((b) => b.id));
-    data = { editions, edition, slots, bookings, emails };
+    data = { editions, edition, slots, bookings, emails, allSlots, allBookings, consents };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin overview failed");
     return <LoadError what="the dashboard" />;
@@ -42,9 +46,10 @@ async function Overview({ searchParams }: { searchParams: PageProps<"/admin">["s
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Overview" />
+        <ZoneOverview editions={[]} slots={[]} bookings={[]} consents={new Map()} />
         <Card>
           <p className="font-medium">No campaigns yet.</p>
-          <p className="mt-1 text-sm text-muted">Once an edition is created in Supabase it will appear here.</p>
+          <p className="mt-1 text-sm text-muted">Create a draft campaign from the zone cards above.</p>
         </Card>
       </div>
     );
@@ -79,7 +84,9 @@ async function Overview({ searchParams }: { searchParams: PageProps<"/admin">["s
         )}
       </PageHeader>
 
-      {stats.testPricedReservations > 0 && (
+      <ZoneOverview editions={editions} slots={data.allSlots} bookings={data.allBookings} consents={data.consents} />
+
+      {edition.productModel !== "square_v1" && stats.testPricedReservations > 0 && (
         <Notice tone="warning" role="note">
           {stats.testPricedReservations} of {stats.reservations} reservations use the temporary test prices. Amounts below are
           what each booking actually stores.

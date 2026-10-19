@@ -13,9 +13,11 @@ import type { AdminBooking, AdminEdition, AdminSlot } from "./metrics";
 type Db = SupabaseClient<Database>;
 
 const BOOKING_COLUMNS =
-  "id, edition_id, status, size, claimed_slot_count, price_cents, pricing_mode, hold_expires_at, reference, created_at, confirmed_at, stripe_customer_id, stripe_setup_intent_id, stripe_payment_method_id, stripe_setup_status, stripe_setup_status_at, flagged_at, flag_reason, cancelled_at, cancellation_reason, card_removed_at, booking_contacts(business_name, contact_name, email, phone), booking_artwork(id, status, crop_width, updated_at, review_status, review_note), booking_slots(slot_id, released_at)";
+  "id, edition_id, category_id, cart_id, status, size, claimed_slot_count, price_cents, pricing_mode, hold_expires_at, reference, created_at, confirmed_at, stripe_customer_id, stripe_setup_intent_id, stripe_payment_method_id, stripe_setup_status, stripe_setup_status_at, flagged_at, flag_reason, cancelled_at, cancellation_reason, card_removed_at, booking_contacts(business_name, contact_name, email, phone), booking_artwork(id, status, crop_width, crop_height, crop_x, crop_y, zoom, updated_at, review_status, review_note), booking_slots(slot_id, released_at)";
 
 type BookingRow = {
+  category_id: string | null;
+  cart_id: string | null;
   id: string;
   edition_id: string;
   status: string;
@@ -38,7 +40,7 @@ type BookingRow = {
   cancellation_reason: string | null;
   card_removed_at: string | null;
   booking_contacts: { business_name: string; contact_name: string; email: string; phone: string } | null;
-  booking_artwork: { id: string; status: string; crop_width: number | null; updated_at: string; review_status: string; review_note: string | null } | null;
+  booking_artwork: { id: string; status: string; crop_width: number | null; crop_height: number | null; crop_x: number | null; crop_y: number | null; zoom: number | null; updated_at: string; review_status: string; review_note: string | null } | null;
   booking_slots: { slot_id: string; released_at: string | null }[];
 };
 
@@ -47,6 +49,8 @@ const SETUP = new Set(["succeeded", "failed", "canceled"]);
 export function toAdminBooking(r: BookingRow): AdminBooking {
   return {
     id: r.id,
+    categoryId: r.category_id,
+    cartId: r.cart_id,
     editionId: r.edition_id,
     status: r.status,
     size: r.size as AdminBooking["size"],
@@ -66,7 +70,7 @@ export function toAdminBooking(r: BookingRow): AdminBooking {
       ? { businessName: r.booking_contacts.business_name, contactName: r.booking_contacts.contact_name, email: r.booking_contacts.email, phone: r.booking_contacts.phone }
       : null,
     artwork: r.booking_artwork
-      ? { status: r.booking_artwork.status, cropped: r.booking_artwork.crop_width !== null, updatedAt: r.booking_artwork.updated_at }
+      ? { status: r.booking_artwork.status, cropped: r.booking_artwork.crop_width !== null, square: r.booking_artwork.crop_width !== null && r.booking_artwork.crop_height !== null && r.booking_artwork.crop_width > 0 && Math.abs(r.booking_artwork.crop_width - r.booking_artwork.crop_height) <= 1 && r.booking_artwork.crop_x !== null && r.booking_artwork.crop_y !== null && r.booking_artwork.zoom !== null, updatedAt: r.booking_artwork.updated_at }
       : null,
     claims: r.booking_slots.map((s) => ({ slotId: s.slot_id, released: s.released_at !== null })),
     flag: r.flagged_at ? { at: r.flagged_at, reason: r.flag_reason ?? "" } : null,
@@ -83,6 +87,7 @@ function fail(what: string, error: { message: string } | null): never {
 }
 
 type EditionRow = {
+  product_model: string;
   id: string;
   zone_id: string;
   name: string | null;
@@ -108,6 +113,7 @@ const toEdition = (e: EditionRow): AdminEdition => ({
   name: e.name,
   targetQuantity: e.target_quantity,
   layoutTemplate: e.layout_template,
+  productModel: e.product_model,
   reservationsOpenAt: e.reservations_open_at,
   pausedAt: e.reservations_paused_at,
   artworkDueAt: e.artwork_due_at,
@@ -127,7 +133,7 @@ export async function listEditions(db: Db): Promise<AdminEdition[]> {
   const { data, error } = await db
     .from("editions")
     .select(
-      "id, zone_id, name, target_quantity, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)",
+      "id, zone_id, name, target_quantity, product_model, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)",
     )
     .order("issue_month", { ascending: false })
     .returns<EditionRow[]>();
@@ -212,7 +218,7 @@ export async function searchBookings(
   if (opts.filter === "ended") query = query.in("status", ["released", "cancelled"]);
   if (opts.editionId) query = query.eq("edition_id", opts.editionId);
   if (opts.extra === "artwork") query = query.not("booking_artwork", "is", null);
-  if (opts.extra === "payment") query = query.not("stripe_setup_intent_id", "is", null);
+  if (opts.extra === "payment") query = query.or("stripe_setup_intent_id.not.is.null,stripe_payment_method_id.not.is.null");
   const q = opts.q?.trim().replace(/[%,()*\\]/g, " ").slice(0, 80);
   if (q) {
     query = query.or(`business_name.ilike.%${q}%,contact_name.ilike.%${q}%,email.ilike.%${q}%`, { referencedTable: "booking_contacts" });
@@ -302,4 +308,17 @@ export async function signEvidence(path: string) {
 // Private artwork, viewable through a short-lived signed URL. ONLY call after requireAdmin().
 export async function signArtwork(bookingId: string) {
   return getArtwork(createAdminClient(), bookingId);
+}
+
+// Fetch cart siblings independently of table pagination; admin session/RLS only.
+export async function listCartZones(db: Db, cartIds: string[]) {
+  if (!cartIds.length) return new Map<string, string[]>();
+  const {data,error} = await db.from("bookings").select("cart_id, editions(zones(name))").in("cart_id",cartIds).not("status","in","(released,cancelled)");
+  if (error) fail("selected zones",error);
+  const result = new Map<string,string[]>();
+  for (const row of data) {
+    const name = row.editions?.zones?.name;
+    if (row.cart_id && name) result.set(row.cart_id,[...new Set([...(result.get(row.cart_id) ?? []),name])]);
+  }
+  return result;
 }

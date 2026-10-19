@@ -12,6 +12,7 @@ import type { Database } from "@/lib/supabase/database.types";
 type Admin = SupabaseClient<Database>;
 
 export type ReservationView = {
+  productModel?: string;
   bookingId: string;
   status: string;
   isTest: boolean; // development TEST reservation (simulated card, no payment method, no authorization)
@@ -88,12 +89,13 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
   const own = new Set(slots.map((s) => s.label));
   return {
     bookingId: data.id,
+    productModel: catalog.productModel,
     status: data.status,
     isTest: isTestStripeId(data.stripe_customer_id),
     card: !data.stripe_payment_method_id ? "none" : data.card_removed_at ? "removed" : sharedCard ? "shared" : "pending",
     pricingMode: data.pricing_mode === "test" ? "test" : "launch",
     editionId: data.edition_id,
-    campaign: { taken: catalog.slots.filter((s) => !s.available).length, total: catalog.slots.length },
+    campaign: { taken: catalog.slots.filter((s) => s.occupancy === "reserved").length, total: catalog.slots.length },
     emailSent: (email.data?.length ?? 0) > 0,
     reference: data.reference,
     confirmedAt: data.confirmed_at,
