@@ -1,0 +1,205 @@
+Inside914 MVP simplification — Phase A audit and implementation plan
+Date: 2026-10-19
+Repository: MyPenguin19/Inside914
+Local branch: revision/shared-postcard-mvp
+Starting commit: 637c6100adaf1bb2ba5f15bb05db86194449aeda
+
+STATUS
+
+Phase A repository audit is complete. Implementation is stopped at the owner's
+explicit geometry/schema boundaries. No application code, migration, database,
+price, account configuration, or integration has been changed for this revision.
+The new MVP is NOT implemented or verified. This document is the local plan.
+
+KEEP
+
+- The existing homepage styling, responsive utilities and src/components/ui.
+- The four canonical names/slugs in src/lib/catalog/regions.ts. Delivery counts
+  remain provisional; do not infer ZIP codes, routes, or confirmed reach.
+- Admin authentication in src/lib/admin/auth.ts, RLS, private.require_admin(),
+  audited admin RPCs, mailing evidence and the private layout-approval registry.
+- Booking/slot claims, transaction locks, expiring holds and rate limiting.
+- Stripe SetupIntent architecture, server verification, signature verification,
+  stored payment consent and the shared Customer/payment method mechanism.
+- Private artwork storage, server file validation, crop/zoom/reposition tools.
+- Account-free booking_access_tokens and /r/[token] -> /reservation. Tokens are
+  random, stored hashed, scoped to a booking, expiring and revocable.
+- Email outbox, Resend transport, cancellation handling and shared-card retention.
+- Tests of security boundaries, holds, webhook validation, image validation,
+  email escaping/delivery, admin authorization, cancellation and responsiveness.
+
+REMOVE / DISCONNECT
+
+- /account/* and /dashboard/*, their mutation actions, navigation links and
+  advertiser-only session/proof dependencies. Preserve /admin authentication.
+- Recurring plans and future-occurrence enrollment, including direct entry
+  points, not just navigation. Retain historical tables and migration files.
+- Standard/double/full_side/both_sides product selection, slot-pair selection,
+  multiple size price fields in the MVP workflow and artwork-by-zone controls.
+- Old customer-facing pricing/format/recurrence copy and obsolete links.
+- There is currently no Stripe subscription or charging implementation to remove.
+  The new code must continue to prevent subscriptions and automatic enrollment.
+
+MODIFY
+
+- src/lib/pricing.ts and the database hold/confirmation functions: one square
+  product, 39900 cents per zone; selected totals 399/798/1197/1596 dollars and
+  zero due today. Changing the TypeScript constant alone is insufficient:
+  hold_cart currently also contains $1/$2 test amounts. Test isolation must use
+  fake/test Stripe and local Supabase, not different advertised MVP prices.
+- src/lib/admin/layouts.ts and src/lib/print/spec.ts currently define a
+  provisional portrait 6.5 x 12 card with 16 rectangular positions. Replace for
+  NEW MVP campaigns only after exact physical placement is verified/approved.
+- Category first, then 1–4 available zones, one square artwork, business/contact
+  information, one SetupIntent and explicit separate $399 authorizations.
+- Reuse the reservation group internally: its bookings already retain their own
+  edition, price and consent. Grouping must never couple later zone activation.
+- Reuse one logical artwork asset/crop across all selected zones, retaining
+  per-reservation associations and approvals. Remove the need to edit each area.
+- Account-free status links need artwork replacement and payment recovery;
+  /reservation currently shows status but says artwork changes require support.
+- Admin statistics currently count occupied units and broadly treat all statuses
+  other than pending/released/cancelled as confirmed. Replace MVP eligibility
+  with exactly ten valid single-tile reservations, valid unique categories,
+  approved artwork, successful card setup, matching consent and mailing readiness.
+  Blocking an inventory position must never reduce the activation threshold.
+
+NEW WORK REQUIRED
+
+- A normalized category catalog, mandatory category identifiers and database
+  claims scoped to a campaign/zone. Current booking_contacts.category is nullable
+  text with only a length constraint. UI choices exist but do not enforce
+  exclusivity. No safe explicit category override pattern was found; add none.
+- Transactional category acquisition/release alongside slot acquisition, with
+  a database uniqueness constraint on live campaign/category claims. Expired
+  holds must be released under locks; availability checks alone are insufficient.
+  Recheck at confirmation; use stable lock ordering for multi-zone requests.
+- Fixed F1–F6/B1–B4 paid inventory; the two house ads and postal panel must remain
+  separate non-sellable layout regions. Exact placement is blocked below.
+- Explicit admin Activate & Charge Zone, gated in the database, never triggered
+  by the tenth reservation. Snapshot the eligible ten bookings for that zone.
+- After reservation flow verification: separate server-only collection service,
+  one $399 PaymentIntent per zone booking, persistent idempotency keys, audited
+  attempts, verified payment webhooks as the payment-status authority, retry and
+  authentication-required recovery through scoped links. Never charge the cart
+  total. Freeze/revalidate activation and cancellation under transaction locks.
+- Existing webhook handling is SetupIntent-only. Existing admin payment screens
+  are read-only; approval for print is not an activation-and-collection workflow.
+
+DATABASE IMPACT
+
+Additive modifier migrations are required; no historical migration may change.
+The brief explicitly says to stop if category uniqueness requires schema work.
+That condition is present: there is no category claim/uniqueness constraint.
+
+Proposed schema work for review:
+1. Version/identify the new square MVP campaign model without rewriting existing
+   bookings, consent amounts, layouts or historical campaign inventory.
+2. Add normalized category identifiers and a constrained claim table with RLS
+   and narrow grants; add guarded hold, confirmation and cancellation paths.
+3. Add shared artwork associations suitable for one asset and multiple bookings.
+4. Add campaign activation and per-booking payment-attempt/event records with
+   unique operation identifiers and audit links, in the later payment phase.
+5. Disconnect/revoke obsolete advertiser and product mutation entry points in
+   new migrations while leaving their historical data/tables intact.
+
+Do not infer category IDs for old broad labels such as Home services or Other.
+Do not reprice/re-authorize legacy reservations. Do not apply remote migrations.
+The repository has 21 migration files. Previous Phase 5 verification was pending;
+this audit has not reconciled local or production applied-migration state.
+Reconcile the isolated local database read-only before new local schema testing.
+Production reconciliation is a separate prerequisite for any later approved
+release; this audit did not connect to production.
+
+GEOMETRY GATE — NOT VERIFIED
+
+The owner's brief supplies 9 x 6 trim, 9.125 x 6.125 bleed file, approximately
+8.75 x 5.75 live area, and a 3.925 x 3.33 lower-right postal exclusion panel.
+These dimensions do not specify the panel's exact origin or required clearance,
+and the live bounds are explicitly approximate. They are not enough to certify
+positions or maximum safe printed square size.
+
+Official sources inspected on 2026-10-19:
+https://www.amazingmail.com/templates/blank-templates
+https://www.amazingmail.com/templates/start
+https://sendcards.amazingmail.com/getstarted
+
+The public Print & Mail postcard selector lists 4.25 x 6, 5.5 x 8.5, 5.5 x 11.5,
+and 3.5 x 8.5. No exact 9 x 6 landscape template was located there or in the
+linked public template files. This does not establish that the product does
+not exist. A direct official template link or printer-provided PDF is needed.
+
+Conditional arithmetic, NOT printer-approved geometry:
+- Six 2.5-inch squares in a 3 x 2 front grid occupy 7.5 x 5 inches, before
+  gutters. That footprint fits inside the stated approximate live rectangle.
+- IF live bounds are centered and IF the postal panel touches the trimmed
+  right/bottom edges, the safe width to its left is 9 - 3.925 - 0.125 = 4.950
+  inches. A 2 x 2 back grid of 2.5-inch squares needs 5.000 inches: 0.050 too wide.
+- For that specific arrangement, 2.475 inches is an optimistic zero-gutter
+  upper bound, not an approved size or a proven maximum across all arrangements.
+- Under those same assumptions, space above the panel is 2.545 inches high.
+  Other back arrangements and the two house ads have not been ruled out or
+  verified. Their fit must be tested together against the actual template.
+
+No placement coordinates were hardcoded; no artwork was resized or distorted.
+Keep the requested 2.5 x 2.5 upload standard. Once the official template is
+available, reproduce trim/bleed/live/postal bounds, measure all placements and
+clearances, and calculate any required size change. A smaller printed tile
+requires explicit owner approval. Both house ads need verified reserved regions
+and supplied/approved artwork before any production proof can be approved.
+
+CONTROLLED IMPLEMENTATION ORDER
+
+A. Audit/plan: complete; resolve the template and schema stop conditions first.
+B. Square-only product, fixed ten positions, $399 and transactional categories.
+C. Account-free category/zones/single-artwork checkout and status links.
+D. Verified AmazingMail geometry and automated fit/exclusion tests; the geometry
+   feasibility preflight occurs before inventory coordinates are committed.
+E. Admin ten-advertiser readiness, category occupancy and production views.
+F. Separate per-zone payment collection only after B–E reservation verification.
+
+TEST IMPACT
+
+- Replace obsolete product/account/recurring journeys with tests that those MVP
+  entry points and mutations are unavailable. Preserve security coverage.
+- Add local integration races for the tenth/eleventh reservation and duplicate
+  category holds; the same category must remain available in another zone.
+- Test hold expiry, abandonment, failed setup, cancellation and authorization
+  mismatch: none may make a zone eligible to charge.
+- Test all 1–4 zone totals, one upload/crop for all zones, separate consents and
+  $0 collected at reservation. Verify a zone at 9/10 cannot activate.
+- Geometry tests must cover bounds, 1:1 shapes, six front/four back inventory,
+  both house regions, pairwise non-overlap and postal exclusion. Do not claim
+  printer verification using guessed fixture coordinates.
+- After the reservation tests pass, test per-zone activation independence,
+  retries/double-clicks, duplicate/out-of-order webhooks, payment failures and
+  authentication-required recovery using local fakes or isolated test Stripe.
+- Browser verification at 320, 375, 390, 768 and 1440 pixels; preserve the design.
+- Run the full requested suite against the isolated local database only. Review
+  fixture cleanup first: existing admin integration tests delete all bookings
+  in a shared development edition, so those tests need dedicated fixtures before
+  they can safely run under this revision's no-destructive-operations constraint.
+
+BASELINE CHECKS RUN IN THIS AUDIT
+
+npm run typecheck: PASS
+npm run lint: PASS
+npm test: PASS — 251 tests in 29 files
+npm run test:integration: NOT RUN — stopped before schema/fixture changes
+npm run test:e2e: NOT RUN — stopped before implementation and local DB validation
+npm run build: NOT RUN — stopped at audit; no application code changed
+New MVP geometry/acceptance tests: NOT IMPLEMENTED / NOT RUN
+
+These are baseline results, not proof that any of the 30 new acceptance criteria
+have been implemented. No failed tests were suppressed or reported as passed.
+
+NEXT INPUT NEEDED
+
+Provide the actual AmazingMail 9 x 6 landscape template (official URL or PDF).
+Confirm proceeding with the proposed local additive category/schema work, as
+the brief specifically requires stopping at that finding. This is separate from
+approval for any smaller printed tile, which cannot be requested responsibly
+until the exact template has been measured.
+
+No push, deployment, production database access/write, live Stripe write,
+production Resend change, or Vercel configuration change occurred in this audit.
