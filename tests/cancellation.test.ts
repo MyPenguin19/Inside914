@@ -59,6 +59,12 @@ describe("cancellation email", () => {
     }
   });
 
+  test("shared cards remain available for other reservations", () => {
+    const email = reservationCancelledEmail({ ...base, card: "shared" });
+    expect(email.text).toContain("other active reservations");
+    expect(email.text).not.toContain("being removed");
+  });
+
   test("test reservations are labeled", () => {
     expect(reservationCancelledEmail({ ...base, test: true }).subject).toMatch(/^\[TEST\] /);
   });
@@ -71,6 +77,8 @@ function fakeAdmin(row: Record<string, unknown> | null) {
     select: () => chain,
     eq: () => chain,
     is: () => chain,
+    not: () => chain,
+    limit: () => chain,
     maybeSingle: async () => ({ data: row, error: null }),
     update: (values: Record<string, unknown>) => {
       updates.push(values);

@@ -3,7 +3,7 @@
 // arrives; the chosen template's key is stored on the campaign and its slots are copied in.
 
 export type TemplateSlot = { side: "front" | "back"; label: string; x: number; y: number; width: number; height: number };
-export type LayoutTemplate = { key: string; label: string; description: string; slots: TemplateSlot[] };
+export type LayoutTemplate = { key: string; label: string; description: string; approved: boolean; slots: TemplateSlot[] };
 
 function grid(side: "front" | "back", rows: number, top: number, unitHeight: number): TemplateSlot[] {
   return Array.from({ length: rows * 2 }, (_, i) => ({
@@ -19,8 +19,9 @@ function grid(side: "front" | "back", rows: number, top: number, unitHeight: num
 export const LAYOUT_TEMPLATES: LayoutTemplate[] = [
   {
     key: "provisional-2x4",
+    approved: false,
     label: "Provisional 2 × 4 grid per side (16 spaces)",
-    description: "Eight 3.25″ × 3″ spaces on each side, as in the current campaign. Not the approved print layout.",
+    description: "Eight 3.25″ × 3″ spaces on each side, as in the current campaign. Not approved: no mailing panel, postage, branding, bleed or safe margins are reserved. Inventory is provisional and cannot open for reservations.",
     slots: [...grid("front", 4, 0, 3), ...grid("back", 4, 0, 3)],
   },
 ];

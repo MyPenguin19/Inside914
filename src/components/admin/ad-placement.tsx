@@ -8,6 +8,9 @@ import type { ArtworkView } from "@/lib/artwork/service";
 // The advertiser's artwork: cropped ad in its place on the postcard, the resolution check, and a
 // link to the original upload. viewUrl is a short-lived signed URL (private bucket).
 export function AdPlacement({ artwork, own, slots }: { artwork: ArtworkView; own: AdminSlot[]; slots: AdminSlot[] }) {
+  if (new Set(own.map(s => s.side)).size > 1) return <div className="grid gap-4">
+    {(["front", "back"] as const).map(side => <AdPlacement key={side} artwork={artwork} own={own.filter(s => s.side === side)} slots={slots} />)}
+  </div>;
   const area = adArea(own);
   const ppi = artwork.crop ? effectivePpi(artwork.crop, area) : null;
   return (

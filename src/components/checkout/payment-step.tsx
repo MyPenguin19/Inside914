@@ -15,6 +15,8 @@ type Actions = {
 };
 
 type Props = {
+  successHref?: string;
+  returnHref?: string;
   publishableKey: string | null;
   consentText: string;
   termsVersion: string;
@@ -27,7 +29,7 @@ type Phase = "loading" | "ready" | "saved" | "submitting" | "processing" | "unav
 
 // Saves a card with Stripe's own secure form (card details never touch our servers) after an
 // explicit, unticked-by-default consent. Then asks the server to confirm the reservation.
-export function PaymentStep({ publishableKey, consentText, termsVersion, actions, testMode = false, loadStripeJs = loadStripe }: Props) {
+export function PaymentStep({ successHref = "/book/confirmed", returnHref = "/book/complete", publishableKey, consentText, termsVersion, actions, testMode = false, loadStripeJs = loadStripe }: Props) {
   const router = useRouter();
   const mountRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
@@ -77,7 +79,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
   async function finish() {
     setPhase("submitting");
     const { outcome } = await actions.confirmReservation();
-    if (outcome === "confirmed" || outcome === "already_confirmed") return router.push("/book/confirmed");
+    if (outcome === "confirmed" || outcome === "already_confirmed") return router.push(successHref);
     setPhase("ready");
     fail(outcome);
   }
@@ -120,7 +122,7 @@ export function PaymentStep({ publishableKey, consentText, termsVersion, actions
     const { error: stripeError, setupIntent } = await stripe.confirmSetup({
       elements,
       redirect: "if_required",
-      confirmParams: { return_url: `${window.location.origin}/book/complete` },
+      confirmParams: { return_url: `${window.location.origin}${returnHref}` },
     });
     if (stripeError) {
       setPhase("ready");

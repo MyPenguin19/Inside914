@@ -1,12 +1,12 @@
 import { Notice } from "@/components/ui/primitives";
 import { getStripeKeyMode } from "@/lib/env/checkout";
 import { formatPrice } from "@/lib/format";
-import { TEST_PRICES } from "@/lib/pricing";
+import { TEST_PRICES, POSTCARD_PRICES } from "@/lib/pricing";
 
 // Shown wherever the temporary $1 / $2 prices apply. Server component: the wording follows the
 // Stripe keys actually configured, so it never claims "test mode" while real cards are being saved.
 export function TestCheckoutNotice({ checkout = false }: { checkout?: boolean }) {
-  const prices = `${formatPrice(TEST_PRICES.unitPriceCents)} standard, ${formatPrice(TEST_PRICES.doublePriceCents)} double`;
+  const prices = `${formatPrice(TEST_PRICES.unitPriceCents)} standard, ${formatPrice(TEST_PRICES.doublePriceCents)} double; full-side options retain ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} / ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} per area`;
   let mode: "test" | "live" | null;
   try {
     mode = getStripeKeyMode();

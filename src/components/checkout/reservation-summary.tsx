@@ -1,3 +1,5 @@
+
+import { bookingSizeLabel } from "@/lib/booking/products";
 import { CroppedImage } from "@/components/artwork/cropped-image";
 import { PostcardPreview } from "@/components/artwork/postcard-preview";
 import type { PostcardZone } from "@/components/postcard/postcard-side";
@@ -9,28 +11,30 @@ export function ReservationSummary({
   view,
   amountLabel = "Total authorized",
   zones,
+  provisional = false,
 }: {
+  provisional?: boolean;
   view: ReservationView;
   amountLabel?: string;
   zones?: PostcardZone[]; // printed non-ad areas, when the layout has them
 }) {
-  const side = view.area.side === "front" ? "Front" : "Back";
+  const side = view.size === "both_sides" ? "Front and back" : view.area.side === "front" ? "Front" : "Back";
   return (
     <section aria-label="Reservation summary" className="rounded-2xl border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold">Your reservation</h2>
       <div className="mt-4 grid grid-cols-[96px_minmax(0,1fr)] gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
-        <PostcardPreview side={view.area.side} otherSlots={view.otherSlots} area={view.area} showSafeArea={false} compact zones={zones}>
+        <div>{(view.areas ?? [view.area]).map(previewArea => <PostcardPreview key={previewArea.side} side={previewArea.side} otherSlots={view.otherSlots} area={previewArea} showSafeArea={false} compact zones={zones}>
           {view.artwork?.crop ? (
             <CroppedImage src={view.artwork.viewUrl} imageWidth={view.artwork.width} imageHeight={view.artwork.height} crop={view.artwork.crop} alt="Your ad" />
           ) : (
             <div className="h-full bg-accent-soft" />
           )}
-        </PostcardPreview>
+        </PostcardPreview>)}</div>
         <dl className="grid content-start gap-2 text-sm">
           <Row label="Edition" value={`${view.zoneName} · ${formatIssueMonth(view.issueMonth)}`} />
-          <Row label="Planned mailing" value={`≈ ${formatHouseholds(view.households)} homes`} />
+          <Row label="Planned mailing" value={provisional ? (view.households > 0 ? `≈ ${formatHouseholds(view.households)} homes, provisional` : "Household count awaiting confirmation") : `≈ ${formatHouseholds(view.households)} homes`} />
           <Row label="Position" value={`${side} · ${view.positions.map((p) => p.label).join(" + ")}`} />
-          <Row label="Size" value={view.size === "double" ? "Double (two side-by-side spaces)" : "Standard"} />
+          <Row label="Size" value={bookingSizeLabel(view.size)} />
           <Row label="Reservation deadline" value={formatDeadline(view.artworkDeadline)} />
         </dl>
       </div>

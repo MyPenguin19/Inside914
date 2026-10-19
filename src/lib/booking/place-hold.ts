@@ -18,10 +18,13 @@ export type HoldFailure =
   | "error";
 
 export type HoldResult =
-  | { ok: true; bookingId: string; expiresAt: string; size: "standard" | "double"; priceCents: number; token: string }
+  | { ok: true; bookingId: string; expiresAt: string; size: import("@/lib/booking/products").BookingSize; priceCents: number; token: string }
   | { ok: false; reason: HoldFailure };
 
-const HoldInput = z.object({ slotIds: z.array(z.uuid()).min(1).max(2) });
+const HoldInput = z.object({ slotIds: z.array(z.uuid()).min(1).max(256), mode: z.enum(["standard", "double", "full_side", "both_sides"]).optional() }).refine(input => {
+  if (input.mode === "full_side" || input.mode === "both_sides") return true;
+  return input.mode === "standard" ? input.slotIds.length === 1 : input.mode === "double" ? input.slotIds.length === 2 : input.slotIds.length <= 2;
+});
 
 // SQLSTATEs raised by public.hold_slots().
 const DB_ERRORS: Record<string, HoldFailure> = {
@@ -32,8 +35,8 @@ const DB_ERRORS: Record<string, HoldFailure> = {
   INS05: "invalid_pricing",
 };
 
-// One atomic hold for 1 slot (standard) or 2 adjacent slots (double), at the price the server's
-// pricing configuration sets (see lib/pricing). Takes the secret-key client: hold_slots() is
+// One atomic hold for standard, double, full-side or both-sides inventory at server-owned
+// prices (see lib/pricing). Takes the secret-key client: both hold RPCs are
 // executable only by service_role. The browser never supplies a price.
 export async function placeHold(admin: SupabaseClient<Database>, raw: unknown): Promise<HoldResult> {
   const input = HoldInput.safeParse(raw);
@@ -59,15 +62,17 @@ export async function placeHold(admin: SupabaseClient<Database>, raw: unknown): 
   }
 
   const { token, hash } = createHoldToken();
-  const { data, error } = await admin
-    .rpc("hold_slots", {
+  const full = input.data.mode === "full_side" || input.data.mode === "both_sides";
+  const request = full ? admin.rpc("hold_postcard", {
+    p_slot_ids: input.data.slotIds, p_size: input.data.mode!, p_token_hash: hash, p_pricing_mode: prices.mode,
+  }) : admin.rpc("hold_slots", {
       p_slot_ids: input.data.slotIds,
       p_token_hash: hash,
       p_pricing_mode: prices.mode,
       p_unit_price_cents: prices.unitPriceCents,
       p_double_price_cents: prices.doublePriceCents,
-    })
-    .single();
+    });
+  const { data, error } = await request.single();
 
   if (error) {
     const reason = DB_ERRORS[error.code];
@@ -79,7 +84,7 @@ export async function placeHold(admin: SupabaseClient<Database>, raw: unknown): 
     ok: true,
     bookingId: data.booking_id,
     expiresAt: data.hold_expires_at,
-    size: data.size as "standard" | "double",
+    size: data.size as import("@/lib/booking/products").BookingSize,
     priceCents: data.price_cents,
     token,
   };

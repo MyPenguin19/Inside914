@@ -18,9 +18,10 @@ type Admin = SupabaseClient<Database>;
 
 export type CheckoutBooking = {
   id: string;
+  cartId?: string | null;
   editionId: string;
   status: string;
-  size: "standard" | "double";
+  size: import("@/lib/booking/products").BookingSize;
   priceCents: number;
   pricingMode: "launch" | "test";
   holdExpiresAt: string | null;
@@ -39,9 +40,10 @@ type Row = Database["public"]["Tables"]["bookings"]["Row"] & {
 function toCheckoutBooking(row: Row): CheckoutBooking {
   return {
     id: row.id,
+    cartId: row.cart_id,
     editionId: row.edition_id,
     status: row.status,
-    size: row.size as "standard" | "double",
+    size: row.size as import("@/lib/booking/products").BookingSize,
     priceCents: row.price_cents,
     pricingMode: row.pricing_mode === "test" ? "test" : "launch",
     holdExpiresAt: row.hold_expires_at,
@@ -92,6 +94,7 @@ export function stripeModeConflict(booking: CheckoutBooking, stripe: StripeClien
 // Step 1: business and contact details (validated + normalized on the server).
 export async function saveContact(admin: Admin, token: string | undefined, raw: Record<string, unknown>) {
   const booking = await getBookingByHoldToken(admin, token);
+  if (booking?.cartId) return { ok: false as const, reason: "use_cart" as const };
   const gate = checkoutGate(booking);
   if (gate) return { ok: false as const, reason: gate };
 
@@ -118,6 +121,7 @@ const REUSABLE = new Set(["requires_payment_method", "requires_confirmation", "r
 // Step 2: a Stripe Customer and a SetupIntent for FUTURE off-session use. Saves a card; charges $0.
 export async function startPayment(admin: Admin, stripe: StripeClient, token: string | undefined) {
   const booking = await getBookingByHoldToken(admin, token);
+  if (booking?.cartId) return { ok: false as const, reason: "use_cart" as const };
   const gate = checkoutGate(booking, { contact: true });
   if (gate) return { ok: false as const, reason: gate };
   const b = booking!;
@@ -167,6 +171,7 @@ export async function recordConsent(admin: Admin, token: string | undefined, raw
   if (input.data.termsVersion !== TERMS_VERSION) return { ok: false as const, reason: "terms_changed" as const };
 
   const booking = await getBookingByHoldToken(admin, token);
+  if (booking?.cartId) return { ok: false as const, reason: "use_cart" as const };
   const gate = checkoutGate(booking, { contact: true });
   if (gate) return { ok: false as const, reason: gate };
   if (!booking!.stripeSetupIntentId) return { ok: false as const, reason: "payment_not_started" as const };
@@ -216,6 +221,7 @@ const RELEASE_CARD: ConfirmOutcome[] = ["hold_expired", "not_pending", "inventor
 // concurrently (from the browser and from the webhook).
 export async function completeReservation(admin: Admin, stripe: StripeClient, bookingId: string): Promise<ConfirmOutcome> {
   const booking = await getBookingById(admin, bookingId);
+  if (booking?.cartId) return (await import("@/lib/booking/cart")).completeCart(admin, stripe, booking.cartId);
   if (!booking?.stripeSetupIntentId) return "not_pending";
   if (booking.status === "reserved") return "already_confirmed";
   const conflict = stripeModeConflict(booking, stripe);

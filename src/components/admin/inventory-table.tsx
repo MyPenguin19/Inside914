@@ -1,3 +1,4 @@
+import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { setSlotBlock } from "@/app/admin/admin-actions";
 import { ConfirmAction } from "@/components/admin/confirm-action";
@@ -40,7 +41,7 @@ export function InventoryTable({ slots, states, expired }: { slots: AdminSlot[];
             ) : (
               "—"
             ),
-            b ? (b.size === "double" ? `Double (with ${partner})` : "Standard") : "—",
+            b ? (b.size === "double" ? `Double (with ${partner})` : bookingSizeLabel(b.size)) : "—",
             b ? <Badge key="w" label={artworkLabel(b)} /> : "—",
             st.state === "held" && b?.holdExpiresAt
               ? `Hold ends ${formatTimestamp(b.holdExpiresAt)}`

@@ -61,7 +61,7 @@ export function CampaignForm({
         </SelectField>
         {fixed && <input type="hidden" name="zone_id" value={v("zone_id")} />}
         <TextField id="issue_month" label="Mailing month" type="month" required defaultValue={v("issue_month")} error={e.issue_month} disabled={locked} />
-        <TextField id="target_quantity" label="Target mailing quantity (homes)" type="number" inputMode="numeric" min={1} required defaultValue={v("target_quantity")} error={e.target_quantity} />
+        <TextField id="target_quantity" label="Target mailing quantity (homes)" hint="Provisional estimate; not a confirmed delivery quantity." type="number" inputMode="numeric" min={1} required defaultValue={v("target_quantity")} error={e.target_quantity} />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2" disabled={locked}>

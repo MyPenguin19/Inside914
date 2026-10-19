@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { REGIONS } from "@/lib/catalog/regions";
 import type { Database } from "@/lib/supabase/database.types";
 
 // REAL local database + Supabase Auth (no mocks): throwaway admin and non-admin users (owner-approved),
@@ -21,6 +22,7 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
   let member: SupabaseClient<Database>;
   const users: string[] = [];
   const editions: string[] = [];
+  const zones: string[] = [];
   const year = 2090 + Math.floor(Math.random() * 9);
 
   async function signedIn(isAdmin: boolean) {
@@ -72,10 +74,80 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
       await service.from("bookings").delete().eq("edition_id", id);
       await service.from("editions").delete().eq("id", id);
     }
+    for (const id of zones) await service.from("zones").delete().eq("id", id);
     await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);
     await service.from("slots").update({ blocked_at: null, blocked_by: null, blocked_reason: null }).eq("edition_id", OPEN_EDITION);
     await service.from("admin_events").delete().in("admin_user_id", users);
     for (const id of users) await service.auth.admin.deleteUser(id);
+  });
+
+  test("zones are admin-only, audited, editable and duplicate-safe; provisional drafts cannot open", async () => {
+    const suffix = randomUUID();
+    const args = { p_id: null, p_name: `Zone ${suffix}`, p_slug: `zone-${suffix}`, p_household_count: 5000 };
+    expect((await member.rpc("admin_save_zone", args)).error?.message).toBe("not_admin");
+    const anon = createClient<Database>(url, anonKey, { auth: { persistSession: false } });
+    expect((await anon.rpc("admin_save_zone", args)).error).not.toBeNull();
+    const made = await admin.rpc("admin_save_zone", args);
+    expect(made.error).toBeNull();
+    zones.push(made.data!);
+    expect((await admin.rpc("admin_save_zone", args)).error?.message).toBe("zone_exists");
+    expect((await admin.rpc("admin_save_zone", { ...args, p_slug: `other-${suffix}`, p_name: args.p_name.toUpperCase() })).error?.message).toBe("zone_exists");
+    expect((await admin.rpc("admin_save_zone", { ...args, p_name: `Other ${suffix}` })).error?.message).toBe("zone_exists");
+    expect((await admin.rpc("admin_save_zone", { ...args, p_id: made.data, p_household_count: 5100 })).error).toBeNull();
+    expect((await events(made.data!)).map((e) => e.event_type)).toEqual(["zone.created", "zone.updated"]);
+    expect((await anon.from("zones").select("id").eq("id", made.data!)).data).toEqual([]);
+    const id = await create(11, { zone_id: made.data });
+    expect((await admin.rpc("admin_set_campaign_status", { p_id: id, p_action: "open" })).error?.message).toBe("layout_not_approved");
+    expect((await service.from("editions").update({ status: "open" }).eq("id", id)).error?.message).toBe("layout_not_approved");
+    expect((await admin.rpc("admin_save_zone", { ...args, p_id: made.data, p_slug: `changed-${suffix}` })).error?.message).toBe("zone_slug_in_use");
+    const { data: slot } = await admin.from("slots").select("id").eq("edition_id", id).limit(1).single();
+    expect(await placeHold(service, { slotIds: [slot!.id] })).toEqual({ ok: false, reason: "edition_closed" });
+  });
+
+  test("the same mailing month supports four independent area drafts, prices and inventories", async () => {
+    const ids: string[] = [];
+    const slotIds = new Set<string>();
+    for (const [i, area] of REGIONS.entries()) {
+      let zoneId = (await admin.from("zones").select("id").eq("slug", area.slug).maybeSingle()).data?.id;
+      if (!zoneId) {
+        const made = await admin.rpc("admin_save_zone", { p_id: null, p_name: area.name, p_slug: area.slug, p_household_count: 0 });
+        expect(made.error).toBeNull();
+        zoneId = made.data!;
+        zones.push(zoneId);
+      }
+      const id = await create(12, {
+        zone_id: zoneId,
+        name: `Test ${area.name} ${year}`,
+        target_quantity: 1000 + i, // Synthetic test estimates, never written to the zone or production.
+        unit_price_cents: 50000 + i * 1000,
+        double_price_cents: 90000 + i * 1000,
+        reservation_deadline: `${year - 1}-12-0${i + 1}T04:59:00.000Z`,
+      });
+      ids.push(id);
+      const inventory = await admin.from("slots").select("id").eq("edition_id", id);
+      expect(inventory.data).toHaveLength(16);
+      for (const slot of inventory.data!) slotIds.add(slot.id);
+      expect((await admin.rpc("admin_create_campaign", { p: campaign(12, { zone_id: zoneId }), p_slots: slots })).error?.message).toBe("campaign_exists_for_month");
+    }
+    expect(slotIds.size).toBe(64); // Inventory is never shared across geographic campaigns.
+    const before = await admin.from("editions").select("id, zone_id, status, artwork_deadline, target_quantity, unit_price_cents, double_unit_price_cents").in("id", ids);
+    expect(before.error).toBeNull();
+    expect(new Set(before.data!.map((row) => row.zone_id)).size).toBe(4);
+    for (const [i, id] of ids.entries()) expect(before.data!.find((row) => row.id === id)).toMatchObject({ status: "draft", unit_price_cents: 50000 + i * 1000, double_unit_price_cents: 90000 + i * 1000 });
+    const edited = await admin.rpc("admin_update_campaign", { p_id: ids[1], p: { name: "Test Southern independently edited", target_quantity: 2200, reservation_deadline: `${year - 1}-12-04T04:59:00.000Z` } });
+    expect(edited.error).toBeNull();
+    const after = (await admin.from("editions").select("id, zone_id, status, artwork_deadline, target_quantity, unit_price_cents, double_unit_price_cents").in("id", ids)).data!;
+    const southern = after.find((row) => row.id === ids[1])!;
+    expect(southern.target_quantity).toBe(2200);
+    expect(new Date(southern.artwork_deadline).toISOString()).toBe(`${year - 1}-12-04T04:59:00.000Z`);
+    for (const id of [ids[0], ids[2], ids[3]]) expect(after.find((row) => row.id === id)).toEqual(before.data!.find((row) => row.id === id));
+    const anon = createClient<Database>(url, anonKey, { auth: { persistSession: false } });
+    expect((await anon.from("editions").select("id").in("id", ids)).data).toEqual([]);
+    expect((await anon.from("slots").select("id").in("edition_id", ids)).data).toEqual([]);
+    for (const id of ids) {
+      const opening = await admin.rpc("admin_set_campaign_status", { p_id: id, p_action: "open" });
+      expect(["layout_not_approved", "another_open_campaign_in_area"]).toContain(opening.error?.message);
+    }
   });
 
   test("non-admins and anonymous callers are refused by every admin function", async () => {

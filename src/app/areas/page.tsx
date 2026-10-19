@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { BookingSteps } from "@/components/booking/booking-steps";
 import { LiveAreas } from "@/components/booking/live-areas";
@@ -29,6 +30,7 @@ export default function AreasPage() {
             </Notice>
           </div>
         )}
+        <p className="mt-6"><Link href="/book/multi" className="font-medium underline">Reserve in up to four areas at once</Link></p>
         <Suspense fallback={<AreasSkeleton />}>
           <LiveAreas />
         </Suspense>

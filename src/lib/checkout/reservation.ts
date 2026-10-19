@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getArtwork, type ArtworkView } from "@/lib/artwork/service";
-import { adArea, type SlotGeometry } from "@/lib/artwork/rules";
+import { adArea, adAreas, type SlotGeometry } from "@/lib/artwork/rules";
 import { getEditionCatalog } from "@/lib/catalog/queries";
 import { isTestStripeId } from "@/lib/dev/test-mode";
 import type { Database } from "@/lib/supabase/database.types";
@@ -15,7 +15,7 @@ export type ReservationView = {
   bookingId: string;
   status: string;
   isTest: boolean; // development TEST reservation (simulated card, no payment method, no authorization)
-  card: "removed" | "pending" | "none"; // saved card: removed in Stripe, still attached, or never saved
+  card: "removed" | "pending" | "none" | "shared"; // saved card: removed in Stripe, still attached, or never saved
   pricingMode: "launch" | "test"; // test = temporary $1 / $2 prices (with test or live Stripe keys)
   editionId: string;
   campaign: { taken: number; total: number }; // spaces held or reserved on this edition
@@ -29,10 +29,11 @@ export type ReservationView = {
   households: number;
   issueMonth: string;
   artworkDeadline: string;
-  size: "standard" | "double";
+  size: import("@/lib/booking/products").BookingSize;
   priceCents: number;
   positions: { label: string; side: "front" | "back" }[];
   area: SlotGeometry;
+  areas?: SlotGeometry[];
   otherSlots: SlotGeometry[];
   artwork: ArtworkView | null;
 };
@@ -77,12 +78,19 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
     admin.from("email_outbox").select("status").eq("booking_id", data.id).eq("status", "sent").limit(1),
   ]);
   if (!catalog) return null;
+  let sharedCard = false;
+  if (data.status === "cancelled" && data.stripe_payment_method_id && !data.card_removed_at) {
+    const active = await admin.from("bookings").select("id").eq("stripe_payment_method_id", data.stripe_payment_method_id)
+      .not("status", "in", "(cancelled,released)").limit(1);
+    if (active.error) throw active.error;
+    sharedCard = Boolean(active.data?.length);
+  }
   const own = new Set(slots.map((s) => s.label));
   return {
     bookingId: data.id,
     status: data.status,
     isTest: isTestStripeId(data.stripe_customer_id),
-    card: !data.stripe_payment_method_id ? "none" : data.card_removed_at ? "removed" : "pending",
+    card: !data.stripe_payment_method_id ? "none" : data.card_removed_at ? "removed" : sharedCard ? "shared" : "pending",
     pricingMode: data.pricing_mode === "test" ? "test" : "launch",
     editionId: data.edition_id,
     campaign: { taken: catalog.slots.filter((s) => !s.available).length, total: catalog.slots.length },
@@ -96,10 +104,11 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
     households: catalog.households,
     issueMonth: catalog.issueMonth,
     artworkDeadline: catalog.artworkDeadline,
-    size: data.size as "standard" | "double",
+    size: data.size as import("@/lib/booking/products").BookingSize,
     priceCents: data.price_cents,
     positions: slots.map((s) => ({ label: s.label, side: s.side })),
     area: adArea(slots),
+    areas: adAreas(slots),
     otherSlots: catalog.slots.filter((s) => s.side === slots[0].side && !own.has(s.label)),
     artwork,
   };

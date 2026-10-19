@@ -1,3 +1,5 @@
+
+import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -98,7 +100,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
                   ["Campaign", edition ? <Link href={`/admin/campaigns/${edition.id}`} className="underline-offset-4 hover:underline">{edition.zoneName} · {formatIssueMonth(edition.issueMonth)}</Link> : "—"],
                   ["Reserve-by date", edition ? formatDeadline(edition.artworkDeadline) : "—"],
                   ["Position", positionLabel(b, labels)],
-                  ["Size", b.size === "double" ? `Double (${b.claims.filter((c) => !c.released).length} units)` : "Standard (1 unit)"],
+                  ["Size", `${bookingSizeLabel(b.size)} (${b.claims.filter((c) => !c.released).length} units)`],
                   ["Reference", b.reference ?? "—"],
                   ["Status", <Badge key="s" label={reservationLabel(b, now)} />],
                   ["Hold started", formatTimestamp(b.createdAt)],
@@ -173,7 +175,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
                       {h.reference ?? "No reference"}
                     </Link>,
                     <Badge key="s" label={reservationLabel(h, now)} />,
-                    h.size === "double" ? "Double" : "Standard",
+                    bookingSizeLabel(h.size),
                     formatPrice(h.priceCents),
                     formatTimestamp(h.createdAt),
                   ])}

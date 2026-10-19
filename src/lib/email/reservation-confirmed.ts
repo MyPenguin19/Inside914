@@ -1,3 +1,5 @@
+
+import { bookingSizeLabel } from "@/lib/booking/products";
 import { formatDeadline, formatHouseholds, formatIssueMonth, formatPrice } from "@/lib/format";
 import { escapeHtml } from "./escape";
 
@@ -14,7 +16,7 @@ export type ReservationEmailData = {
   artworkDeadline: string;
   side: "front" | "back";
   positions: string[];
-  size: "standard" | "double";
+  size: import("@/lib/booking/products").BookingSize;
   priceCents: number;
   reservationUrl: string;
   supportEmail: string;
@@ -24,7 +26,7 @@ export type ReservationEmailData = {
 
 export function reservationConfirmedEmail(d: ReservationEmailData) {
   const edition = `${d.zoneName} · ${formatIssueMonth(d.issueMonth)}`;
-  const position = `${d.side === "front" ? "Front" : "Back"} · ${d.positions.join(" + ")} (${d.size === "double" ? "double size" : "standard"})`;
+  const position = `${d.size === "both_sides" ? "Front and back" : d.side === "front" ? "Front" : "Back"} · ${d.positions.join(" + ")} (${bookingSizeLabel(d.size)})`;
   const rows: [string, string][] = [
     ["Reference", d.reference],
     ["Edition", `${edition} (planned mailing ≈ ${formatHouseholds(d.households)} homes)`],

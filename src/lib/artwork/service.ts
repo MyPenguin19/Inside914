@@ -31,6 +31,7 @@ export type ArtworkFailure =
 
 export type ArtworkView = {
   id: string;
+  version?: string;
   contentType: ArtworkType;
   width: number;
   height: number;
@@ -52,12 +53,12 @@ async function activeHold(admin: Admin, token: string | undefined): Promise<{ ok
 
 async function deleteArtworkFor(admin: Admin, bookingId: string) {
   const { data: rows } = await admin.from("booking_artwork").select("storage_path").eq("booking_id", bookingId);
-  if (rows?.length) {
-    const { error } = await admin.storage.from(ARTWORK_BUCKET).remove(rows.map((r) => r.storage_path));
-    if (error) throw new Error(`Could not delete old artwork: ${error.message}`);
-  }
   const { error } = await admin.from("booking_artwork").delete().eq("booking_id", bookingId);
   if (error) throw new Error(`Could not delete artwork record: ${error.message}`);
+  if (rows?.length) {
+    const { error: storageError } = await admin.storage.from(ARTWORK_BUCKET).remove(rows.map((r) => r.storage_path));
+    if (storageError) throw new Error(`Could not delete old artwork: ${storageError.message}`);
+  }
 }
 
 // Step 1: reserve a fresh random path and hand back a single-use signed upload URL for it.
@@ -192,6 +193,7 @@ export async function getArtwork(admin: Admin, bookingId: string): Promise<Artwo
   const hasCrop = row.crop_x !== null && row.crop_y !== null && row.crop_width !== null && row.crop_height !== null;
   return {
     id: row.id,
+    version: row.storage_path,
     contentType: row.content_type as ArtworkType,
     width: row.width_px,
     height: row.height_px,
@@ -215,6 +217,7 @@ const EXTEND_ERRORS: Record<string, ExtendFailure> = {
 // "Need more time?": renews a hold in its last 5 minutes, at most twice (enforced in extend_hold()).
 export async function extendHold(admin: Admin, token: string | undefined) {
   if (!token) return { ok: false as const, reason: "no_hold" as ExtendFailure };
+  if ((await getHeldBooking(admin, token))?.cartId) return { ok: false as const, reason: "extension_limit" as ExtendFailure };
   const { data, error } = await admin.rpc("extend_hold", { p_token_hash: hashHoldToken(token) });
   if (error) {
     const reason = EXTEND_ERRORS[error.code];

@@ -63,11 +63,17 @@ test("keyboard: choose a standard position, then switch to a double", async ({ p
 test("two visitors want the same position: the second is told and sees it reserved", async ({ browser }) => {
   const first = await (await browser.newContext()).newPage();
   const second = await (await browser.newContext()).newPage();
-  for (const page of [first, second]) {
-    await page.goto(EDITION_URL);
-    await showSide(page, "Back");
-    await position(page, "Back", "B1").click(); // both select B1 while it's open
-  }
+  await first.goto(EDITION_URL);
+  await showSide(first, "Back");
+  // A previous completed local TEST reservation may still own B1. Race for an actually
+  // available space, without resetting data or changing another reservation.
+  const available = first.getByRole("button", { name: /^Back position B\d+: Available/ }).first();
+  const label = await available.getAttribute("data-slot-label");
+  if (!label) throw new Error("No available back position for the concurrency test");
+  await available.click();
+  await second.goto(EDITION_URL);
+  await showSide(second, "Back");
+  await position(second, "Back", label).click();
 
   await first.getByRole("button", { name: /hold this position/i }).click();
   const held = first.getByRole("heading", { name: "Your position is on hold" });
@@ -78,11 +84,11 @@ test("two visitors want the same position: the second is told and sees it reserv
   try {
     await second.getByRole("button", { name: /hold this position/i }).click();
     await expect(errorAlert(second)).toContainText(/another business just reserved/i);
-    await expect(position(second, "Back", "B1")).toBeDisabled();
-    await expect(position(second, "Back", "B1")).toHaveAccessibleName(/On hold/); // held by the first visitor, not yet confirmed
+    await expect(position(second, "Back", label)).toBeDisabled();
+    await expect(position(second, "Back", label)).toHaveAccessibleName(/On hold/); // held by the first visitor, not yet confirmed
     await expect(second).toHaveURL(new RegExp(`${EDITION_URL}$`));
   } finally {
-    await first.getByRole("button", { name: "Change selection" }).click(); // release B1
+    await first.getByRole("button", { name: "Change selection" }).click(); // release the test hold
     await expect(first).toHaveURL(new RegExp(`${EDITION_URL}$`));
   }
 });

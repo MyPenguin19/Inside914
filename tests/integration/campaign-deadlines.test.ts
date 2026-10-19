@@ -1,3 +1,4 @@
+import { localLayoutFixture } from "./local-layout-fixture";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
@@ -14,6 +15,7 @@ const url = process.env.SUPABASE_URL!;
 const anonKey = process.env.SUPABASE_ANON_KEY!;
 const secretKey = process.env.SUPABASE_SECRET_KEY;
 const TEST_ZONE = randomUUID();
+const TEST_LAYOUT = `test-approved-${randomUUID()}`;
 
 describe.skipIf(!secretKey)("campaign deadlines (real database functions)", () => {
   let service: SupabaseClient<Database>;
@@ -35,6 +37,7 @@ describe.skipIf(!secretKey)("campaign deadlines (real database functions)", () =
   }
 
   beforeAll(async () => {
+    localLayoutFixture(TEST_LAYOUT);
     service = createClient<Database>(url, secretKey!, { auth: { persistSession: false } });
     const email = `inside914-deadline-${randomUUID()}@example.com`;
     const password = randomBytes(24).toString("base64url");
@@ -51,7 +54,7 @@ describe.skipIf(!secretKey)("campaign deadlines (real database functions)", () =
       p: {
         name: `Deadline test ${year}`, zone_id: TEST_ZONE, issue_month: `${year}-01-01`, target_quantity: 5000, reservations_open_at: null,
         reservation_deadline: future, artwork_due_at: `${year - 1}-11-05T04:59:00.000Z`, mailing_window_start: `${year - 1}-11-10`, mailing_window_end: `${year - 1}-11-15`,
-        layout_template: "provisional-2x4", unit_price_cents: 50000, double_price_cents: 90000,
+        layout_template: TEST_LAYOUT, unit_price_cents: 50000, double_price_cents: 90000,
       },
       p_slots: LAYOUT_TEMPLATES[0].slots,
     });
@@ -68,6 +71,7 @@ describe.skipIf(!secretKey)("campaign deadlines (real database functions)", () =
     await service.from("admin_events").delete().eq("admin_user_id", adminId);
     await service.auth.admin.deleteUser(adminId);
     await service.from("zones").delete().eq("id", TEST_ZONE);
+    localLayoutFixture(TEST_LAYOUT, true);
   });
 
   test("before the deadline a campaign with reservations can't be canceled, and an unfilled one can't be approved", async () => {

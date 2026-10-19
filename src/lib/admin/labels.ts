@@ -34,6 +34,8 @@ export const paymentLabel = (b: AdminBooking) => READINESS[paymentReadiness(b)];
 export function positionLabel(b: AdminBooking, labels: Map<string, { label: string; side: string }>) {
   const own = b.claims.map((c) => labels.get(c.slotId)).filter(Boolean) as { label: string; side: string }[];
   if (!own.length) return "—";
+  if (b.size === "both_sides") return "Front and back · all advertising spaces";
+  if (b.size === "full_side") return `${own[0].side === "front" ? "Front" : "Back"} · all advertising spaces`;
   return `${own[0].side === "front" ? "Front" : "Back"} · ${own.map((s) => s.label).sort().join(" + ")}`;
 }
 

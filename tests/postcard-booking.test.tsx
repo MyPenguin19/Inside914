@@ -104,7 +104,7 @@ describe("PostcardBooking", () => {
     fireEvent.click(holdButton());
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/book/hold"));
-    expect(holdSelection).toHaveBeenCalledWith({ editionId: catalog.id, slotIds: ["f1", "f2"] });
+    expect(holdSelection).toHaveBeenCalledWith({ editionId: catalog.id, slotIds: ["f1", "f2"], mode: "double" });
   });
 
   test("when another business takes the position first, says so and redraws availability", async () => {
@@ -119,7 +119,7 @@ describe("PostcardBooking", () => {
     const alert = await screen.findByRole("alert", {}, { timeout: 3000 }); // generous under full-suite load
     expect(within(alert).getByText(/another business just reserved/i)).toBeTruthy();
     expect(position("F1").hasAttribute("disabled")).toBe(true);
-    expect(holdButton().hasAttribute("disabled")).toBe(true); // selection cleared
+    await waitFor(() => expect(holdButton().hasAttribute("disabled")).toBe(true)); // selection cleared after transition
     expect(push).not.toHaveBeenCalled();
   });
 

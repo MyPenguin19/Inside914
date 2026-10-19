@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
 import { adminErrorMessage, parseCampaignForm, parseExtendDeadlineForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
+import { zoneSchema } from "@/lib/admin/zone-form";
 import { findTemplate } from "@/lib/admin/layouts";
 import { followUpCancellations } from "@/lib/checkout/cancellation-followup";
 import { getStripe } from "@/lib/checkout/stripe";
@@ -24,6 +25,17 @@ const reason = (max: number) => z.string().trim().min(1, "Please give a reason."
 function done(message: string): ActionResult {
   refresh();
   return { ok: true, message };
+}
+
+export async function saveZone(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const { supabase } = await requireAdmin();
+  const values = Object.fromEntries(["id", "name", "slug", "household_count"].map((key) => [key, String(form.get(key) ?? "")]));
+  const parsed = zoneSchema.safeParse(values);
+  if (!parsed.success) return { message: parsed.error.issues[0].message, values };
+  const v = parsed.data;
+  const { error } = await supabase.rpc("admin_save_zone", { p_id: v.id, p_name: v.name, p_slug: v.slug, p_household_count: v.household_count });
+  if (error) return { message: adminErrorMessage(error), values };
+  return done(v.id ? "Zone saved." : "Zone created.");
 }
 
 // ---- Campaigns ---------------------------------------------------------------------------
@@ -68,6 +80,10 @@ export async function setCampaignStatus(_prev: ActionResult, form: FormData): Pr
   const id = uuid.safeParse(form.get("id"));
   const action = StatusAction.safeParse(form.get("action"));
   if (!id.success || !action.success) return { message: "That action isn't available." };
+  if (["open", "resume"].includes(action.data)) {
+    const { data: edition } = await supabase.from("editions").select("layout_template").eq("id", id.data).single();
+    if (!findTemplate(edition?.layout_template ?? "")?.approved) return { message: adminErrorMessage({ message: "layout_not_approved" }) };
+  }
   const { data, error } = await supabase.rpc("admin_set_campaign_status", { p_id: id.data, p_action: action.data });
   if (error) return { message: adminErrorMessage(error) };
   if (data === "already") return done("Already done: nothing changed.");

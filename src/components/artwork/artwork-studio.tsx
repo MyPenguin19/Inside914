@@ -1,5 +1,7 @@
 "use client";
 
+import { bookingSizeLabel, positionLabel } from "@/lib/booking/products";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, type DragEvent } from "react";
@@ -19,7 +21,7 @@ import {
   type SlotGeometry,
 } from "@/lib/artwork/rules";
 import type { ArtworkFailure, ArtworkView } from "@/lib/artwork/service";
-import { formatPrice } from "@/lib/format";
+import { formatDeadline, formatPrice } from "@/lib/format";
 import { PRINT_SPEC } from "@/lib/print/spec";
 import type { PostcardZone } from "@/components/postcard/postcard-side";
 import { Button } from "@/components/ui/button";
@@ -34,8 +36,9 @@ export type ArtworkActions = {
 };
 
 type Props = {
+  reservationMode?: boolean;
   hold: { expiresAt: string; extensionsLeft: number };
-  ad: { side: "front" | "back"; area: SlotGeometry; labels: string[]; size: "standard" | "double"; priceCents: number };
+  ad: { side: "front" | "back"; area: SlotGeometry; labels: string[]; size: import("@/lib/booking/products").BookingSize; priceCents: number };
   otherSlots: SlotGeometry[];
   initialArtwork: ArtworkView | null;
   actions: ArtworkActions;
@@ -70,6 +73,7 @@ const PROBLEM_TEXT: Record<ArtworkFailure | "interrupted", string> = {
 };
 
 export function ArtworkStudio({
+  reservationMode = false,
   hold,
   ad,
   otherSlots,
@@ -218,9 +222,9 @@ export function ArtworkStudio({
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
           <p>
-            Your position is held for{" "}
+            {reservationMode ? "Artwork changes close " : "Your position is held for "}
             <strong className="font-mono tabular-nums" suppressHydrationWarning>
-              {formatCountdown(secondsLeft)}
+              {reservationMode ? formatDeadline(expiresAt) : formatCountdown(secondsLeft)}
             </strong>
           </p>
           {canExtend && (
@@ -232,9 +236,9 @@ export function ArtworkStudio({
 
         {expiredNow ? (
           <Notice tone="danger" role="alert">
-            Your hold has ended, so this position may no longer be available.{" "}
+            {reservationMode ? "The artwork deadline has passed." : "Your hold has ended, so this position may no longer be available."}{" "}
             <Link href={restartHref} className="font-medium underline">
-              Choose your position again
+              {reservationMode ? "Return to your reservation" : "Choose your position again"}
             </Link>
             .
           </Notice>
@@ -381,7 +385,7 @@ export function ArtworkStudio({
         <div className="rounded-2xl border border-line bg-surface p-4 text-sm">
           <div className="flex items-baseline justify-between gap-3">
             <p>
-              {ad.side === "front" ? "Front" : "Back"} · {ad.labels.join(" + ")} · {ad.size === "double" ? "Double" : "Standard"}
+              {positionLabel(ad.size, ad.labels.map(label => ({ label, side: ad.side })))} · {bookingSizeLabel(ad.size)}
             </p>
             <p className="font-display text-2xl font-medium">{formatPrice(ad.priceCents)}</p>
           </div>
