@@ -224,3 +224,12 @@ describe("missed reservation deadline (Phase 6A)", () => {
     }
   });
 });
+
+
+test("square campaigns still require ten reservations when one position is blocked", () => {
+  const squareSlots = Array.from({ length: 10 }, (_, i) => ({ ...slots[0], id: `square${i}`, blockedAt: i === 9 ? "2026-11-01" : null }));
+  const bookings = squareSlots.slice(0, 9).map(s => booking({ slotIds: [s.id], priceCents: 39900 }));
+  const stats = campaignStats({ ...edition, productModel: "square_v1" }, squareSlots, bookings, NOW);
+  expect(stats.filledPercent).toBe(90);
+  expect(stats.fullyReserved).toBe(false);
+});

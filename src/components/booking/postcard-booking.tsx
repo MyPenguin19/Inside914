@@ -181,7 +181,7 @@ export function PostcardBooking({
               className={`mx-auto w-full max-w-[400px] lg:max-w-[calc((100svh-8rem)*6.5/12)] ${visibleSide === side ? "" : "hidden lg:block"}`}
             >
               <p className="mb-2 hidden text-sm font-medium text-muted lg:block">{side === "front" ? "Front" : "Back"}</p>
-              <PostcardSide side={side} views={viewsFor(side)} priceCents={price} onSelect={select} zones={zones} caption={false} />
+              <PostcardSide dimensions={catalog.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} side={side} views={viewsFor(side)} priceCents={price} onSelect={select} zones={zones} caption={false} />
             </div>
           ))}
         </div>

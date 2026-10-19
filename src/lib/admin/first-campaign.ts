@@ -9,7 +9,7 @@ export const FIRST_CAMPAIGN_DEFAULTS = {
   artwork_due_at: "2026-12-20T23:59",
   mailing_window_start: "2027-01-11",
   mailing_window_end: "2027-01-15",
-  layout_template: "provisional-2x4",
-  unit_price_cents: "500",
-  double_price_cents: "900",
+  layout_template: "amazingmail-9x6-ten-square-draft",
+  unit_price_cents: "399",
+  double_price_cents: "",
 } as const;

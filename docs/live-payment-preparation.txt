@@ -1,0 +1,48 @@
+Inside914 — Local live-payment preparation
+2026-10-19
+
+Implemented locally
+- Explicit INSIDE914_COLLECTION_MODE: disabled (default), test, or reserved live.
+- Existing test flag alone no longer enables collection.
+- Pure future-live configuration validation: matching live secret/publishable
+  key prefixes, launch pricing, no simulated reservations/test collection,
+  webhook-secret format and public HTTPS application URL.
+- Live collection remains unconditionally blocked in code, even if an environment
+  variable requests it. No Stripe client can be constructed through the
+  collection factory for live mode in this preparation release.
+- Local .env.local collection mode is disabled and test collection flag is false.
+  Existing credentials were preserved and never printed.
+- Admin panel uses existing design and clearly reports disabled/unreleased
+  collection. Recovery still shares the collection gate; live payment events
+  remain ignored by the existing webhook path.
+
+Verification
+TypeScript, ESLint, git diff --check: passed.
+339 unit/component tests across 36 files: passed, including 18 new configuration
+and factory-gate cases. Tests use fake credentials and mocks, not Stripe requests.
+No database/browser tests were run with the user's live credentials. No database
+schema or production configuration was changed. No Stripe API calls, charges,
+external emails, push, merge or deployment.
+
+Files modified in this preparation
+src/lib/payments/environment.ts
+src/components/admin/collection-panel.tsx
+.env.example
+.env.local (ignored, credentials not included in report)
+tests/payments.test.ts
+tests/integration/zone-payments.test.ts (explicit test-mode opt-in for existing test)
+tests/collection-environment.test.ts (new)
+docs/live-payment-preparation.txt (this report)
+
+Release prerequisites — not enabled or verified by this work
+This is configuration groundwork, not a completed live-payment release.
+The existing collection ledger and payment processor remain test-only. Before
+removing the code gate, bind ledger records to Stripe mode/account, adapt and
+verify live event processing and recovery, configure actual receipt/recovery
+email delivery, and review reconciliation/operating procedures. Key prefixes
+and webhook-secret format do not prove ownership, permissions, matching account,
+or webhook endpoint configuration. None was checked against Stripe here.
+Real Stripe success, decline and 3-D Secure recovery remain unverified.
+Printer/layout approval and final proof are still required for campaign collection.
+A separate explicit release approval is needed before any production change,
+push, deployment, enabling collection, or real charge.

@@ -1,0 +1,83 @@
+Inside914 — Phase D: exact postcard geometry, local verification
+2026-10-19 | Branch: feature/mvp-square-product
+
+Result
+The source-labeled nominal geometry accommodates six front and four back paid
+squares, each exactly 2.5 x 2.5 inches. No printed size, placement, website
+styling, database inventory, or production setting was changed in Phase D.
+This completes local mathematical verification, not printer approval. The layout
+and print specification remain provisional/unapproved.
+
+Source templates re-inspected directly in the browser
+Front: https://assets.xpressdocs.com/dserv/tpl/1500/2/566132.jpg
+Back: https://assets.xpressdocs.com/dserv/tpl/1500/1/566132.jpg
+The back illustration anchors its postal dimension arrows to the file edges.
+JPEG illustrations establish labeled nominal dimensions, not manufacturing
+registration tolerances. No pixel-derived tolerance was invented.
+
+Bounds in inches from upload-file top-left
+File:   x=0,      y=0,      width=9.125, height=6.125
+Trim:   x=0.0625, y=0.0625, width=9,     height=6
+Live:   x=0.1875, y=0.1875, width=8.75,  height=5.75
+Postal: x=5.2,    y=2.795,  width=3.925, height=3.33 (back only)
+Bleed extends 0.0625 inch beyond trim on each edge. Live bounds are inset
+0.125 inch from trim. The postal exclusion extends into bleed and is not clipped.
+
+Paid positions, file-origin inches (all 2.5 x 2.5)
+F1 0.8125,0.5625   F2 3.3125,0.5625   F3 5.8125,0.5625
+F4 0.8125,3.0625   F5 3.3125,3.0625   F6 5.8125,3.0625
+B1 0.1875,0.5625   B2 2.6875,0.5625
+B3 0.1875,3.0625   B4 2.6875,3.0625
+Database/admin slots use trim-origin coordinates: subtract 0.0625 from x and y.
+A shared tested conversion now performs this translation without changing sizes.
+
+House regions (back, file-origin; never paid inventory)
+Inside914: x=5.2,y=0.1875,width=3.7375,height=1.30375
+Inside Diagnostics: x=5.2,y=1.49125,width=3.7375,height=1.30375
+Both allocations lie within live bounds above postal. These are region allocations,
+not supplied or approved house artwork. The lower allocation meets postal exactly.
+
+Clearance findings and stop condition
+Two back columns have 5.0125 inches of horizontal space. Two 2.5-inch squares
+leave only 0.0125 inch (0.3175 mm) for any column gutter plus postal clearance.
+The current candidate has zero inter-ad gutter. Its lower house region has zero
+additional postal clearance. Printer acceptance must be obtained before use.
+For the current two-column/two-row arrangement:
+maximum square = min((5.0125 - column gap - postal clearance)/2,
+                     (5.75 - row gap)/2).
+With zero additional allowances, the upper bound is 2.50625 inches.
+For example, a required 0.125-inch column gap lowers it to 2.44375 inches.
+The new calculator reports such conflicts; it never resizes artwork or placements.
+If printer requirements invalidate 2.5-inch tiles, stop for owner approval rather
+than silently shrinking or distorting them. No new allowance has been assumed.
+
+Phase D files
+src/lib/print/amazingmail-layout.ts — shared origin conversion and explicit
+  back-arrangement fit calculation with invalid-input rejection.
+src/lib/admin/layouts.ts — uses the shared conversion; resulting coordinates
+  and inventory are unchanged.
+tests/amazingmail-geometry.test.ts — seven additional regression cases for
+  conversion, postal bounds, exact limits, conflicts and invalid allowances.
+docs/mvp-amazingmail-geometry.txt — marks the earlier foundation report as
+  historical and points to this current report.
+docs/mvp-phase-d.txt — this handoff.
+
+Verification performed this phase
+Typecheck: passed.
+Lint: passed.
+Unit: 278 passed in 32 files, including 18 geometry tests.
+Optimized local build: passed.
+git diff --check: passed.
+No failed or skipped tests in these runs. Integration/E2E suites were not rerun
+for this pure geometry change; no database, authentication, storage, payment,
+or browser component behavior changed. Phase C's prior scoped results are in
+its report and are not counted as newly executed Phase D tests.
+
+Remaining before print/launch
+Printer confirmation of file-edge postal anchoring and required clearances;
+acceptance of edge-to-edge paid tiles; final house artwork and proof review.
+No approval registry entry, print export certification, or campaign opening was
+performed. Admin simplification (Phase E) and collection (Phase F) are not begun.
+
+All edits remain local and uncommitted alongside prior Phase B/C work.
+No production changes, database writes, pushes, merges, or deployments.

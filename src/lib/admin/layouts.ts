@@ -1,6 +1,9 @@
-// Postcard layout templates an admin can start a campaign from. Geometry in inches on the
-// 6.5" x 12" card, like every slot in the database. PROVISIONAL until the printer's template
-// arrives; the chosen template's key is stored on the campaign and its slots are copied in.
+import { AMAZINGMAIL_9X6_LAYOUT, fileToTrim } from "@/lib/print/amazingmail-layout";
+import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
+
+// Layout geometry uses inches from the trimmed card's top-left. Historical campaigns
+// retain their 6.5 × 12 layout. New drafts use the provisional 9 × 6 square template;
+// neither template is printer-approved.
 
 export type TemplateSlot = { side: "front" | "back"; label: string; x: number; y: number; width: number; height: number };
 export type LayoutTemplate = { key: string; label: string; description: string; approved: boolean; slots: TemplateSlot[] };
@@ -16,6 +19,14 @@ function grid(side: "front" | "back", rows: number, top: number, unitHeight: num
   }));
 }
 
+export const SQUARE_TEMPLATE: LayoutTemplate = {
+  key: SQUARE_PRODUCT.layoutKey,
+  label: "9 × 6 postcard — 10 square ads",
+  description: "Ten paid 2.5″ square positions: six front, four back. Postal and house regions are excluded. Printer clearance approval is still required before opening.",
+  approved: false,
+  slots: AMAZINGMAIL_9X6_LAYOUT.paidSlots.map(fileToTrim),
+};
+
 export const LAYOUT_TEMPLATES: LayoutTemplate[] = [
   {
     key: "provisional-2x4",
@@ -24,6 +35,7 @@ export const LAYOUT_TEMPLATES: LayoutTemplate[] = [
     description: "Eight 3.25″ × 3″ spaces on each side, as in the current campaign. Not approved: no mailing panel, postage, branding, bleed or safe margins are reserved. Inventory is provisional and cannot open for reservations.",
     slots: [...grid("front", 4, 0, 3), ...grid("back", 4, 0, 3)],
   },
+  SQUARE_TEMPLATE,
 ];
 
 export const findTemplate = (key: string) => LAYOUT_TEMPLATES.find((t) => t.key === key) ?? null;

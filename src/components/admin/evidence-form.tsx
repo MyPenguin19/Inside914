@@ -54,7 +54,7 @@ export function EvidenceForm({ editionId }: { editionId: string }) {
   }, {});
 
   return (
-    <form ref={formRef} action={action} className="grid gap-4 sm:grid-cols-2" noValidate>
+    <form ref={formRef} action={action} className="grid grid-cols-1 gap-4 sm:grid-cols-2" noValidate>
       <input type="hidden" name="edition_id" value={editionId} />
       <SelectField id="kind" label="Type of document" required defaultValue="printer_confirmation">
         {KINDS.map(([v, l]) => (
@@ -68,7 +68,7 @@ export function EvidenceForm({ editionId }: { editionId: string }) {
         <label htmlFor="file" className="text-sm font-medium">
           File <span className="font-normal text-muted">(PDF, JPG or PNG, up to 10 MB)</span>
         </label>
-        <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png" className="text-sm" />
+        <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png" className="min-w-0 w-full text-sm" />
       </div>
       <TextField id="quantity_printed" label="Quantity printed" type="number" min={0} optional hint="Only if the document states it." />
       <TextField id="quantity_accepted" label="Quantity accepted for mailing" type="number" min={0} optional hint="Only if the document states it." />

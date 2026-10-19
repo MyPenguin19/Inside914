@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from "@/lib/support";
 import { parseEnv } from "./parse";
 
 // Test or LIVE Stripe keys (live approved by the owner, 2026-10-17). Either way the app only saves
-// cards with SetupIntents: no code path creates a charge (tests/checkout-text.test.ts).
+// cards with SetupIntents. Separate local-only Phase F collection requires test keys.
 const SECRET_KEY = /^(sk|rk)_(test|live)_/;
 const StripeEnv = z.object({
   STRIPE_SECRET_KEY: z

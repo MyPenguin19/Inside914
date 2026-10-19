@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { BookingSteps } from "@/components/booking/booking-steps";
-import { LiveAreas } from "@/components/booking/live-areas";
+import { CategoryCheckout } from "@/components/booking/category-checkout";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Notice } from "@/components/ui/primitives";
@@ -17,7 +16,7 @@ export default function AreasPage() {
       <main className="page-width flex-1 py-6 sm:py-8">
         <BookingSteps current={1} />
         <div className="mt-6">
-          <h1 className="font-display text-4xl font-medium tracking-tight">Choose your advertising area.</h1>
+          <h1 className="font-display text-4xl font-medium tracking-tight">Choose your category and zones.</h1>
           <p className="mt-2 max-w-2xl text-muted">
             Each area is one postcard mailed to homes in that part of Westchester. We plan the mailing routes for you.
           </p>
@@ -30,9 +29,9 @@ export default function AreasPage() {
             </Notice>
           </div>
         )}
-        <p className="mt-6"><Link href="/book/multi" className="font-medium underline">Reserve in up to four areas at once</Link></p>
+
         <Suspense fallback={<AreasSkeleton />}>
-          <LiveAreas />
+          <div className="mt-6"><CategoryCheckout /></div>
         </Suspense>
       </main>
       <SiteFooter />

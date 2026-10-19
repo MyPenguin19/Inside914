@@ -1,0 +1,111 @@
+Inside914 — Phase F local payment collection
+2026-10-19 | Branch feature/mvp-square-product | Uncommitted local work
+
+Status
+Implemented locally with isolated database and simulated Stripe verification.
+Real Stripe test-mode payments, declines and 3-D Secure verification are blocked
+because no local Stripe test keys/webhook signing secret were supplied. This is
+not a production-ready or live-payment approval. Collection defaults to disabled.
+
+Behavior
+- An admin previews ten separate $399 obligations and explicitly authorizes one
+  zone. The database locks the campaign and its bookings, verifies ten confirmed
+  reservations, distinct normalized categories, single-slot claims, $399 consent,
+  saved customer/payment method, approved square artwork, a printer-approved
+  layout, a published final proof and a mailing window. Other zones are untouched.
+- Exactly one durable ledger and one PaymentIntent per reservation. Initial intent
+  creation and confirmation use stable, different idempotency keys. Intent ID is
+  persisted before off-session confirmation. Failed/authentication-required
+  intents are not automatically reconfirmed by admin retries.
+- An ambiguous creation older than 23 hours is blocked for reconciliation rather
+  than risking reuse after Stripe's idempotency retention window. Canceled intents
+  also require administrator review; no replacement intent is silently created.
+- Webhooks retain raw-body signature verification. Payment events are separate
+  from SetupIntent reservation events. Live payment events cannot enter local
+  test collection. The server retrieves the current PaymentIntent and verifies
+  amount, currency, customer, booking, zone and ledger metadata before updating.
+- A transactional event ledger handles duplicates and stale events; success is
+  final. Only signed webhook processing marks the booking charged or failed.
+  Payment state and authorization are audited. In-flight cancellation/inventory
+  release/review changes are blocked; printing is blocked while payments remain.
+- Failed payments/authentication requirements receive a three-day recovery-link
+  window. Random 256-bit tokens are stored as hashes, rotate on reissue, and are
+  consumed on success. URL tokens are exchanged for HttpOnly SameSite cookies,
+  with no-referrer/no-store responses. Expired links require admin review.
+- Recovery handles authentication on the same PaymentIntent or mounts the
+  Payment Element for a replacement payment method. It never creates another
+  charge. Already-issued Stripe client secrets are Stripe capabilities; the
+  three-day limit controls access to the recovery link, not Stripe's intent expiry.
+- Receipt/recovery notices are queued uniquely in the existing outbox. For this
+  local-only phase, processing writes .dev-emails previews and marks them as
+  not delivered; it never sends these payment notices through Resend.
+- Admin campaign/production panels show test collection, state and recovery.
+  Payments shows actual recorded Stripe-test totals and all card-sharing zone
+  reservations, including members without their own SetupIntent ID.
+- Existing components/styles are reused. Reservation checkout still charges $0.
+
+Environment boundary
+INSIDE914_TEST_COLLECTION=true is required, together with localhost Supabase,
+matching sk_test_/rk_test_ and pk_test_ keys, and no Vercel environment markers.
+The example environment defaults this flag to false. No .env.local credentials
+or production configuration were changed. Fake cus_devtest_/pm_devtest_ records
+are explicitly refused by the Stripe collection module.
+
+Database changes applied locally only, in order
+20261019224823_zone_payment_collection.sql
+20261019225209_zone_payment_notifications.sql
+20261019225324_zone_collection_audit_target.sql
+20261019225334_zone_webhook_audit_events.sql
+The latter two align new audit writes with existing campaign/system event
+constraints found by tests. Applied migrations were kept immutable; no historical
+migration was edited. Local migrations were applied transactionally with psql,
+not remote db push or reset. The local stack uses earlier direct-applied migrations.
+
+Main files
+src/lib/payments/{environment,charge,recovery,notices}.ts
+src/app/admin/collection-actions.ts
+src/components/admin/collection-panel.tsx
+src/components/payments/{recovery-link,recovery-form}.tsx
+src/app/pay/page.tsx and src/app/pay/[token]/route.ts
+src/app/api/stripe/webhook/route.ts
+src/lib/email/outbox.ts
+src/lib/admin/data.ts and zone-readiness.ts
+src/components/admin/zone-readiness.tsx
+Admin campaign, production and payments pages
+src/lib/supabase/database.types.ts, src/lib/env/checkout.ts
+CLAUDE.md and .env.example
+Tests: payments, payment-recovery-form, stripe-webhook-route, checkout-text,
+zone-readiness, database/zone-payments, integration/zone-payments,
+e2e/square-campaign and e2e/multi-area.
+
+Verification and limitations
+Passed: TypeScript, ESLint, optimized Next.js build and git diff --check.
+Passed: 321 unit/component tests across 35 files; 28 focused integration tests
+across three files (payment suite rechecked independently: three passed);
+57 rollback-only SQL assertions; seven focused Chromium E2E tests, including
+admin mobile layout, four-zone checkout/Payments visibility and invalid recovery.
+Database lint reported no schema errors. SQL assertions include the reused
+square-product foundation. Concurrency and token tests use UUID-scoped synthetic
+campaigns/approvals only and clean them afterward. No real Stripe API or Resend
+write was executed. The first integration invocation attempted Docker discovery;
+the native stack works by starting Vitest with node --env-file=.env.local.
+Test fixture metadata parsing and a cleanup UUID/text cast were corrected, and
+only the identified disposable fixtures were removed. Final data checks confirmed
+the original two editions, 17 slots and ten bookings are unchanged. Payment
+ledgers, payment-event rows and payment audit fixtures all returned to zero.
+Full legacy suites remain outside this scoped run because obsolete account/product
+expectations and shared-data cleanup routines are documented in Phase C.
+No unrun real-Stripe scenario is counted as passed.
+
+Next verification, still local
+Provide test keys and the local webhook signing secret through .env.local, not
+chat. Explicitly enable local collection and use genuine Stripe test SetupIntents
+instead of devtest cards. Forward Stripe test events to
+http://localhost:3000/api/stripe/webhook. Verify a success, decline, authentication
+challenge, signed duplicate/out-of-order delivery and recovery on disposable,
+approved test fixtures. Remove synthetic approvals afterward. Do not substitute
+live keys or enable live collection; that requires a separately reviewed release.
+Printer approval/final house artwork remain outstanding for real campaigns.
+No tax, statement-descriptor, live webhook or email-provider settings were changed.
+
+No production changes, push, merge or deployment. All work remains local.

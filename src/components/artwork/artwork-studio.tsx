@@ -36,6 +36,7 @@ export type ArtworkActions = {
 };
 
 type Props = {
+  dimensions?: { width: number; height: number };
   reservationMode?: boolean;
   hold: { expiresAt: string; extensionsLeft: number };
   ad: { side: "front" | "back"; area: SlotGeometry; labels: string[]; size: import("@/lib/booking/products").BookingSize; priceCents: number };
@@ -73,6 +74,7 @@ const PROBLEM_TEXT: Record<ArtworkFailure | "interrupted", string> = {
 };
 
 export function ArtworkStudio({
+  dimensions,
   reservationMode = false,
   hold,
   ad,
@@ -368,7 +370,7 @@ export function ArtworkStudio({
         </h2>
         {/* Sized so the whole card, the quality note and Continue fit on screen together. */}
         <div className="mx-auto w-full max-w-[260px] sm:max-w-[300px] lg:max-w-[min(100%,calc((100svh-24rem)*6.5/12))]">
-          <PostcardPreview side={ad.side} otherSlots={otherSlots} area={ad.area} zones={zones}>
+          <PostcardPreview dimensions={dimensions} side={ad.side} otherSlots={otherSlots} area={ad.area} zones={zones}>
             {image && area ? (
               <CroppedImage src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} alt="Your ad as it will sit on the postcard" />
             ) : (

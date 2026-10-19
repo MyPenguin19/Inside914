@@ -8,6 +8,9 @@ vi.mock("@/lib/checkout/webhook", () => ({ handleStripeEvent }));
 vi.mock("@/lib/checkout/stripe", () => ({ getStripe: () => ({}) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
 
+const paymentHandler = vi.fn(async () => "recorded");
+vi.mock("@/lib/payments/charge", () => ({ getCollectionStripe: () => ({context:{mode:"test",accountId:"acct_fixture"}}), handlePaymentEvent: paymentHandler }));
+
 const SECRET = "whsec_test_secret_for_unit_tests";
 const { POST } = await import("@/app/api/stripe/webhook/route");
 
@@ -29,6 +32,7 @@ beforeEach(() => vi.stubEnv("STRIPE_WEBHOOK_SECRET", SECRET));
 afterEach(() => {
   vi.unstubAllEnvs();
   handleStripeEvent.mockClear();
+  paymentHandler.mockClear();
 });
 
 describe("Stripe webhook route", () => {
@@ -64,4 +68,16 @@ describe("Stripe webhook route", () => {
     const signature = Stripe.webhooks.generateTestHeaderString({ payload, secret: SECRET });
     expect((await POST(request(payload, signature))).status).toBe(500);
   });
+});
+
+
+test("signed test payment events use the separate collection handler",async()=>{
+ const body=JSON.stringify({id:"evt_pay",type:"payment_intent.succeeded",livemode:false,data:{object:{id:"pi_test"}}});
+ const signature=Stripe.webhooks.generateTestHeaderString({payload:body,secret:SECRET});
+ expect((await POST(request(body,signature))).status).toBe(200);expect(paymentHandler).toHaveBeenCalledTimes(1);expect(handleStripeEvent).not.toHaveBeenCalled();
+});
+test("signed live payment events never enter test collection",async()=>{
+ const body=JSON.stringify({id:"evt_live",type:"payment_intent.succeeded",livemode:true,data:{object:{id:"pi_live"}}});
+ const signature=Stripe.webhooks.generateTestHeaderString({payload:body,secret:SECRET});
+ expect((await POST(request(body,signature))).status).toBe(200);expect(paymentHandler).not.toHaveBeenCalled();
 });

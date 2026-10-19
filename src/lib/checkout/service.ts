@@ -19,6 +19,9 @@ type Admin = SupabaseClient<Database>;
 export type CheckoutBooking = {
   id: string;
   cartId?: string | null;
+  categoryId?: string | null;
+  productModel?: string;
+  sharedArtwork?: string | null;
   editionId: string;
   status: string;
   size: import("@/lib/booking/products").BookingSize;
@@ -34,13 +37,17 @@ export type CheckoutBooking = {
 
 type Row = Database["public"]["Tables"]["bookings"]["Row"] & {
   booking_contacts: Database["public"]["Tables"]["booking_contacts"]["Row"] | null;
-  booking_artwork: { status: string; crop_width: number | null } | null;
+  editions: { product_model: string } | null;
+  booking_artwork: Database["public"]["Tables"]["booking_artwork"]["Row"] | null;
 };
 
 function toCheckoutBooking(row: Row): CheckoutBooking {
   return {
     id: row.id,
     cartId: row.cart_id,
+    categoryId: row.category_id,
+    productModel: row.editions?.product_model,
+    sharedArtwork: row.booking_artwork?.shared_source_id ? JSON.stringify([row.booking_artwork.shared_source_id,row.booking_artwork.crop_x,row.booking_artwork.crop_y,row.booking_artwork.crop_width,row.booking_artwork.crop_height,row.booking_artwork.zoom,row.booking_artwork.width_px,row.booking_artwork.height_px,row.booking_artwork.byte_size]) : null,
     editionId: row.edition_id,
     status: row.status,
     size: row.size as import("@/lib/booking/products").BookingSize,
@@ -55,7 +62,7 @@ function toCheckoutBooking(row: Row): CheckoutBooking {
   };
 }
 
-const COLUMNS = "*, booking_contacts(*), booking_artwork(status, crop_width)";
+const COLUMNS = "*, editions(product_model), booking_contacts(*), booking_artwork(*)";
 
 export async function getBookingByHoldToken(admin: Admin, token: string | undefined) {
   if (!token) return null;

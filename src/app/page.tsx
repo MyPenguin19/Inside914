@@ -12,9 +12,9 @@ const TRUST = [
 ];
 
 const STEPS = [
-  { title: "Choose your advertising area", body: "Start with Central Westchester. We handle the mailing routes for you." },
-  { title: "Select your postcard space", body: "Pick an open space on the front or back. Go double-size for more impact." },
-  { title: "Upload and adjust your ad", body: "Add your image, then drag and zoom until it fits. You'll see it on the card." },
+  { title: "Choose your business category", body: "See which Westchester zones have room for your category." },
+  { title: "Select your zones", body: "Choose one to four available zones at $399 each. Each campaign fills independently." },
+  { title: "Upload and adjust your ad", body: "Upload one image, then crop and position the same square ad for all selected zones." },
   { title: "Reserve securely", body: "Save a card to hold your space. You pay only when the campaign is confirmed." },
 ];
 
@@ -71,7 +71,7 @@ export default function Home() {
                 How It Works
               </ButtonLink>
             </div>
-            <p className="mt-4 text-sm text-muted">Standard space $500 · Double space $900 · $0 today</p>
+            <p className="mt-4 text-sm text-muted">Square ad $399 per zone · One image across your zones · $0 today</p>
           </div>
           <PostcardIllustration />
         </section>
@@ -101,21 +101,15 @@ export default function Home() {
             />
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               <PriceCard
-                name="Standard Advertisement"
-                price="$500"
-                detail="One space on the postcard. Great for an offer, a logo, and your phone number."
+                name="Square Advertisement"
+                price="$399 per zone"
+                detail="One square space on a shared postcard. Use the same artwork in up to four zones."
                 diagram={<SizeDiagram size="standard" />}
               />
-              <PriceCard
-                name="Double-Size Advertisement"
-                price="$900"
-                detail="Two side-by-side spaces merged into one wide ad. Twice the room for $100 less than two spaces."
-                diagram={<SizeDiagram size="double" />}
-                highlight
-              />
+
             </div>
             <p className="mt-6 text-sm text-muted">
-              Mailed to approximately 5,000 homes in Central Westchester (planned quantity). Printed on a 6.5″ × 12″ card.
+              Each selected zone is an independent campaign with 10 paid square ads on a 9″ × 6″ postcard. Household reach and print layout remain provisional.
             </p>
           </div>
         </section>

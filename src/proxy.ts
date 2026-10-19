@@ -4,6 +4,9 @@ import { NextResponse, type NextRequest } from "next/server";
 // Refresh account sessions and route signed-out visitors to the appropriate login.
 // Each protected page and action independently verifies its session and authorization.
 export async function proxy(request: NextRequest) {
+  if (/^\/(account|dashboard)(\/|$)/.test(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL("/areas", request.url), 303);
+  }
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;

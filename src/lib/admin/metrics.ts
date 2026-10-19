@@ -15,6 +15,8 @@ export type AdminSlot = {
 };
 
 export type AdminBooking = {
+  categoryId?: string | null;
+  cartId?: string | null;
   id: string;
   editionId: string;
   status: string;
@@ -32,7 +34,7 @@ export type AdminBooking = {
   stripeSetupStatus: "succeeded" | "failed" | "canceled" | null;
   stripeSetupStatusAt: string | null;
   contact: { businessName: string; contactName: string; email: string; phone: string } | null;
-  artwork: { status: string; cropped: boolean; updatedAt: string } | null;
+  artwork: { status: string; square?: boolean; cropped: boolean; updatedAt: string } | null;
   claims: { slotId: string; released: boolean }[];
   flag?: { at: string; reason: string } | null;
   cancellation?: { at: string; reason: string; cardRemovedAt: string | null } | null;
@@ -42,6 +44,7 @@ export type AdminBooking = {
 };
 
 export type AdminEdition = {
+  productModel?: string;
   id: string;
   zoneId?: string;
   name?: string | null; // campaign name (older editions have none)
@@ -126,6 +129,7 @@ export function campaignStats(edition: AdminEdition, slots: AdminSlot[], booking
   const totalUnits = states.length;
   const blockedUnits = states.filter((s) => s.state === "blocked").length;
   const sellableUnits = totalUnits - blockedUnits;
+  const requiredUnits = edition.productModel === "square_v1" ? 10 : sellableUnits;
   return {
     totalUnits,
     blockedUnits,
@@ -133,8 +137,8 @@ export function campaignStats(edition: AdminEdition, slots: AdminSlot[], booking
     reservedUnits,
     heldUnits: states.filter((s) => s.state === "held").length,
     availableUnits: states.filter((s) => s.state === "available").length,
-    filledPercent: sellableUnits ? Math.round((reservedUnits / sellableUnits) * 100) : 0,
-    fullyReserved: sellableUnits > 0 && reservedUnits === sellableUnits,
+    filledPercent: requiredUnits ? Math.round((reservedUnits / requiredUnits) * 100) : 0,
+    fullyReserved: requiredUnits > 0 && reservedUnits === requiredUnits,
     reservations: confirmed.length,
     advertisers: new Set(confirmed.map(advertiserKey)).size,
     reservedValueCents: confirmed.reduce((sum, b) => sum + b.priceCents, 0),

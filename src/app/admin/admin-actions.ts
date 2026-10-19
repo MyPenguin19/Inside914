@@ -44,8 +44,7 @@ export async function createCampaign(_prev: ActionResult, form: FormData): Promi
   const { supabase } = await requireAdmin();
   const parsed = parseCampaignForm(form);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const template = findTemplate(parsed.value.layout_template)!;
-  const { data, error } = await supabase.rpc("admin_create_campaign", { p: parsed.value, p_slots: template.slots });
+  const { data, error } = await supabase.rpc("admin_create_square_campaign", { p: parsed.value });
   if (error) return { message: adminErrorMessage(error), values: parsed.raw };
   redirect(`/admin/campaigns/${data}`);
 }
@@ -80,6 +79,11 @@ export async function setCampaignStatus(_prev: ActionResult, form: FormData): Pr
   const id = uuid.safeParse(form.get("id"));
   const action = StatusAction.safeParse(form.get("action"));
   if (!id.success || !action.success) return { message: "That action isn't available." };
+  if (action.data === "approve_for_print") {
+    const { data: edition, error } = await supabase.from("editions").select("product_model").eq("id", id.data).single();
+    if (error || !edition) return { message: "Could not verify this campaign." };
+    if (edition.product_model === "square_v1") return { message: "Square zones require the activation and payment collection workflow planned for Phase F." };
+  }
   if (["open", "resume"].includes(action.data)) {
     const { data: edition } = await supabase.from("editions").select("layout_template").eq("id", id.data).single();
     if (!findTemplate(edition?.layout_template ?? "")?.approved) return { message: adminErrorMessage({ message: "layout_not_approved" }) };

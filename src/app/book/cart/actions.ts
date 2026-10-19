@@ -6,7 +6,6 @@ import {
   CART_COOKIE,
   CART_TERMS,
   cartMemberToken,
-  createCart,
   ownedCart,
   cartGate,
   startCartPayment,
@@ -25,6 +24,7 @@ import type { ContactFormState } from "@/app/(public)/actions/checkout";
 import { getStripe } from "@/lib/checkout/stripe";
 import { isDevTestModeActive, isTestStripeId } from "@/lib/dev/test-mode";
 import { fakeStripe } from "@/lib/dev/fake-stripe";
+import { createCategoryCart } from "@/lib/booking/category-checkout";
 const token = async () => (await cookies()).get(CART_COOKIE)?.value;
 const options = {
   httpOnly: true,
@@ -63,7 +63,7 @@ export async function holdAreas(raw: unknown) {
         message:
           "You already have held areas. Return to your area reservation to finish or release them.",
       };
-    const cart = await createCart(admin, raw);
+    const cart = await createCategoryCart(admin, raw);
     (await cookies()).set(CART_COOKIE, cart.token, options);
     return { ok: true };
   } catch (e) {
@@ -76,7 +76,7 @@ export async function holdAreas(raw: unknown) {
 export async function editAreaArtwork(form: FormData) {
   const secret = await token();
   const cart = await ownedCart(createAdminClient(), secret);
-  const member = cart?.members.find((b) => b.id === form.get("bookingId"));
+  const member = cart?.members[0]?.productModel === "square_v1" ? cart.members[0] : cart?.members.find((b) => b.id === form.get("bookingId"));
   if (
     !secret ||
     !member ||
@@ -93,6 +93,8 @@ export async function editAreaArtwork(form: FormData) {
   redirect("/book/artwork");
 }
 export async function reuseArtwork(form: FormData) {
+  const current = await ownedCart(createAdminClient(),await token());
+  if (current?.members.some(b=>b.productModel === "square_v1")) redirect("/book/cart");
   await copyCartArtwork(
     createAdminClient(),
     await token(),
@@ -130,13 +132,16 @@ export async function submitCartContact(
       "category",
     ].map((k) => [k, String(form.get(k) ?? "")]),
   );
-  const parsed = parseContact(values);
-  if (!parsed.ok) return { values, errors: parsed.errors };
   const admin = createAdminClient();
   const cart = await ownedCart(admin, await token());
+  const parsed = parseContact({ ...values, category: cart?.members[0].categoryId ? "" : values.category });
+  if (!parsed.ok) return { values, errors: parsed.errors };
   const gate = cart ? cartGate(cart.members) : "no_hold";
   if (gate) return { values, message: gate };
   const c = parsed.contact;
+  const categoryId = cart!.members[0].categoryId;
+  const category = categoryId ? await admin.from("advertising_categories").select("name").eq("id",categoryId).single() : null;
+  if (category?.error || (categoryId && cart!.members.some(b=>b.categoryId!==categoryId))) return { values, message: "error" };
   const { error } = await admin.from("booking_contacts").upsert(
     cart!.members.map((b) => ({
       booking_id: b.id,
@@ -145,7 +150,7 @@ export async function submitCartContact(
       email: c.email,
       phone: c.phone,
       website: c.website,
-      category: c.category,
+      category: category?.data?.name ?? c.category,
     })),
   );
   if (error) return { values, message: "error" };

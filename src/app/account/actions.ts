@@ -11,6 +11,7 @@ import {
   clientAddress,
   visitorHash,
 } from "@/lib/booking/hold-rate-limit";
+const accountsEnabled = () => false;
 export type AccountState = { message?: string; email?: string };
 const Email = z.email().max(320);
 const Password = z.string().min(12).max(128);
@@ -27,6 +28,7 @@ export async function signUp(
   _state: AccountState,
   form: FormData,
 ): Promise<AccountState> {
+  if (!accountsEnabled()) redirect("/areas");
   const email = String(form.get("email") ?? "")
     .trim()
     .toLowerCase();
@@ -56,6 +58,7 @@ export async function signIn(
   _state: AccountState,
   form: FormData,
 ): Promise<AccountState> {
+  if (!accountsEnabled()) redirect("/areas");
   const email = String(form.get("email") ?? "")
     .trim()
     .toLowerCase();
@@ -81,6 +84,7 @@ export async function signIn(
   redirect("/dashboard");
 }
 export async function signOut() {
+  if (!accountsEnabled()) redirect("/areas");
   const client = await createClient();
   await client.auth.signOut();
   redirect("/account/login");
@@ -89,6 +93,7 @@ export async function forgotPassword(
   _state: AccountState,
   form: FormData,
 ): Promise<AccountState> {
+  if (!accountsEnabled()) redirect("/areas");
   const email = String(form.get("email") ?? "")
     .trim()
     .toLowerCase();
@@ -110,6 +115,7 @@ export async function resetPassword(
   _state: AccountState,
   form: FormData,
 ): Promise<AccountState> {
+  if (!accountsEnabled()) redirect("/areas");
   const password = Password.safeParse(form.get("password"));
   if (!password.success)
     return { message: "Use a password of 12–128 characters." };
@@ -129,6 +135,7 @@ export async function resetPassword(
 }
 
 export async function sendVerification(): Promise<AccountState> {
+  if (!accountsEnabled()) redirect("/areas");
   const client = await createClient();
   const {
     data: { user },

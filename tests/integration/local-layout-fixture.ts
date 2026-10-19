@@ -20,3 +20,16 @@ export function localLayoutFixture(key: string, remove = false) {
     : `insert into private.approved_layout_templates (template_key, approval_reference) values ('${key}', 'Synthetic isolated test fixture; never a print approval');`;
   execFileSync(psql, ["-X", "-v", "ON_ERROR_STOP=1", "-c", sql], { env: { ...process.env, PGHOST: "127.0.0.1", PGPORT: "54322", PGUSER: "postgres", PGDATABASE: "postgres", PGPASSWORD: "postgres" }, stdio: "pipe" });
 }
+
+// Open only UUID-scoped square test campaigns. Simulated approval is inserted and
+// removed inside the same transaction; no approval registry change is committed.
+export function openLocalSquareFixtures(ids: string[]) {
+  if (!/^http:\/\/(127\.0\.0\.1|localhost):54321$/.test(process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")) throw new Error("Local stack required");
+  if (!ids.length || ids.some(id=>! /^[a-f0-9-]{36}$/.test(id))) throw new Error("Invalid fixture IDs");
+  const psql = process.env.LOCAL_PSQL_PATH ?? findPsql(resolve("../supabase-runtime/cache")) ?? "psql";
+  execFileSync(psql,["-X","-v","ON_ERROR_STOP=1","-c",`begin;
+    insert into private.approved_layout_templates(template_key,approval_reference) values('amazingmail-9x6-ten-square-draft','TRANSACTION ONLY synthetic fixture; not printer approval');
+    update public.editions set status='open' where id in (${ids.map(id=>`'${id}'`).join(",")}) and product_model='square_v1';
+    delete from private.approved_layout_templates where template_key='amazingmail-9x6-ten-square-draft';
+    commit;`], { env: {...process.env,PGHOST:"127.0.0.1",PGPORT:"54322",PGUSER:"postgres",PGDATABASE:"postgres",PGPASSWORD:"postgres"},stdio:"pipe" });
+}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { LAYOUT_TEMPLATES } from "@/lib/admin/layouts";
-import { AMAZINGMAIL_9X6_LAYOUT as layout, type PrintRectangle } from "@/lib/print/amazingmail-layout";
+import { AMAZINGMAIL_9X6_LAYOUT as layout, backSquareFit, fileToTrim, type PrintRectangle } from "@/lib/print/amazingmail-layout";
 import { AMAZINGMAIL_9X6_SPEC as spec, PRINT_SPEC } from "@/lib/print/spec";
 
 // Compare integer millionths; do not hide a postal overlap behind float tolerance.
@@ -98,11 +98,58 @@ describe("AmazingMail 566132 nominal geometry (not printer approval)", () => {
     expect(overlaps({ ...lowerHouse, height: lowerHouse.height + 0.001 }, layout.postal)).toBe(true);
   });
 
-  test("does not enable this candidate or change the active legacy postcard", () => {
+  test("registers draft inventory without approving it or changing historical dimensions", () => {
     expect(layout.approved).toBe(false);
     expect(spec.status).toBe("provisional");
-    expect(LAYOUT_TEMPLATES.some((t) => t.key === layout.key)).toBe(false);
+    expect(LAYOUT_TEMPLATES.find((t) => t.key === layout.key)?.approved).toBe(false);
     expect(PRINT_SPEC.trimInches).toEqual({ width: 6.5, height: 12 });
     expect(PRINT_SPEC.bleedInches).toBeNull();
+  });
+});
+
+
+describe("Phase D origin and clearance regression", () => {
+  test("translates inventory exactly once and preserves all dimensions", () => {
+    const template = LAYOUT_TEMPLATES.find(t => t.key === layout.key)!;
+    for (const [i, slot] of template.slots.entries()) {
+      const source = layout.paidSlots[i];
+      expect(slot).toEqual(fileToTrim(source));
+      expect(u(slot.x) + u(layout.trim.x)).toBe(u(source.x));
+      expect(u(slot.y) + u(layout.trim.y)).toBe(u(source.y));
+      expect(slot.width).toBe(2.5);
+      expect(slot.height).toBe(2.5);
+    }
+    expect(template.slots.find(s => s.label === "B4")).toMatchObject({x: 2.625, y: 3});
+  });
+
+  test("translates house and postal regions without clipping the exclusion", () => {
+    expect(fileToTrim(layout.postal)).toEqual({side:"back", x:5.1375, y:2.7325, width:3.925, height:3.33});
+    const live = fileToTrim(layout.live), postal = fileToTrim(layout.postal);
+    for (const region of [...layout.paidSlots, ...layout.houseRegions]) {
+      const translated = fileToTrim(region);
+      expect(inside(translated, live)).toBe(true);
+      if (region.side === "back") expect(overlaps(translated, postal)).toBe(false);
+    }
+  });
+
+  test("reports the exact nominal upper bound without resizing tiles", () => {
+    expect(backSquareFit({columnGap:0,rowGap:0,postalClearance:0})).toEqual({
+      maximumSquareInches:2.50625, fitsRequestedTile:true, horizontalRemainderInches:0.0125,
+    });
+    expect(backSquareFit({columnGap:0.00625,rowGap:0,postalClearance:0.00625}).fitsRequestedTile).toBe(true);
+    expect(backSquareFit({columnGap:0,rowGap:0,postalClearance:0.012501}).fitsRequestedTile).toBe(false);
+  });
+
+  test("reports conflicts for printer allowances exceeding available space", () => {
+    expect(backSquareFit({columnGap:0.125,rowGap:0,postalClearance:0}).maximumSquareInches).toBe(2.44375);
+    expect(backSquareFit({columnGap:0,rowGap:0.750001,postalClearance:0}).fitsRequestedTile).toBe(false);
+    expect(layout.paidSlots.every(s => s.width === 2.5 && s.height === 2.5)).toBe(true);
+    expect(layout.approved).toBe(false);
+  });
+
+  test.each([-1, NaN, Infinity])("rejects invalid allowances %s", value => {
+    for (const field of ["columnGap", "rowGap", "postalClearance"] as const) {
+      expect(() => backSquareFit({columnGap:0,rowGap:0,postalClearance:0,[field]:value})).toThrow(RangeError);
+    }
   });
 });

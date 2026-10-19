@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { HeaderCta } from "@/components/header-cta";
 
 const NAV = [
-  { href: "/dashboard", label: "Account" },
   { href: "/#how-it-works", label: "How It Works" },
   { href: "/areas", label: "Advertising Areas" },
   { href: "/#pricing", label: "Pricing" },

@@ -1,0 +1,56 @@
+Inside914 MVP — Phase B local preparation
+
+New campaigns use product_model=square_v1, one $399 square per selected zone,
+and exactly ten paid positions (six front, four back). Prices remain $399 under
+both isolated test and launch pricing modes. Alternate ad sizes are unavailable
+for these campaigns. Historical campaigns retain their original terms.
+
+The admin creation form uses existing components/styles and a fixed price.
+admin_create_square_campaign checks administrator authorization, delegates date
+and duplicate validation to the existing audited workflow, creates canonical
+inventory, and enables normalized category exclusivity atomically.
+
+Database checks prevent repricing, changing the product model or zone, changing
+square geometry, adding an eleventh/house position, reducing inventory, and
+claiming multiple positions for a square booking. Booking/cart RPCs enforce the
+same terms. A blocked position does not lower the ten-confirmed-reservation
+threshold. Ten temporary holds are not a full campaign. No automatic charges
+were added.
+
+The draft layout reuses the sourced AmazingMail geometry, converted from file
+to trim coordinates. Postal and two house regions are excluded from paid slot
+records. Preview dimensions follow the campaign; legacy dimensions are retained.
+Printer clearance remains unapproved (including the nominal 0.0125-inch back
+clearance). No approval registry entry is added by this migration.
+
+Apply only the new migration 20261019215507_square_campaign_product.sql to an
+environment with the earlier migrations already applied. Historical migration
+files are unchanged. The current local stack had earlier direct-applied changes,
+so this migration was applied directly with psql; no reset or migration-ledger
+rewrite was performed. Production has not received this migration.
+
+Verification, 2026-10-19:
+- Local optimized build: pass (fresh cache after sandbox port-binding failure).
+- TypeScript: pass.
+- ESLint: pass.
+- Unit tests: 269 passed across 31 files.
+- Existing category/multi-area integration suites: 25 passed.
+- tests/database/square-product.sql: 34 assertions passed; transaction rolled back.
+  Covers authorization, duplicate prevention, four zones, exact inventory,
+  tampering, category claims, four-area pricing, overselling, consent amounts,
+  confirmation and fixed-ten fullness. Fake card references only.
+- e2e/square-campaign.spec.ts: passed. Real local admin login -> create draft ->
+  inspect stored model/price and 6+4 inventory. Form and inventory have no
+  document overflow at 320,375,390,768,1440px. No browser page errors.
+- Local database advisors: no warning/error findings; function lint: no errors.
+- Existing 2 editions, 17 slots and 10 bookings unchanged (apart from additive
+  legacy model field). All new test fixtures cleaned up or rolled back.
+- No template approval persisted. No real Stripe calls or email delivery tests.
+- Full unrelated E2E/Stripe suites were not run; no skipped test is counted as passed.
+
+Boundary: this is the new campaign product/inventory foundation. The category-first
+customer journey and shared-artwork simplification remain Phase C. Existing
+historical public catalog and booking paths remain available for legacy campaigns.
+New square campaigns remain draft until printer approval and the remaining launch
+phases are completed. No live campaign, customer booking, production schema,
+production environment setting, GitHub push, merge or deployment was performed.

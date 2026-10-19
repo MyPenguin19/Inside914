@@ -48,7 +48,7 @@ export function CampaignStatusControls({ edition: e, stats, now }: { edition: Ad
         consequence={<>The campaign is marked canceled and can no longer be opened or edited. Only possible while it has no confirmed reservations.</>} />,
     );
   }
-  if (e.status === "closed") {
+  if (e.status === "closed" && e.productModel !== "square_v1") {
     controls.push(
       <ConfirmAction key="approve" label="Approve for print" action={setCampaignStatus} fields={f("approve_for_print")} confirmLabel="Approve"
         consequence={<>Records that the owner approved this campaign for production. Every sellable space must be reserved and every reservation needs approved artwork. This does not charge anyone.</>} />,
@@ -74,7 +74,7 @@ export function CampaignStatusControls({ edition: e, stats, now }: { edition: Ad
   }
   return (
     <div className="flex flex-col gap-4">
-      {!layoutApproved && <Notice tone="warning" role="note"><strong>Layout approval required.</strong> This inventory is provisional; approved sellable capacity is not yet established. Obtain the printer or mail-house template covering addressing, postage, branding, bleed and safe margins before opening reservations. No layout is currently approved.</Notice>}
+      {!layoutApproved && <Notice tone="warning" role="note"><strong>Layout approval required.</strong> This layout remains provisional. Printer acceptance of postal clearance, bleed, safe margins and final house artwork is required before opening reservations. No layout is currently approved.</Notice>}
       {missed && (
         <Notice tone="danger" role="alert">
           <strong>Deadline passed: {stats.reservedUnits} of {stats.sellableUnits} spaces reserved.</strong> The reservation deadline ({formatDeadline(e.artworkDeadline)}) passed before the

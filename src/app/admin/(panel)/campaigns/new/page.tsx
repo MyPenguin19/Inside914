@@ -7,9 +7,9 @@ import { Card } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { listZones } from "@/lib/admin/data";
 import { FIRST_CAMPAIGN_DEFAULTS, FIRST_ZONE } from "@/lib/admin/first-campaign";
-import { LAYOUT_TEMPLATES } from "@/lib/admin/layouts";
+import { SQUARE_TEMPLATE } from "@/lib/admin/layouts";
 import { regionalDraftDefaults } from "@/lib/catalog/regions";
-import { LAUNCH_PRICES } from "@/lib/pricing";
+import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
 
 export default function NewCampaignPage({ searchParams }: { searchParams: Promise<{ draft?: string; area?: string }> }) {
   return (
@@ -51,13 +51,13 @@ async function NewCampaign({ searchParams }: { searchParams: Promise<{ draft?: s
         mode="create"
         action={createCampaign}
         zones={zones}
-        templates={LAYOUT_TEMPLATES}
+        templates={[SQUARE_TEMPLATE]}
         defaults={{
           zone_id: selected.id,
           ...(query.area ? regionalDraftDefaults(selected) : {}),
-          layout_template: LAYOUT_TEMPLATES[0].key,
-          unit_price_cents: String(LAUNCH_PRICES.unitPriceCents / 100),
-          double_price_cents: String(LAUNCH_PRICES.doublePriceCents / 100),
+          layout_template: SQUARE_TEMPLATE.key,
+          unit_price_cents: String(SQUARE_PRODUCT.priceCents / 100),
+          double_price_cents: "",
           ...(preset ? FIRST_CAMPAIGN_DEFAULTS : {}),
         }}
       />

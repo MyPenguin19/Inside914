@@ -1,3 +1,4 @@
+import { getCollectionStripe, handlePaymentEvent } from "@/lib/payments/charge";
 import Stripe from "stripe";
 import { handleStripeEvent } from "@/lib/checkout/webhook";
 import { getStripe } from "@/lib/checkout/stripe";
@@ -17,6 +18,12 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (event.type.startsWith("payment_intent.")) {
+      const stripe=getCollectionStripe();
+      if(event.livemode !== (stripe.context.mode === "live") || (event.account && event.account !== stripe.context.accountId)) return Response.json({received:true,result:"ignored_mode_or_account"});
+      const result=await handlePaymentEvent(createAdminClient(),stripe,event);
+      return Response.json({received:true,result});
+    }
     const result = await handleStripeEvent(createAdminClient(), getStripe(), event);
     return Response.json({ received: true, result });
   } catch (error) {
