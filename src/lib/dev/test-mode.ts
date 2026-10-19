@@ -1,8 +1,8 @@
 // Development-only TEST reservations (simulated card, no Stripe). Fails closed: every condition
 // must hold, so a stray environment variable can never enable it in production or on Vercel.
 
-// Databases test reservations may ever touch: the Inside914 DEV project and a local stack.
-const ALLOWED_SUPABASE_HOSTS = new Set(["uobiwanrxifqwdnouzxj.supabase.co", "127.0.0.1", "localhost"]);
+// Databases test reservations may ever touch: a local stack.
+const ALLOWED_SUPABASE_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 export const DEV_TEST_PREFIX = "devtest";
 export const DEV_TEST_FLAG = "INSIDE914_DEV_TEST_RESERVATIONS";

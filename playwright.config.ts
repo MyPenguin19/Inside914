@@ -1,4 +1,9 @@
+import { loadEnvConfig } from "@next/env";
+import { assertTestEnvironment } from "./scripts/test-environment";
 import { defineConfig, devices } from "@playwright/test";
+
+loadEnvConfig(process.cwd());
+assertTestEnvironment();
 
 const baseURL = "http://localhost:3000";
 
@@ -13,7 +18,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     env: {
       ...Object.fromEntries(
         ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "INSIDE914_DEV_TEST_RESERVATIONS"].flatMap((key) =>

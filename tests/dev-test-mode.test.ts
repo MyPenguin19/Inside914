@@ -9,7 +9,7 @@ const { stripeModeConflict } = await import("@/lib/checkout/service");
 const DEV = {
   INSIDE914_DEV_TEST_RESERVATIONS: "true",
   NODE_ENV: "development",
-  NEXT_PUBLIC_SUPABASE_URL: "https://uobiwanrxifqwdnouzxj.supabase.co",
+  NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
 };
 
 describe("development TEST reservation guard (fails closed)", () => {
@@ -28,7 +28,7 @@ describe("development TEST reservation guard (fails closed)", () => {
     ["Vercel preview", { ...DEV, VERCEL_ENV: "preview" }, "running_on_vercel"],
     ["any Vercel URL", { ...DEV, VERCEL_URL: "inside914.vercel.app" }, "running_on_vercel"],
     ["another Supabase project", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "https://prodprojectref.supabase.co" }, "not_dev_database"],
-    ["lookalike host", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "https://uobiwanrxifqwdnouzxj.supabase.co.evil.com" }, "not_dev_database"],
+    ["lookalike host", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "http://localhost.evil.example" }, "not_dev_database"],
     ["missing database", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: undefined }, "unknown_database"],
   ])("stays OFF: %s", (_, env, reason) => {
     expect(devTestMode(env)).toEqual({ active: false, reason });

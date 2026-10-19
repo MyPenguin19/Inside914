@@ -1,3 +1,4 @@
+import { assertTestEnvironment } from "../../scripts/test-environment";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
@@ -27,3 +28,5 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
   process.env.SUPABASE_URL = status.API_URL;
   process.env.SUPABASE_ANON_KEY = status.PUBLISHABLE_KEY ?? status.ANON_KEY;
 }
+
+assertTestEnvironment();
