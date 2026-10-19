@@ -91,3 +91,24 @@ describe("hold expiry", () => {
     expect(holdSecondsLeft(expiresAt, Date.parse("2026-10-16T06:00:00Z"))).toBe(0);
   });
 });
+
+describe("exclusive postcard selection", () => {
+  const open = slots.map(s => ({ ...s, available: true }));
+  test("selects all spaces on the chosen side, or both sides", () => {
+    expect(selectionForSlot("f2", "full_side", open, pairs)).toEqual(["f1", "f2", "f3", "f4"]);
+    expect(selectionForSlot("b2", "full_side", open, pairs)).toEqual(["b1", "b2"]);
+    expect(selectionForSlot("f2", "both_sides", open, pairs)).toEqual(open.map(s => s.id));
+  });
+  test("one unavailable space prevents exclusive selection; empty/missing sides are refused", () => {
+    expect(selectionForSlot("f1", "full_side", slots, pairs)).toBeNull();
+    expect(selectionForSlot("f1", "both_sides", slots, pairs)).toBeNull();
+    expect(selectionForSlot("missing", "both_sides", [], [])).toBeNull();
+    expect(selectionForSlot("f1", "both_sides", open.filter(s => s.side === "front"), [])).toBeNull();
+  });
+  test("prices are per product, never multiplied by the number of slots", () => {
+    const full = { ...pricing, fullSidePriceCents: 160000, bothSidesPriceCents: 290000 };
+    expect(priceFor("full_side", full)).toBe(160000);
+    expect(priceFor("both_sides", full)).toBe(290000);
+    expect(priceFor("both_sides", pricing)).toBeNull();
+  });
+});

@@ -1,3 +1,4 @@
+import { REGIONS } from "./regions";
 import type { AreaCard } from "@/components/booking/area-cards";
 import type { EditionSummary } from "@/lib/catalog/queries";
 import { formatIssueMonth } from "@/lib/format";
@@ -9,7 +10,7 @@ export const CAMPAIGN_DETAILS_PROVISIONAL = true;
 
 // Areas Inside914 plans to serve that have no campaign configured yet. Shown as "coming soon"
 // unless a bookable edition exists for the same zone slug. No dates, counts or towns: none exist.
-export const PLANNED_AREAS: { slug: string; name: string }[] = [{ slug: "northern-westchester", name: "Northern Westchester" }];
+export const PLANNED_AREAS: { slug: string; name: string }[] = [...REGIONS];
 
 // Cards for the live areas page: one per bookable edition (from Supabase), then planned areas.
 export function areaCardsFrom(editions: EditionSummary[], planned = PLANNED_AREAS): AreaCard[] {

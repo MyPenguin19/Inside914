@@ -1,3 +1,5 @@
+
+import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { TestCheckoutNotice } from "@/components/checkout/test-checkout-notice";
 import { ButtonLink } from "@/components/ui/button";
@@ -10,7 +12,7 @@ import { HoldCountdown } from "@/components/booking/hold-countdown";
 import { HoldStatePanel, Panel } from "@/components/booking/hold-state-panel";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { effectivePpi, resolutionLevel } from "@/lib/artwork/rules";
+import { adAreas, effectivePpi, resolutionLevel } from "@/lib/artwork/rules";
 import { loadHoldContext } from "@/lib/booking/hold-context";
 import { formatIssueMonth, formatPrice } from "@/lib/format";
 
@@ -49,7 +51,7 @@ async function Review() {
   }
 
   const ppi = effectivePpi(artwork.crop, area);
-  const side = area.side === "front" ? "Front" : "Back";
+  const side = booking.size === "both_sides" ? "Front and back (same artwork)" : area.side === "front" ? "Front" : "Back";
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] lg:gap-8">
       <section aria-labelledby="review-title" className="min-w-0">
@@ -68,7 +70,7 @@ async function Review() {
           <Item label="Edition" value={`${booking.zoneName} · ${formatIssueMonth(booking.issueMonth)}`} />
           <Item label="Postcard side" value={side} />
           <Item label="Position" value={booking.positions.map((p) => p.label).join(" + ")} />
-          <Item label="Size" value={booking.size === "double" ? "Double (two side-by-side positions)" : "Standard"} />
+          <Item label="Size" value={bookingSizeLabel(booking.size)} />
           <Item label="Price" value={formatPrice(booking.priceCents)} />
           <Item label="Charged today" value="Nothing" />
         </dl>
@@ -90,15 +92,15 @@ async function Review() {
         </div>
       </section>
       <aside aria-label="Your ad on the postcard" className="mx-auto w-full max-w-[300px] lg:sticky lg:top-20 lg:max-w-none lg:self-start">
-        <PostcardPreview side={area.side} otherSlots={otherSlots} area={area}>
+        {adAreas(booking.positions).map(previewArea => <PostcardPreview key={previewArea.side} side={previewArea.side} otherSlots={otherSlots} area={previewArea}>
           <CroppedImage
             src={artwork.viewUrl}
             imageWidth={artwork.width}
             imageHeight={artwork.height}
-            crop={artwork.crop}
+            crop={artwork.crop!}
             alt="Your ad as it will sit on the postcard"
           />
-        </PostcardPreview>
+        </PostcardPreview>)}
       </aside>
     </div>
   );

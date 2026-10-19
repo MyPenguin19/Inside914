@@ -16,10 +16,13 @@ test("lists the open Central Westchester campaign from Supabase and leads to its
   await expect(central).toContainText("January 5, 2027"); // planned mail date, from editions.mail_date
   await expect(central.getByText(/^\d+ of 16$/)).toBeVisible(); // open count comes from live availability
 
-  // Not configured in the database: coming soon, no booking link, no invented details.
-  const northern = page.getByRole("article").filter({ hasText: "Northern Westchester" });
-  await expect(northern).toContainText("Coming soon");
-  await expect(northern.getByRole("link")).toHaveCount(0);
+  // Unpublished areas keep the existing coming-soon treatment without invented availability.
+  for (const name of ["Southern Westchester", "Northern Westchester", "Eastern Westchester"]) {
+    const area = page.getByRole("article").filter({ hasText: name });
+    await expect(area).toContainText("Coming soon");
+    await expect(area.getByRole("link")).toHaveCount(0);
+    await expect(area).not.toContainText("5,000");
+  }
 
   // The draft February edition stays hidden.
   await expect(page.getByText("February 2027")).toHaveCount(0);

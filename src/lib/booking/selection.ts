@@ -3,7 +3,7 @@
 import { PRINT_SPEC } from "@/lib/print/spec";
 
 export type Side = "front" | "back";
-export type SizeMode = "standard" | "double";
+export type SizeMode = import("./products").BookingSize;
 
 // Public occupancy (no booking details): held = someone is mid-checkout, reserved = confirmed.
 export type Occupancy = "available" | "held" | "reserved" | "closed";
@@ -24,7 +24,7 @@ export type SlotPair = { leftId: string; rightId: string; side: Side; available:
 
 export type Availability = { slots: Record<string, boolean>; pairs: SlotPair[] };
 
-export type Pricing = { unitPriceCents: number; doublePriceCents: number | null };
+export type Pricing = { unitPriceCents: number; doublePriceCents: number | null; fullSidePriceCents?: number; bothSidesPriceCents?: number };
 
 // Trim size from the (provisional) print spec. Slot geometry comes from the database.
 export const POSTCARD_INCHES = PRINT_SPEC.trimInches;
@@ -34,6 +34,8 @@ export function isDoubleOffered(pricing: Pricing, pairs: SlotPair[]) {
 }
 
 export function priceFor(mode: SizeMode, pricing: Pricing) {
+  if (mode === "full_side") return pricing.fullSidePriceCents ?? null;
+  if (mode === "both_sides") return pricing.bothSidesPriceCents ?? null;
   return mode === "standard" ? pricing.unitPriceCents : pricing.doublePriceCents;
 }
 
@@ -41,6 +43,13 @@ export function priceFor(mode: SizeMode, pricing: Pricing) {
 export function selectionForSlot(slotId: string, mode: SizeMode, slots: CatalogSlot[], pairs: SlotPair[]) {
   if (mode === "standard") {
     return slots.some((s) => s.id === slotId && s.available) ? [slotId] : null;
+  }
+  if (mode === "full_side" || mode === "both_sides") {
+    const anchor = slots.find(s => s.id === slotId);
+    if (!anchor) return null;
+    const selected = slots.filter(s => mode === "both_sides" || s.side === anchor.side);
+    if (mode === "both_sides" && new Set(selected.map(s => s.side)).size !== 2) return null;
+    return selected.length && selected.every(s => s.available) ? selected.map(s => s.id) : null;
   }
   const pair =
     pairs.find((p) => p.available && p.leftId === slotId) ?? pairs.find((p) => p.available && p.rightId === slotId);
@@ -52,7 +61,11 @@ export function isSelectable(slotId: string, mode: SizeMode, slots: CatalogSlot[
 }
 
 // Is this exact selection still bookable under the given availability?
-export function isSelectionAvailable(slotIds: string[], availability: Availability) {
+export function isSelectionAvailable(slotIds: string[], availability: Availability, mode?: SizeMode) {
+  // Scope/completeness are authoritatively checked by hold_postcard under database locks.
+  if (mode === "full_side" || mode === "both_sides") {
+    return slotIds.length > 0 && new Set(slotIds).size === slotIds.length && slotIds.every(id => availability.slots[id] === true);
+  }
   if (slotIds.length === 1) return availability.slots[slotIds[0]] === true;
   if (slotIds.length === 2) {
     const [a, b] = slotIds;

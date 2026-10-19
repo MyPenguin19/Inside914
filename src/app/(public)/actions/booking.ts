@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { removeArtwork } from "@/lib/artwork/service";
-import { releaseHold } from "@/lib/booking/held-booking";
+import { getHeldBooking, releaseHold } from "@/lib/booking/held-booking";
 import { HOLD_COOKIE, placeHold, type HoldFailure } from "@/lib/booking/place-hold";
 import { allowHoldAttempt, clientAddress, visitorHash } from "@/lib/booking/hold-rate-limit";
 import { isSelectionAvailable, type Availability } from "@/lib/booking/selection";
@@ -18,15 +18,16 @@ export type HoldSelectionResult =
 
 const HoldSelectionInput = z.object({
   editionId: z.uuid(),
-  slotIds: z.array(z.uuid()).min(1).max(2),
+  slotIds: z.array(z.uuid()).min(1).max(256),
+  mode: z.enum(["standard", "double", "full_side", "both_sides"]).optional(),
 });
 
-// Rate-limits the visitor, re-checks availability, then places one atomic hold (1 or 2 slots). The
+// Rate-limits the visitor, re-checks availability, then places one atomic hold for the selected product. The
 // token goes into an httpOnly cookie; on a lost race the caller gets fresh availability to redraw.
 export async function holdSelection(raw: unknown): Promise<HoldSelectionResult> {
   const input = HoldSelectionInput.safeParse(raw);
   if (!input.success) return { ok: false, reason: "invalid_input" };
-  const { editionId, slotIds } = input.data;
+  const { editionId, slotIds, mode } = input.data;
 
   try {
     const admin = createAdminClient();
@@ -34,16 +35,16 @@ export async function holdSelection(raw: unknown): Promise<HoldSelectionResult> 
     if (!(await allowHoldAttempt(admin, visitor))) return { ok: false, reason: "rate_limited" };
 
     const fresh = await getAvailability(editionId);
-    if (!isSelectionAvailable(slotIds, fresh)) return { ok: false, reason: "slot_unavailable", availability: fresh };
+    if (!isSelectionAvailable(slotIds, fresh, mode)) return { ok: false, reason: "slot_unavailable", availability: fresh };
 
     const cookieStore = await cookies();
     const previous = cookieStore.get(HOLD_COOKIE)?.value;
-    if (previous) {
+    if (previous && !(await getHeldBooking(admin, previous))?.cartId) {
       await removeArtwork(admin, previous); // a new hold starts with no artwork
       await releaseHold(admin, previous);
     }
 
-    const result = await placeHold(admin, { slotIds });
+    const result = await placeHold(admin, { slotIds, mode });
     if (!result.ok) {
       const availability = result.reason === "slot_unavailable" ? await getAvailability(editionId) : undefined;
       return { ok: false, reason: result.reason, availability };
@@ -69,6 +70,7 @@ export async function releaseCurrentHold(formData: FormData) {
   const cookieStore = await cookies();
   const token = cookieStore.get(HOLD_COOKIE)?.value;
   if (token) {
+    if ((await getHeldBooking(createAdminClient(), token))?.cartId) redirect("/book/cart");
     try {
       const admin = createAdminClient();
       await removeArtwork(admin, token);

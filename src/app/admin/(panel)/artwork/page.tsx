@@ -1,3 +1,5 @@
+
+import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Filters, pageParam } from "@/components/admin/filters";
@@ -104,7 +106,7 @@ async function ArtworkQueue({ searchParams }: { searchParams: PageProps<"/admin/
                 </Link>,
                 e ? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}` : "—",
                 positionLabel(b, data.labels),
-                b.size === "double" ? "Double" : "Standard",
+                bookingSizeLabel(b.size),
                 formatTimestamp(b.artwork?.updatedAt ?? null),
                 <Badge key="s" label={artworkLabel(b)} />,
               ];

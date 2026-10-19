@@ -5,10 +5,11 @@ import { hashHoldToken } from "./hold-token";
 
 export type HeldBooking = {
   id: string;
+  cartId?: string | null;
   editionId: string;
   zoneName: string;
   issueMonth: string;
-  size: "standard" | "double";
+  size: import("@/lib/booking/products").BookingSize;
   priceCents: number;
   pricingMode: "launch" | "test";
   expiresAt: string;
@@ -19,6 +20,7 @@ export type HeldBooking = {
 
 type Row = {
   id: string;
+  cart_id: string | null;
   edition_id: string;
   size: string;
   price_cents: number;
@@ -37,7 +39,7 @@ export async function getHeldBooking(admin: SupabaseClient<Database>, token: str
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id, edition_id, size, price_cents, pricing_mode, status, hold_expires_at, hold_extensions, editions(issue_month, zones(name)), booking_slots(slots(label, side, x_in, y_in, width_in, height_in))",
+      "id, cart_id, edition_id, size, price_cents, pricing_mode, status, hold_expires_at, hold_extensions, editions(issue_month, zones(name)), booking_slots(slots(label, side, x_in, y_in, width_in, height_in))",
     )
     .eq("hold_token_hash", hashHoldToken(token))
     .returns<Row[]>()
@@ -48,10 +50,11 @@ export async function getHeldBooking(admin: SupabaseClient<Database>, token: str
   const active = data.status === "pending" && Date.parse(data.hold_expires_at) > Date.now();
   return {
     id: data.id,
+    cartId: data.cart_id,
     editionId: data.edition_id,
     zoneName: data.editions?.zones?.name ?? "",
     issueMonth: data.editions?.issue_month ?? "",
-    size: data.size as "standard" | "double",
+    size: data.size as import("@/lib/booking/products").BookingSize,
     priceCents: data.price_cents,
     pricingMode: data.pricing_mode === "test" ? "test" : "launch",
     expiresAt: data.hold_expires_at,

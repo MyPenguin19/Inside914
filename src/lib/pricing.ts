@@ -15,6 +15,9 @@ export type Prices = { unitPriceCents: number; doublePriceCents: number | null }
 export const TEST_PRICES = { unitPriceCents: 100, doublePriceCents: 200 } as const; // $1 / $2, temporary
 export const LAUNCH_PRICES = { unitPriceCents: 50000, doublePriceCents: 90000 } as const; // reference; editions are authoritative
 
+// Full-side products retain these amounts even in isolated test mode (cards are only saved).
+export const POSTCARD_PRICES = { fullSidePriceCents: 160000, bothSidesPriceCents: 290000 } as const;
+
 export class PricingConfigError extends Error {
   constructor(message: string) {
     super(`Pricing configuration: ${message}`);

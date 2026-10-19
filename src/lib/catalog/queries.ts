@@ -1,6 +1,6 @@
 import "server-only";
 import type { Availability, CatalogSlot, Occupancy, Side, SlotPair } from "@/lib/booking/selection";
-import { pricesFor, type PricingMode } from "@/lib/pricing";
+import { pricesFor, POSTCARD_PRICES, type PricingMode } from "@/lib/pricing";
 import { createPublicClient } from "@/lib/supabase/public";
 
 export type EditionSummary = {
@@ -13,6 +13,8 @@ export type EditionSummary = {
   mailDate: string | null;
   unitPriceCents: number;
   doublePriceCents: number | null;
+  fullSidePriceCents?: number;
+  bothSidesPriceCents?: number;
   pricingMode: PricingMode;
   bookable: boolean;
   totalUnits: number;
@@ -52,6 +54,7 @@ function toSummary(row: EditionRow, slots: { available: boolean }[], priced = tr
     unitPriceCents: prices.unitPriceCents,
     doublePriceCents: prices.doublePriceCents,
     pricingMode: prices.mode,
+    ...POSTCARD_PRICES,
     bookable: row.status === "open" && Date.parse(row.artwork_deadline) > Date.now(),
     totalUnits: slots.length,
     availableUnits: slots.filter((s) => s.available).length,

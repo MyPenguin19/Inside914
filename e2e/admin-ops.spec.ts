@@ -1,3 +1,4 @@
+import { REGIONS } from "../src/lib/catalog/regions";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -15,6 +16,7 @@ const service = url && secret ? createClient(url, secret, { auth: { persistSessi
 const admin = { id: "", email: `inside914-e2e-ops-${randomUUID()}@example.com`, password: randomBytes(24).toString("base64url") };
 const year = 2080 + Math.floor(Math.random() * 9);
 const name = `E2E campaign ${year}`;
+const zoneSlug = `e2e-zone-${randomUUID()}`;
 
 test.beforeAll(async () => {
   const { data, error } = await service!.auth.admin.createUser({ email: admin.email, password: admin.password, email_confirm: true });
@@ -26,6 +28,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   const { data } = await service!.from("editions").select("id").like("name", `E2E campaign ${year}%`);
   for (const e of data ?? []) await service!.from("editions").delete().eq("id", e.id);
+  await service!.from("zones").delete().eq("slug", zoneSlug);
   await service!.from("admin_events").delete().eq("admin_user_id", admin.id);
   await service!.auth.admin.deleteUser(admin.id);
 });
@@ -39,6 +42,66 @@ async function signIn(page: Page) {
 }
 
 const main = (page: Page) => page.getByRole("main");
+
+test("manage a geographic zone without publishing it", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin/zones");
+  const form = page.locator("form").filter({ has: page.getByRole("button", { name: "Create zone", exact: true }) });
+  await form.getByLabel("Zone name").fill(`E2E zone ${zoneSlug}`);
+  await form.getByLabel(/^Slug/).fill(zoneSlug);
+  await form.getByLabel("Target households (provisional)").fill("5000");
+  await form.getByRole("button", { name: "Create zone", exact: true }).click();
+  await expect(page.getByRole("heading", { name: `E2E zone ${zoneSlug}`, exact: true })).toBeVisible();
+  const saved = page.locator("form").filter({ has: page.locator(`input[value="${zoneSlug}"]`) }).first();
+  await saved.getByLabel("Target households (provisional)").fill("5100");
+  await saved.getByRole("button", { name: "Save zone", exact: true }).click();
+  await expect(saved.getByRole("status")).toHaveText("Zone saved.");
+  await form.getByLabel("Zone name").fill(`E2E zone ${zoneSlug}`);
+  await form.getByLabel(/^Slug/).fill(zoneSlug);
+  await form.getByLabel("Target households (provisional)").fill("5000");
+  await form.getByRole("button", { name: "Create zone", exact: true }).click();
+  await expect(form.getByRole("status")).toHaveText("A zone with this name or slug already exists.");
+});
+
+test("each geographic area prepares its own draft without copying dates or inventing quantities", async ({ page }) => {
+  await signIn(page);
+  test.setTimeout(60_000); // Twenty area/viewport combinations exercise the same existing form.
+  for (const width of [320, 375, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const area of REGIONS) {
+      await page.goto("/admin/zones");
+      const link = page.getByRole("link", { name: `New draft campaign for ${area.name}`, exact: true });
+      await link.click();
+      await expect(page).toHaveURL(new RegExp(`area=${area.slug}$`));
+      await expect(page.getByLabel("Campaign name")).toHaveValue(area.name);
+      const selected = page.getByLabel(/^Area/);
+      await expect(selected.locator("option:checked")).toHaveText(area.name);
+      await expect(page.getByLabel("Mailing month")).toHaveValue("");
+      await expect(page.getByLabel("Reservation deadline")).toHaveValue("");
+      await expect(page.getByLabel("Artwork submission deadline")).toHaveValue("");
+      await expect(page.getByLabel("Standard price ($)")).toHaveValue("500");
+      if (area.slug !== "central-westchester") await expect(page.getByLabel("Target mailing quantity (homes)")).toHaveValue("");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    }
+  }
+  await page.goto("/admin/campaigns/new?area=unconfigured-region");
+  await expect(page.getByRole("main")).toContainText("This area is not configured.");
+  await expect(page.getByRole("button", { name: "Create draft campaign" })).toHaveCount(0);
+});
+
+test("January proposal loads exact dates and prices without creating a campaign", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/admin/campaigns/new?draft=central-westchester-2027-01");
+  await expect(page.getByLabel("Campaign name")).toHaveValue("Central Westchester — January 2027");
+  await expect(page.getByLabel("Mailing month")).toHaveValue("2027-01");
+  await expect(page.getByLabel("Reservation deadline")).toHaveValue("2026-12-15T23:59");
+  await expect(page.getByLabel("Artwork submission deadline")).toHaveValue("2026-12-20T23:59");
+  await expect(page.getByLabel("Mailing window: first day")).toHaveValue("2027-01-11");
+  await expect(page.getByLabel("Mailing window: last day")).toHaveValue("2027-01-15");
+  await expect(page.getByLabel("Standard price ($)")).toHaveValue("500");
+  await expect(page.getByLabel("Double price ($)")).toHaveValue("900");
+  await expect(page.getByLabel("Target mailing quantity (homes)")).toHaveValue("5000");
+});
 
 test("create a draft campaign (with validation), edit it, block a space, see the rules enforced, cancel it", async ({ page }) => {
   await signIn(page);
@@ -79,10 +142,9 @@ test("create a draft campaign (with validation), edit it, block a space, see the
   await main(page).getByRole("button", { name: "Unblock" }).last().click();
   await expect(main(page).getByRole("row").filter({ hasText: "Front F1" })).not.toContainText("Blocked:");
 
-  // Opening is refused: another Central Westchester campaign is already open (database rule).
-  await main(page).getByRole("button", { name: "Open for reservations" }).click();
-  await main(page).getByRole("button", { name: "Open now" }).click();
-  await expect(main(page).getByText("Another campaign in this area is already open. Close it first.")).toBeVisible();
+  // Provisional geometry cannot be offered for sale.
+  await expect(main(page).getByText("Layout approval required.")).toBeVisible();
+  await expect(main(page).getByRole("button", { name: "Open for reservations" })).toHaveCount(0);
 
   // Cancel the draft.
   await main(page).getByRole("button", { name: "Cancel campaign" }).click();

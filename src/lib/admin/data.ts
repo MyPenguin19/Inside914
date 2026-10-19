@@ -13,13 +13,14 @@ import type { AdminBooking, AdminEdition, AdminSlot } from "./metrics";
 type Db = SupabaseClient<Database>;
 
 const BOOKING_COLUMNS =
-  "id, edition_id, status, size, price_cents, pricing_mode, hold_expires_at, reference, created_at, confirmed_at, stripe_customer_id, stripe_setup_intent_id, stripe_payment_method_id, stripe_setup_status, stripe_setup_status_at, flagged_at, flag_reason, cancelled_at, cancellation_reason, card_removed_at, booking_contacts(business_name, contact_name, email, phone), booking_artwork(id, status, crop_width, updated_at, review_status, review_note), booking_slots(slot_id, released_at)";
+  "id, edition_id, status, size, claimed_slot_count, price_cents, pricing_mode, hold_expires_at, reference, created_at, confirmed_at, stripe_customer_id, stripe_setup_intent_id, stripe_payment_method_id, stripe_setup_status, stripe_setup_status_at, flagged_at, flag_reason, cancelled_at, cancellation_reason, card_removed_at, booking_contacts(business_name, contact_name, email, phone), booking_artwork(id, status, crop_width, updated_at, review_status, review_note), booking_slots(slot_id, released_at)";
 
 type BookingRow = {
   id: string;
   edition_id: string;
   status: string;
   size: string;
+  claimed_slot_count: number | null;
   price_cents: number;
   pricing_mode: string;
   hold_expires_at: string | null;
@@ -48,7 +49,8 @@ export function toAdminBooking(r: BookingRow): AdminBooking {
     id: r.id,
     editionId: r.edition_id,
     status: r.status,
-    size: r.size === "double" ? "double" : "standard",
+    size: r.size as AdminBooking["size"],
+    claimedSlotCount: r.claimed_slot_count,
     priceCents: r.price_cents,
     pricingMode: r.pricing_mode === "test" ? "test" : "launch",
     holdExpiresAt: r.hold_expires_at,
@@ -134,7 +136,7 @@ export async function listEditions(db: Db): Promise<AdminEdition[]> {
 }
 
 export async function listZones(db: Db) {
-  const { data, error } = await db.from("zones").select("id, name").order("name");
+  const { data, error } = await db.from("zones").select("id, name, slug, household_count").order("name");
   if (error) fail("areas", error);
   return data;
 }

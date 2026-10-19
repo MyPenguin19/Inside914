@@ -44,7 +44,7 @@ async function signIn(page: Page, who: { email: string; password: string }) {
 }
 
 test("signed out: every admin page sends you to the login page", async ({ page }) => {
-  for (const path of ["/admin", "/admin/advertisers", "/admin/payments", "/admin/settings", "/admin/campaigns/00000000-0000-4000-8000-000000000101"]) {
+  for (const path of ["/admin/zones", "/admin/campaigns/new?draft=central-westchester-2027-01", "/admin", "/admin/advertisers", "/admin/payments", "/admin/settings", "/admin/campaigns/00000000-0000-4000-8000-000000000101"]) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/admin\/login$/);
   }
@@ -101,9 +101,11 @@ test("admin pages fit a phone screen", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Overview", level: 1 })).toBeVisible();
   for (const width of [320, 375, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const path of ["/admin", "/admin/campaigns", "/admin/campaigns/00000000-0000-4000-8000-000000000101", "/admin/advertisers", "/admin/artwork", "/admin/payments", "/admin/settings"]) {
+    for (const path of ["/admin/zones", "/admin/campaigns/new?draft=central-westchester-2027-01", "/admin", "/admin/campaigns", "/admin/campaigns/00000000-0000-4000-8000-000000000101", "/admin/advertisers", "/admin/artwork", "/admin/payments", "/admin/settings"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      if (path === "/admin/zones") await expect(page.getByRole("button", { name: "Create zone", exact: true })).toBeVisible();
+      if (path.startsWith("/admin/campaigns/new")) await expect(page.getByLabel("Reservation deadline")).toHaveValue("2026-12-15T23:59");
       // Payments streams its readiness card after the heading; measure the complete form.
       if (path === "/admin/payments") await expect(page.getByLabel("Campaign", { exact: true })).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

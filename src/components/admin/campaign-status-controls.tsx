@@ -2,6 +2,7 @@ import { setCampaignStatus } from "@/app/admin/admin-actions";
 import { ConfirmAction } from "@/components/admin/confirm-action";
 import { ExtendDeadlineForm } from "@/components/admin/extend-deadline-form";
 import { Notice } from "@/components/ui/primitives";
+import { findTemplate } from "@/lib/admin/layouts";
 import { deadlineMissed, type AdminEdition, type CampaignStats } from "@/lib/admin/metrics";
 import { formatDay, formatDeadline } from "@/lib/format-admin";
 
@@ -11,7 +12,8 @@ export function CampaignStatusControls({ edition: e, stats, now }: { edition: Ad
   const f = (action: string) => ({ id: e.id, action });
   const controls: React.ReactNode[] = [];
   const missed = deadlineMissed(e, stats, now);
-  if (e.status === "draft" || e.status === "closed") {
+  const layoutApproved = findTemplate(e.layoutTemplate ?? "")?.approved === true;
+  if ((e.status === "draft" || e.status === "closed") && layoutApproved) {
     controls.push(
       <ConfirmAction key="open" label="Open for reservations" action={setCampaignStatus} fields={f("open")} confirmLabel="Open now"
         consequence={<>Customers will be able to see this campaign and hold its {stats.totalUnits - stats.blockedUnits} sellable spaces. Requirements (deadline, layout, spaces, prices, no other open campaign in this area) are checked first.</>} />,
@@ -72,6 +74,7 @@ export function CampaignStatusControls({ edition: e, stats, now }: { edition: Ad
   }
   return (
     <div className="flex flex-col gap-4">
+      {!layoutApproved && <Notice tone="warning" role="note"><strong>Layout approval required.</strong> This inventory is provisional; approved sellable capacity is not yet established. Obtain the printer or mail-house template covering addressing, postage, branding, bleed and safe margins before opening reservations. No layout is currently approved.</Notice>}
       {missed && (
         <Notice tone="danger" role="alert">
           <strong>Deadline passed: {stats.reservedUnits} of {stats.sellableUnits} spaces reserved.</strong> The reservation deadline ({formatDeadline(e.artworkDeadline)}) passed before the

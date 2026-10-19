@@ -30,8 +30,9 @@ export function formatMegabytes(bytes: number) {
 
 export type SlotGeometry = { side: "front" | "back"; x: number; y: number; width: number; height: number };
 
-// The ad's printable area: one slot, or the union of two adjacent slots for a double.
+// Bounds on one physical side; never union coordinates across front and back.
 export function adArea(slots: SlotGeometry[]): SlotGeometry {
+  slots = slots.filter(s => s.side === slots[0].side);
   const left = Math.min(...slots.map((s) => s.x));
   const top = Math.min(...slots.map((s) => s.y));
   const right = Math.max(...slots.map((s) => s.x + s.width));
@@ -63,4 +64,11 @@ export function isCropInside(crop: CropPixels, image: { width: number; height: n
     crop.x + crop.width <= image.width + 1 &&
     crop.y + crop.height <= image.height + 1
   );
+}
+
+export function adAreas(slots: SlotGeometry[]): SlotGeometry[] {
+  return (["front", "back"] as const).flatMap(side => {
+    const own = slots.filter(s => s.side === side);
+    return own.length ? [adArea(own)] : [];
+  });
 }

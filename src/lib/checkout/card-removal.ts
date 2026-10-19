@@ -27,6 +27,11 @@ export async function removeSavedCard(admin: Admin, stripe: StripeClient, bookin
   if (error) throw new Error(`Could not load booking: ${error.message}`);
   if (!b || b.status !== "cancelled" || !b.stripe_payment_method_id || b.card_removed_at) return "skipped";
 
+  // A group saves one card for several independent campaign reservations.
+  const { data: active, error: activeError } = await admin.from("bookings").select("id")
+    .eq("stripe_payment_method_id", b.stripe_payment_method_id).not("status", "in", "(cancelled,released)").limit(1);
+  if (activeError) throw activeError;
+  if (active?.length) return "skipped";
   const testCard = isTestStripeId(b.stripe_payment_method_id);
   if (!testCard && isFakeStripe(stripe)) return "skipped"; // a real card is only removed with real Stripe
   if (!testCard) {
@@ -43,24 +48,33 @@ export async function removeSavedCard(admin: Admin, stripe: StripeClient, bookin
   const { error: updateError } = await admin
     .from("bookings")
     .update({ card_removed_at: new Date().toISOString() })
-    .eq("id", b.id)
+    .eq("stripe_payment_method_id", b.stripe_payment_method_id)
+    .eq("status", "cancelled")
     .is("card_removed_at", null);
   if (updateError) throw new Error(`Could not record card removal: ${updateError.message}`);
   return "removed";
 }
 
-// Retries every cancelled booking whose card is still attached, oldest first.
+// Stable-key pagination skips cards retained for active reservations without starving
+// unrelated cancellations. Updating a processed row cannot shift the next page.
 export async function processDueCardRemovals(admin: Admin, stripe: StripeClient, limit = 20) {
-  const { data, error } = await admin
-    .from("bookings")
-    .select("id")
-    .eq("status", "cancelled")
-    .not("stripe_payment_method_id", "is", null)
-    .is("card_removed_at", null)
-    .order("cancelled_at")
-    .limit(limit);
-  if (error) throw new Error(`Could not list card removals: ${error.message}`);
   const results: CardRemoval[] = [];
-  for (const b of data ?? []) results.push(await removeSavedCard(admin, stripe, b.id));
+  let cursor: string | null = null;
+  while (results.length < limit) {
+    let query = admin.from("bookings").select("id")
+      .eq("status", "cancelled").not("stripe_payment_method_id", "is", null)
+      .is("card_removed_at", null).order("id").limit(limit);
+    if (cursor) query = query.gt("id", cursor);
+    const { data, error } = await query;
+    if (error) throw new Error(`Could not list card removals: ${error.message}`);
+    if (!data?.length) break;
+    for (const b of data) {
+      cursor = b.id;
+      const result = await removeSavedCard(admin, stripe, b.id);
+      if (result !== "skipped") results.push(result);
+      if (results.length >= limit) break;
+    }
+    if (data.length < limit) break;
+  }
   return results;
 }

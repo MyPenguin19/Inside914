@@ -14,6 +14,43 @@ export type Database = {
   }
   public: {
     Tables: {
+      recurring_plans: {
+        Row: { id:string; user_id:string; name:string; source_booking_ids:string[]; start_month:string; end_month:string; interval_months:number; status:string; created_at:string; updated_at:string }
+        Insert: { id?:string; user_id:string; name:string; source_booking_ids:string[]; start_month:string; end_month:string; interval_months:number; status?:string; created_at?:string; updated_at?:string }
+        Update: { status?:string; updated_at?:string }
+        Relationships: []
+      }
+      recurring_occurrences: {
+        Row: { plan_id:string; issue_month:string; cart_id:string; nonce:string; created_at:string }
+        Insert: { plan_id:string; issue_month:string; cart_id:string; nonce:string; created_at?:string }
+        Update: { cart_id?:string; nonce?:string }
+        Relationships: []
+      }
+
+      advertiser_email_verifications: {
+        Row: { user_id:string; verified_email:string; verified_at:string }
+        Insert: { user_id:string; verified_email:string; verified_at?:string }
+        Update: { verified_email?:string; verified_at?:string }
+        Relationships: []
+      }
+      advertiser_bookings: {
+        Row: { booking_id: string; user_id: string; created_at: string }
+        Insert: { booking_id: string; user_id: string; created_at?: string }
+        Update: { booking_id?: string; user_id?: string; created_at?: string }
+        Relationships: []
+      }
+      advertiser_artwork_drafts: {
+        Row: { id:string; booking_id:string; user_id:string; storage_path:string; base_updated_at:string|null; status:string; content_type:string|null; byte_size:number|null; width_px:number|null; height_px:number|null; created_at:string }
+        Insert: { id?:string; booking_id:string; user_id:string; storage_path:string; base_updated_at?:string|null; status?:string; content_type?:string|null; byte_size?:number|null; width_px?:number|null; height_px?:number|null; created_at?:string }
+        Update: { status?:string; content_type?:string|null; byte_size?:number|null; width_px?:number|null; height_px?:number|null }
+        Relationships: []
+      }
+      reservation_carts: {
+        Row: { id: string; token_hash: string; created_at: string }
+        Insert: { id?: string; token_hash: string; created_at?: string }
+        Update: { id?: string; token_hash?: string; created_at?: string }
+        Relationships: []
+      }
       admin_events: {
         Row: {
           admin_user_id: string | null
@@ -348,6 +385,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          cart_id: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -365,6 +403,7 @@ export type Database = {
           price_cents: number
           pricing_mode: string
           reference: string | null
+          claimed_slot_count: number | null
           size: string
           status: string
           stripe_customer_id: string | null
@@ -375,6 +414,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cart_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -392,6 +432,7 @@ export type Database = {
           price_cents: number
           pricing_mode?: string
           reference?: string | null
+          claimed_slot_count?: number | null
           size: string
           status?: string
           stripe_customer_id?: string | null
@@ -402,6 +443,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cart_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -419,6 +461,7 @@ export type Database = {
           price_cents?: number
           pricing_mode?: string
           reference?: string | null
+          claimed_slot_count?: number | null
           size?: string
           status?: string
           stripe_customer_id?: string | null
@@ -856,6 +899,13 @@ export type Database = {
       }
     }
     Functions: {
+      recurring_plan_manage: { Args: { p_id:string; p_action:string; p:Json }; Returns:string }
+      hold_recurring_occurrence: { Args: { p_user:string; p_plan:string; p_month:string; p_nonce:string; p_hash:string; p_items:Json; p_pricing_mode:string; p_expected_total:number }; Returns:Json }
+
+      claim_advertiser_bookings: { Args: never; Returns: number }
+      advertiser_manage: { Args: { p_booking:string; p_action:string; p:Json }; Returns:string }
+      hold_cart: { Args: { p_token_hash: string; p_items: Json; p_pricing_mode: string }; Returns: string }
+      confirm_cart: { Args: { p_cart_id: string; p_setup_intent_id: string; p_payment_method_id: string; p_references: Json }; Returns: string }
       admin_add_booking_note: {
         Args: { p_body: string; p_booking_id: string }
         Returns: string
@@ -866,6 +916,10 @@ export type Database = {
       }
       admin_cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
+        Returns: string
+      }
+      admin_save_zone: {
+        Args: { p_id: string | null; p_name: string; p_slug: string; p_household_count: number }
         Returns: string
       }
       admin_create_campaign: {
@@ -912,6 +966,10 @@ export type Database = {
         Returns: string
       }
       extend_hold: { Args: { p_token_hash: string }; Returns: string }
+      hold_postcard: {
+        Args: { p_slot_ids: string[]; p_size: string; p_token_hash: string; p_pricing_mode: string }
+        Returns: { booking_id: string; hold_expires_at: string; size: string; price_cents: number }[]
+      }
       hold_slots: {
         Args: {
           // null when the edition offers no double (hand-corrected: the generator types it as number)

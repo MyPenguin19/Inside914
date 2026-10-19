@@ -11,7 +11,7 @@ export type Placement = { slots: AdminSlot[]; business: string; artwork: Artwork
 // cropping as everywhere else (no second layout engine). Anything not content-approved is shown
 // as a warning tile, never as if it were ready.
 export function AssembledSide({ side, slots, placements }: { side: "front" | "back"; slots: AdminSlot[]; placements: Placement[] }) {
-  const own = placements.filter((p) => p.slots[0]?.side === side);
+  const own = placements.map(p => ({ ...p, slots: p.slots.filter(s => s.side === side) })).filter(p => p.slots.length > 0);
   const taken = new Set(own.flatMap((p) => p.slots.map((s) => s.id)));
   return (
     <figure className="flex flex-col gap-2">

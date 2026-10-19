@@ -1,3 +1,5 @@
+
+import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Filters, pageParam } from "@/components/admin/filters";
@@ -75,7 +77,7 @@ async function Advertisers({ searchParams }: { searchParams: PageProps<"/admin/a
                 b.contact ? formatPhone(b.contact.phone) : "—",
                 e ? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}` : "—",
                 positionLabel(b, data.labels),
-                b.size === "double" ? "Double" : "Standard",
+                bookingSizeLabel(b.size),
                 <Badge key="r" label={reservationLabel(b, now)} />,
                 <Badge key="a" label={artworkLabel(b)} />,
                 <Badge key="p" label={paymentLabel(b)} />,

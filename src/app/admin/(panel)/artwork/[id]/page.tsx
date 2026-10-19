@@ -1,3 +1,5 @@
+
+import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -62,7 +64,7 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
             <DetailList
               rows={[
                 ["Position", positionLabel(b, labels)],
-                ["Size", b.size === "double" ? "Double" : "Standard"],
+                ["Size", bookingSizeLabel(b.size)],
                 ["Uploaded / last positioned", formatTimestamp(b.artwork?.updatedAt ?? null)],
                 ["Reservation", b.reference ?? "Not confirmed"],
                 ["Content review", b.artworkReview === "approved" ? "Approved" : b.artworkReview === "rejected" ? "Rejected" : b.artworkReview === "changes_requested" ? "Changes requested" : "Not reviewed yet"],

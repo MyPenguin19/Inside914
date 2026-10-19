@@ -1,3 +1,5 @@
+
+import { bookingSizeLabel, positionLabel } from "@/lib/booking/products";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -45,7 +47,7 @@ async function HoldDetails() {
   }
   if (!booking) return <NoHold />;
 
-  const where = `${booking.positions[0]?.side === "back" ? "Back" : "Front"} · ${booking.positions.map((p) => p.label).join(" + ")}`;
+  const where = positionLabel(booking.size, booking.positions);
 
   if (booking.state === "expired") {
     return (
@@ -72,7 +74,7 @@ async function HoldDetails() {
       <dl className="mt-6 grid gap-4 border-y border-line py-5 text-sm sm:grid-cols-2">
         <Item label="Edition" value={`${booking.zoneName} · ${formatIssueMonth(booking.issueMonth)}`} />
         <Item label="Position" value={where} />
-        <Item label="Size" value={booking.size === "double" ? "Double (two side-by-side positions)" : "Standard"} />
+        <Item label="Size" value={bookingSizeLabel(booking.size)} />
         <Item label="Price" value={formatPrice(booking.priceCents)} />
       </dl>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

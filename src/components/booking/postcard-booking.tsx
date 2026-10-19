@@ -18,12 +18,13 @@ import {
   type SlotPair,
 } from "@/lib/booking/selection";
 import type { EditionCatalog } from "@/lib/catalog/queries";
+import { bookingSizeLabel, positionLabel } from "@/lib/booking/products";
 import { formatPrice } from "@/lib/format";
 
 type Props = {
   catalog: EditionCatalog;
-  holdSelection: (input: { editionId: string; slotIds: string[] }) => Promise<HoldSelectionResult>;
-  nextHref?: string; // where to go once the hold is placed
+  holdSelection: (input: { editionId: string; slotIds: string[]; mode?: SizeMode }) => Promise<HoldSelectionResult>;
+  nextHref?: string | null; // where to go once the hold is placed
   continueLabel?: string;
   initialSelected?: string[]; // restore a previous choice (e.g. after going back)
   zones?: PostcardZone[]; // printed non-ad areas (masthead, mailing panel), if the layout has them
@@ -35,7 +36,7 @@ const FAILURE_TEXT: Record<Exclude<HoldSelectionResult, { ok: true }>["reason"],
   slot_unavailable:
     "Another business just reserved that position. We've refreshed the postcard, so please choose another spot.",
   edition_closed: "This edition is no longer taking bookings.",
-  invalid_selection: "Those two positions can't be combined into a double-size ad. Please choose again.",
+  invalid_selection: "Those positions do not form a complete selection for this size. Please choose again.",
   slot_not_found: "That position has changed since the page loaded. Please refresh the page.",
   invalid_input: "That selection wasn't valid. Please choose a position again.",
   error: "We couldn't hold your position right now. Nothing was reserved; please try again in a moment.",
@@ -64,13 +65,13 @@ export function PostcardBooking({
     catalog.slots.find((s) => s.id === initialSelected[0])?.side ?? "front",
   );
 
-  const pricing = { unitPriceCents: catalog.unitPriceCents, doublePriceCents: catalog.doublePriceCents };
+  const pricing = catalog;
   const doubleOffered = isDoubleOffered(pricing, pairs);
   const doubleAvailable = doubleOffered && pairs.some((p) => p.available);
   const price = priceFor(mode, pricing);
   const selectedSlots = slots.filter((s) => selected.includes(s.id));
   const selectionText = selectedSlots.length
-    ? `${selectedSlots[0].side === "front" ? "Front" : "Back"} · ${selectedSlots.map((s) => s.label).join(" + ")}`
+    ? positionLabel(mode, selectedSlots)
     : null;
 
   function changeMode(next: SizeMode) {
@@ -95,9 +96,9 @@ export function PostcardBooking({
     if (!selected.length) return;
     setMessage(null);
     startTransition(async () => {
-      const result = await holdSelection({ editionId: catalog.id, slotIds: selected });
+      const result = await holdSelection({ editionId: catalog.id, slotIds: selected, mode });
       if (result.ok) {
-        router.push(nextHref);
+        if (nextHref) router.push(nextHref);
         return;
       }
       if (result.availability) {
@@ -125,7 +126,7 @@ export function PostcardBooking({
                 : "Reserved"
             : selectable
               ? "Available"
-              : "Standard only";
+              : mode === "full_side" ? "Side unavailable" : mode === "both_sides" ? "Postcard unavailable" : "Standard only";
         return { slot, selected: isSelected, selectable, note };
       });
   }
@@ -213,7 +214,18 @@ export function PostcardBooking({
                 shape="double"
               />
             )}
+            {(["full_side", "both_sides"] as const).map(size => {
+              const amount = priceFor(size, pricing);
+              const available = slots.some(slot => isSelectable(slot.id, size, slots, pairs));
+              return amount !== null && <SizeOption key={size} label={bookingSizeLabel(size)}
+                detail={available ? (size === "full_side" ? "All spaces on one side" : "All spaces on both sides") : "Unavailable"}
+                price={formatPrice(amount)} checked={mode === size} disabled={!available}
+                onChange={() => changeMode(size)} shape="double" />;
+            })}
           </div>
+          {(mode === "full_side" || mode === "both_sides") && <p className="mt-2 text-xs text-muted">
+            Price per area. {mode === "both_sides" ? "The same artwork is used on front and back." : "Choose front or back by tapping a space on that side."}
+          </p>}
         </fieldset>
 
         <Card className="order-3 lg:mt-5 lg:order-none">
@@ -223,7 +235,7 @@ export function PostcardBooking({
           <dl className="mt-3 grid gap-2.5 text-sm" aria-live="polite">
             <div className="flex justify-between gap-4">
               <dt className="text-muted">Size</dt>
-              <dd className="font-medium">{mode === "double" ? "Double" : "Standard"}</dd>
+              <dd className="font-medium">{bookingSizeLabel(mode)}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted">Position</dt>
@@ -256,12 +268,12 @@ export function PostcardBooking({
 
       {/* Phones: choice, price and next step stay in reach. Sticky inside this grid (not fixed to the
           window), so it settles after the summary and never covers the footer. */}
-      <div className="sticky bottom-3 z-30 order-4 self-end rounded-2xl border border-line bg-surface/95 p-3 pl-4 shadow-[0_12px_32px_-12px_rgba(28,27,25,0.4)] backdrop-blur lg:hidden">
+      <div className="sticky bottom-3 z-30 order-4 min-w-0 self-end rounded-2xl border border-line bg-surface/95 p-3 pl-4 shadow-[0_12px_32px_-12px_rgba(28,27,25,0.4)] backdrop-blur lg:hidden">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{selectionText ?? "Tap an available space"}</p>
             <p className="truncate text-xs text-muted">
-              {mode === "double" ? "Double" : "Standard"} · {price !== null ? formatPrice(price) : "—"} · $0 today
+              {bookingSizeLabel(mode)} · {price !== null ? formatPrice(price) : "—"} · $0 today
             </p>
           </div>
           {continueButton("shrink-0 !px-5")}

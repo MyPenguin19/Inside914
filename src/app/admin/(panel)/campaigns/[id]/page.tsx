@@ -1,3 +1,5 @@
+import { POSTCARD_PRICES } from "@/lib/pricing";
+import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -119,7 +121,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
               ["Mailing window", edition.mailingWindowStart ? `${formatDay(edition.mailingWindowStart)} – ${formatDay(edition.mailingWindowEnd ?? edition.mailingWindowStart)}` : edition.mailDate ? formatDay(edition.mailDate) : "Not set"],
               ["Target mailing quantity", `≈ ${formatHouseholds(edition.households)} homes`],
               ["Layout", findTemplate(edition.layoutTemplate ?? "")?.label ?? (edition.layoutTemplate ? edition.layoutTemplate : "Created before templates (provisional grid)")],
-              ["Prices (new bookings)", `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""}`],
+              ["Prices (new bookings)", `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
               ["Artwork approval", `${stats.artworkAwaitingReview} awaiting review of ${stats.reservations} reservations`],
               ["Payment methods ready", `${stats.paymentMethodsReady} of ${stats.reservations}`],
               ["Advertisers", String(stats.advertisers)],
@@ -172,7 +174,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
                   {b.contact?.businessName ?? "No details yet"}
                 </Link>,
                 positionLabel(b, labels),
-                b.size === "double" ? "Double" : "Standard",
+                bookingSizeLabel(b.size),
                 <Badge key="s" label={reservationLabel(b, now)} />,
                 <Badge key="a" label={artworkAwaitingReview(b) ? { text: "Awaiting review", tone: "warning" } : artworkLabel(b)} />,
                 <Badge key="p" label={paymentLabel(b)} />,

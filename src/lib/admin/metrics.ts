@@ -18,7 +18,8 @@ export type AdminBooking = {
   id: string;
   editionId: string;
   status: string;
-  size: "standard" | "double";
+  size: import("@/lib/booking/products").BookingSize;
+  claimedSlotCount?: number | null;
   priceCents: number; // the amount stored on the booking (what was authorized), never recomputed
   pricingMode: "launch" | "test";
   holdExpiresAt: string | null;
@@ -190,7 +191,7 @@ export function attentionItems(edition: AdminEdition | null, stats: CampaignStat
   }
   // Card saved but the hold ran out before confirmation: no reservation exists, the card was detached.
   const orphaned = bookings.filter((b) => b.status !== "pending" && !isConfirmed(b) && b.stripeSetupStatus === "succeeded").length;
-  const lostInventory = bookings.filter((b) => isConfirmed(b) && b.claims.filter((c) => !c.released).length !== (b.size === "double" ? 2 : 1)).length;
+  const lostInventory = bookings.filter((b) => isConfirmed(b) && b.claims.filter((c) => !c.released).length !== (b.claimedSlotCount ?? (b.size === "double" ? 2 : b.size === "standard" ? 1 : Infinity))).length;
   if (orphaned + lostInventory) {
     items.push({ key: "investigate", tone: "danger", href: "/admin/advertisers", title: `${orphaned + lostInventory} ${orphaned + lostInventory === 1 ? "booking needs" : "bookings need"} investigation`, detail: [orphaned && `${orphaned} saved a card after the hold expired`, lostInventory && `${lostInventory} confirmed without all of their spaces`].filter(Boolean).join("; ") + "." });
   }
@@ -235,7 +236,7 @@ export function paymentReadinessDetail(b: AdminBooking, consent: { amountCents: 
   const blockers: string[] = [];
   if (!isConfirmed(b)) blockers.push("Not a confirmed reservation");
   const live = b.claims.filter((c) => !c.released).length;
-  if (live !== (b.size === "double" ? 2 : 1)) blockers.push("Its spaces aren't all allocated");
+  if (live !== (b.claimedSlotCount ?? (b.size === "double" ? 2 : b.size === "standard" ? 1 : Infinity))) blockers.push("Its spaces aren't all allocated");
   if (!consent) blockers.push("No future-charge consent on record");
   else if (consent.amountCents !== b.priceCents) blockers.push("Consent amount differs from the reservation amount");
   if (!b.stripePaymentMethodId) blockers.push(b.stripeSetupStatus === "failed" ? "Card setup failed" : "No saved card");
