@@ -23,6 +23,8 @@ describe.skipIf(!enabled)("Stripe test mode: saved cards, no charges", () => {
   const customers: string[] = [];
 
   beforeAll(async () => {
+    // These tests must exercise Stripe even when local fake-card mode is normally enabled.
+    vi.stubEnv("INSIDE914_DEV_TEST_RESERVATIONS", "false");
     admin = createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, { auth: { persistSession: false } });
     const { data } = await admin.from("slots").select("id, label").eq("edition_id", EDITION);
     for (const s of data ?? []) slotIds[s.label] = s.id;
