@@ -1,0 +1,122 @@
+Inside914 — local category/schema foundation
+Date: 2026-10-19
+Branch: revision/shared-postcard-mvp
+
+Completed scope
+
+Added and applied the category foundation to the existing isolated localhost
+Supabase database. This is a schema/API foundation; the customer-facing category
+selection flow is not connected yet. UI, styles, postcard geometry, prices and
+payment integrations are unchanged. The broader MVP revision is not complete.
+
+Implementation
+
+- Added advertising_categories with 12 normalized reference identifiers:
+  plumbing, hvac, landscaping, real-estate, dental, restaurant, pet-care,
+  auto-repair, roofing, electrician, cleaning and pest-control.
+  The catalog has RLS and public read-only access. No unrestricted category text
+  is used for exclusivity. No category override was added.
+- Added editions.category_exclusivity, default false. Only an unused draft can
+  opt in, through an authenticated admin RPC that writes an audit event. An
+  enabled campaign cannot turn the protection off. No existing campaign was
+  opted in or changed to a different status.
+- Added bookings.category_id with a foreign key and a partial unique index on
+  campaign/category for active bookings. The index protects direct database
+  writes as well as the new RPC. No legacy categories were guessed or backfilled.
+- Added a deferred database constraint so category-enabled transactions cannot
+  commit an active booking without a category. Existing hold functions therefore
+  cannot bypass the requirement. Assigned categories cannot be changed or removed;
+  released/canceled categorized bookings cannot be reopened.
+- Added service-only hold_category_cart for one to four distinct areas. It wraps
+  the existing cart/slot implementation, uses deterministic locking and releases
+  expired same-category holds before reassignment. Any conflict rolls back the
+  entire new group. Cancellation releases that zone's claim independently.
+- Added category_availability, exposing only campaign/zone/category and
+  available/held/reserved/closed status. It does not expose advertiser identities,
+  contacts, tokens or payment details. Private draft campaigns remain hidden.
+- Existing confirmation, consent checks, slot allocation, hold expiry and
+  cancellation remain in use. No customer account is required by the new RPC.
+
+Important boundaries
+
+Exclusivity is per zone campaign/edition, so a future campaign can accept a new
+reservation in the same category. A reservation group cannot select the same
+zone twice. Existing campaigns remain legacy-compatible and unmodified.
+
+The new category hold entry point accepts single standard positions only. It
+does not approve a physical layout, create ten-position inventory, disconnect
+legacy customer routes, or implement the later $399 pricing/customer-flow slice.
+It deliberately retains existing pricing behavior until that revision is made.
+The server that connects this RPC to a customer flow must use the existing
+rate-limit and secure cart-token conventions; public clients cannot call it.
+
+Local database application
+
+Three new migrations were applied in individual atomic transactions on localhost:
+1. 20261019205745_category_exclusivity_foundation.sql
+2. 20261019210446_qualify_category_campaign_lookup.sql
+3. 20261019210526_qualify_category_slot_selection.sql
+
+The first test runs caught two ambiguous SQL column references. Follow-up
+modifier migrations corrected them; no historical migration file was edited.
+All final checks below passed after those corrections.
+
+Preflight found that the local ledger contains 12 recorded migrations while
+later Phase 1–4 prerequisite objects already exist from earlier direct local
+applications. The prior recurring-plan migration remains absent locally.
+Only the three independent category migrations were applied in this task; no
+prior migration was replayed, ledger history invented, or database reset.
+Reconcile that pre-existing ledger gap before using future automatic migration
+commands. This report records the direct local application, not a remote release.
+
+Verification
+
+PASS: npm run typecheck
+PASS: npm run lint
+PASS: npm test — 251 unit tests, 29 files
+PASS: category-exclusivity integration suite — 14 tests
+PASS: existing multi-area integration suite — 11 tests
+PASS: Supabase SQL lint, public and private schemas — no schema errors
+PASS: Supabase security advisors — no issues
+PASS: git diff --check
+
+Database cases cover canonical IDs, RLS, admin-only enablement/auditing, direct
+duplicate writes, concurrent same-category claims, competing claims for one
+slot, reverse-order multi-zone requests, atomic rollback, expiry, cancellation,
+confirmation/consent gates, immutable identity and legacy compatibility.
+
+No tests were skipped within the 25 executed database tests. No real Stripe
+calls were made; database confirmation tests use synthetic payment identifiers,
+and the existing multi-area regression uses its local fake Stripe implementation.
+
+Full database suite, E2E and build: not run for this schema-only slice. No browser
+behavior or production bundle code changed. Broader legacy suites still include
+shared-fixture cleanup and the unverified recurring migration; they were not
+reported as passing. Full MVP acceptance remains pending subsequent phases.
+
+Data preservation
+
+Before/after checksums of all original columns matched for:
+- 4 zones
+- 2 campaigns
+- 10 bookings
+- 17 slots
+
+All existing campaigns remain opted out; no temporary category test users remain.
+Tests cleaned up only their own newly created UUID fixtures. No pre-existing
+records were deleted/reset. The 12 category reference rows are intentional
+schema reference data, not sample businesses or reservations.
+
+Files changed
+
+supabase/migrations/20261019205745_category_exclusivity_foundation.sql
+supabase/migrations/20261019210446_qualify_category_campaign_lookup.sql
+supabase/migrations/20261019210526_qualify_category_slot_selection.sql
+src/lib/supabase/database.types.ts
+tests/integration/category-exclusivity.test.ts
+docs/mvp-category-foundation.txt
+
+No historical migration, UI, stylesheet, printer specification, environment file,
+Stripe/Resend integration, or deployment configuration was changed. No production
+access/change, push or deployment occurred. Postcard geometry remains on hold
+until the owner supplies the exact AmazingMail template.

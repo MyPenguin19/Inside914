@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      advertising_categories: {
+        Row: { id: string; name: string }
+        Insert: { id: string; name: string }
+        Update: { id?: string; name?: string }
+        Relationships: []
+      }
       recurring_plans: {
         Row: { id:string; user_id:string; name:string; source_booking_ids:string[]; start_month:string; end_month:string; interval_months:number; status:string; created_at:string; updated_at:string }
         Insert: { id?:string; user_id:string; name:string; source_booking_ids:string[]; start_month:string; end_month:string; interval_months:number; status?:string; created_at?:string; updated_at?:string }
@@ -385,6 +391,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          category_id: string | null
           cart_id: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
@@ -415,6 +422,7 @@ export type Database = {
         }
         Insert: {
           cart_id?: string | null
+          category_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -444,6 +452,7 @@ export type Database = {
         }
         Update: {
           cart_id?: string | null
+          category_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -497,6 +506,7 @@ export type Database = {
       }
       editions: {
         Row: {
+          category_exclusivity: boolean
           artwork_deadline: string
           artwork_due_at: string | null
           created_at: string
@@ -518,6 +528,7 @@ export type Database = {
         }
         Insert: {
           artwork_deadline: string
+          category_exclusivity?: boolean
           artwork_due_at?: string | null
           created_at?: string
           double_unit_price_cents?: number | null
@@ -538,6 +549,7 @@ export type Database = {
         }
         Update: {
           artwork_deadline?: string
+          category_exclusivity?: boolean
           artwork_due_at?: string | null
           created_at?: string
           double_unit_price_cents?: number | null
@@ -865,6 +877,10 @@ export type Database = {
       }
     }
     Views: {
+      category_availability: {
+        Row: { edition_id: string | null; zone_id: string | null; category_id: string | null; category_name: string | null; occupancy: string | null }
+        Relationships: []
+      }
       slot_availability: {
         Row: {
           artwork_deadline: string | null
@@ -899,6 +915,8 @@ export type Database = {
       }
     }
     Functions: {
+      hold_category_cart: { Args: { p_category_id: string; p_token_hash: string; p_items: Json; p_pricing_mode: string }; Returns: string }
+      admin_enable_campaign_categories: { Args: { p_edition_id: string }; Returns: string }
       recurring_plan_manage: { Args: { p_id:string; p_action:string; p:Json }; Returns:string }
       hold_recurring_occurrence: { Args: { p_user:string; p_plan:string; p_month:string; p_nonce:string; p_hash:string; p_items:Json; p_pricing_mode:string; p_expected_total:number }; Returns:Json }
 

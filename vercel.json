@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "main": false,
+      "revision/shared-postcard-mvp": false
+    }
+  },
   "crons": [{ "path": "/api/internal/email-outbox", "schedule": "0 14 * * *" }]
 }
