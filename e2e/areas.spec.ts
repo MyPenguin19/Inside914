@@ -33,7 +33,7 @@ test("an unknown or unpublished (draft) edition shows the not-found page and no 
   // The page streams, so the HTTP status is already 200 when notFound() runs; check what renders.
   for (const id of ["00000000-0000-4000-8000-000000000102", "00000000-0000-4000-8000-000000000999"]) {
     await page.goto(`/editions/${id}`);
-    await expect(page.getByText("This page could not be found.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Page not found", level: 1 })).toBeVisible();
     await expect(page.getByRole("group", { name: /of the postcard/ })).toHaveCount(0);
     await expect(page.getByText("February 2027")).toHaveCount(0);
   }

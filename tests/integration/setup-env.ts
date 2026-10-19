@@ -1,3 +1,4 @@
+import { assertTestEnvironment } from "../../scripts/test-environment";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { isLocalSupabaseUrl } from "@/lib/dev/test-mode";
@@ -35,3 +36,5 @@ process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = shell.anon;
 // Never keep .env.local's secret key: it belongs to whatever project .env.local points at.
 if (shell.secret) process.env.SUPABASE_SECRET_KEY = shell.secret;
 else delete process.env.SUPABASE_SECRET_KEY;
+
+assertTestEnvironment();

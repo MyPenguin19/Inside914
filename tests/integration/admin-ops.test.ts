@@ -299,6 +299,8 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
         .insert({ booking_id: b!.id, storage_path: `${b!.id}/${randomUUID()}`, status: "ready", content_type: "image/png", byte_size: 1000, width_px: 900, height_px: 900, crop_x: 0, crop_y: 0, crop_width: 900, crop_height: 830, zoom: 1 })
         .select("id")
         .single();
+      // This fixture has one sale; block the remaining spaces so the campaign is full.
+      await service.from("slots").update({ blocked_at: new Date().toISOString(), blocked_reason: "fixture inventory" }).eq("edition_id", id).neq("id", s!.id);
       const status = (action: string) => admin.rpc("admin_set_campaign_status", { p_id: id, p_action: action });
 
       expect((await status("approve_for_print")).error?.message).toBe("artwork_not_all_approved");

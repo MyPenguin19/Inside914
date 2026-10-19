@@ -13,7 +13,7 @@ const { LAYOUT_TEMPLATES } = await import("@/lib/admin/layouts");
 const url = process.env.SUPABASE_URL!;
 const anonKey = process.env.SUPABASE_ANON_KEY!;
 const secretKey = process.env.SUPABASE_SECRET_KEY;
-const CENTRAL_ZONE = "00000000-0000-4000-8000-000000000001";
+const TEST_ZONE = randomUUID();
 
 describe.skipIf(!secretKey)("campaign deadlines (real database functions)", () => {
   let service: SupabaseClient<Database>;
@@ -45,9 +45,11 @@ describe.skipIf(!secretKey)("campaign deadlines (real database functions)", () =
     admin = createClient<Database>(url, anonKey, { auth: { persistSession: false } });
     await admin.auth.signInWithPassword({ email, password });
 
+    const zone = await service.from("zones").insert({ id: TEST_ZONE, slug: `deadline-${TEST_ZONE}`, name: "Deadline fixture", household_count: 5000 });
+    if (zone.error) throw zone.error;
     const created = await admin.rpc("admin_create_campaign", {
       p: {
-        name: `Deadline test ${year}`, zone_id: CENTRAL_ZONE, issue_month: `${year}-01-01`, target_quantity: 5000, reservations_open_at: null,
+        name: `Deadline test ${year}`, zone_id: TEST_ZONE, issue_month: `${year}-01-01`, target_quantity: 5000, reservations_open_at: null,
         reservation_deadline: future, artwork_due_at: `${year - 1}-11-05T04:59:00.000Z`, mailing_window_start: `${year - 1}-11-10`, mailing_window_end: `${year - 1}-11-15`,
         layout_template: "provisional-2x4", unit_price_cents: 50000, double_price_cents: 90000,
       },
@@ -55,7 +57,7 @@ describe.skipIf(!secretKey)("campaign deadlines (real database functions)", () =
     });
     if (created.error) throw created.error;
     edition = created.data;
-    // Open it directly: the seeded January campaign already holds the area's one open slot.
+    // The dedicated fixture zone keeps deadline reopening independent of the seeded campaign.
     await setEdition({ status: "open" });
   });
 
@@ -65,6 +67,7 @@ describe.skipIf(!secretKey)("campaign deadlines (real database functions)", () =
     await service.from("admin_events").delete().eq("target_id", edition);
     await service.from("admin_events").delete().eq("admin_user_id", adminId);
     await service.auth.admin.deleteUser(adminId);
+    await service.from("zones").delete().eq("id", TEST_ZONE);
   });
 
   test("before the deadline a campaign with reservations can't be canceled, and an unfilled one can't be approved", async () => {

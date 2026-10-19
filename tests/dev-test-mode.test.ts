@@ -22,7 +22,7 @@ describe("development TEST reservation guard (fails closed)", () => {
   test("only a local Supabase stack counts as local (the hosted project is production)", () => {
     expect(isLocalSupabaseUrl("http://127.0.0.1:54321")).toBe(true);
     expect(isLocalSupabaseUrl("http://localhost:54321")).toBe(true);
-    for (const url of ["https://uobiwanrxifqwdnouzxj.supabase.co", "https://localhost.evil.com", "not a url", undefined]) {
+    for (const url of ["https://hsexthbomretpmqolkqw.supabase.co", "https://localhost.evil.com", "not a url", undefined]) {
       expect(isLocalSupabaseUrl(url)).toBe(false);
     }
   });
@@ -35,7 +35,7 @@ describe("development TEST reservation guard (fails closed)", () => {
     ["Vercel production", { ...DEV, VERCEL: "1", VERCEL_ENV: "production" }, "running_on_vercel"],
     ["Vercel preview", { ...DEV, VERCEL_ENV: "preview" }, "running_on_vercel"],
     ["any Vercel URL", { ...DEV, VERCEL_URL: "inside914.vercel.app" }, "running_on_vercel"],
-    ["the hosted production project", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "https://uobiwanrxifqwdnouzxj.supabase.co" }, "not_dev_database"],
+    ["the hosted production project", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "https://hsexthbomretpmqolkqw.supabase.co" }, "not_dev_database"],
     ["lookalike host", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1.evil.com" }, "not_dev_database"],
     ["missing database", { ...DEV, NEXT_PUBLIC_SUPABASE_URL: undefined }, "unknown_database"],
   ])("stays OFF: %s", (_, env, reason) => {

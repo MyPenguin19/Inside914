@@ -82,12 +82,12 @@ describe("placeHold", () => {
     expect(unset.rpc).not.toHaveBeenCalled();
   });
 
-  test("with live Stripe keys, test pricing still holds at $1 (owner's decision)", async () => {
+  test("with live Stripe keys, temporary pricing refuses to place a hold", async () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_example");
     vi.stubEnv("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "pk_live_example");
     const { client, rpc } = fakeAdmin({ data: { booking_id: "b1", hold_expires_at: "x", size: "standard", price_cents: 100 } });
-    expect((await placeHold(client, { slotIds: [SLOT_ID] })).ok).toBe(true);
-    expect((rpc.mock.calls[0] as unknown[])[1]).toMatchObject({ p_pricing_mode: "test", p_unit_price_cents: 100 });
+    expect((await placeHold(client, { slotIds: [SLOT_ID] })).ok).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   test("an unknown slot is reported without placing a hold", async () => {

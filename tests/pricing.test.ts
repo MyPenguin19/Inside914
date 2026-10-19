@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 const { getPricingMode, pricesFor, TEST_PRICES } = await import("@/lib/pricing");
 
 const edition = { unitPriceCents: 50000, doublePriceCents: 90000 };
-const env = (vars: Record<string, string>) => vars as unknown as NodeJS.ProcessEnv;
+const env = (vars: Record<string, string | undefined>) => vars as unknown as NodeJS.ProcessEnv;
 
 describe("pricing configuration", () => {
   test("test mode: $1 standard, $2 double, in integer cents", () => {
@@ -26,13 +26,15 @@ describe("pricing configuration", () => {
     }
   });
 
-  test("temporary $1 / $2 pricing works with test or live Stripe keys (owner's decision)", () => {
-    for (const [secret, publishable] of [["sk_test_x", "pk_test_x"], ["sk_live_x", "pk_live_x"]]) {
-      expect(pricesFor(edition, env({ INSIDE914_PRICING_MODE: "test", STRIPE_SECRET_KEY: secret, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: publishable }))).toEqual({
-        mode: "test",
-        unitPriceCents: 100,
-        doublePriceCents: 200,
-      });
+  test("temporary prices refuse production infrastructure and live Stripe keys", () => {
+    for (const extra of [
+      { STRIPE_SECRET_KEY: "sk_live_x" },
+      { STRIPE_SECRET_KEY: "rk_live_x" },
+      { NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_live_x" },
+      { VERCEL_ENV: "production" },
+      { NEXT_PUBLIC_SUPABASE_URL: "https://hsexthbomretpmqolkqw.supabase.co" },
+    ]) {
+      expect(() => getPricingMode(env({ INSIDE914_PRICING_MODE: "test", ...extra }))).toThrow(/forbidden/);
     }
   });
 });
