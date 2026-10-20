@@ -94,7 +94,6 @@ export function cartGate(
   contact = false,
 ) {
   if (!members.length || members.length > 4) return "no_hold";
-  if (members.some(b => b.productModel === "square_v1") && (!members[0].sharedArtwork || members.some(b => b.sharedArtwork !== members[0].sharedArtwork))) return "artwork_missing";
   return members.map((b) => checkoutGate(b, { contact })).find(Boolean) ?? null;
 }
 export async function startCartPayment(

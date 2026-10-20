@@ -17,13 +17,13 @@ test("nine is not full and other zones cannot fill it",()=>{
 test.each(["pending","released","cancelled","charge_failed","charged","rejected"])("%s does not count as valid", status=>{
   expect(evaluate([{...bookings[0],status},...bookings.slice(1)]).validCount).toBe(9);
 });
-test("duplicate categories invalidate both conflicting reservations",()=>{
-  expect(evaluate([{...bookings[0],categoryId:bookings[1].categoryId},...bookings.slice(1)]).validCount).toBe(8);
+test("historical duplicate categories do not block square reservations",()=>{
+  expect(evaluate([{...bookings[0],categoryId:bookings[1].categoryId},...bookings.slice(1)]).validCount).toBe(10);
 });
 test("duplicate slot claims invalidate both conflicting reservations",()=>{
   expect(evaluate([{...bookings[0],claims:bookings[1].claims},...bookings.slice(1)]).validCount).toBe(8);
 });
-test.each([{categoryId:null},{stripeCustomerId:null},{stripeSetupStatus:"failed" as const},{stripeSetupStatus:"canceled" as const},{stripePaymentMethodId:null},{priceCents:100},{confirmedAt:null},{claims:[]},{flag:{at:"now",reason:"investigate"}}])("incomplete reservation is excluded: %j", change=>{
+test.each([{stripeCustomerId:null},{stripeSetupStatus:"failed" as const},{stripeSetupStatus:"canceled" as const},{stripePaymentMethodId:null},{priceCents:100},{confirmedAt:null},{claims:[]},{flag:{at:"now",reason:"investigate"}}])("incomplete reservation is excluded: %j", change=>{
   expect(evaluate([{...bookings[0],...change},...bookings.slice(1)]).validCount).toBe(9);
 });
 test("missing consent, blocked slot and missing inventory prevent readiness",()=>{
@@ -39,3 +39,5 @@ test("overview always returns four zones and prioritizes the open campaign",()=>
   const result=zoneCampaigns([{...edition,id:"future",issueMonth:"2028-01-01",status:"draft"},{...edition,id:"open",status:"open"},{...edition,id:"old",status:"completed"}]);
   expect(result).toHaveLength(4);expect(result[0].campaign?.id).toBe("open");expect(result.slice(1).every(r=>r.campaign===null)).toBe(true);
 });
+
+test("category-free reservations remain eligible", () => { expect(evaluate(bookings.map(b => ({ ...b, categoryId: null }))).validCount).toBe(10); });

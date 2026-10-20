@@ -12,9 +12,9 @@ const TRUST = [
 ];
 
 const STEPS = [
-  { title: "Choose your business category", body: "See which Westchester zones have room for your category." },
-  { title: "Select your zones", body: "Choose one to four available zones at $399 each. Each campaign fills independently." },
-  { title: "Upload and adjust your ad", body: "Upload one image, then crop and position the same square ad for all selected zones." },
+  { title: "Choose your areas", body: "Choose one to four Westchester areas at $399 per area." },
+  { title: "Choose squares and artwork", body: "Pick a square in each area, then upload a separate ad or reuse the same image." },
+  { title: "Add your business details", body: "Tell us how to contact you about your advertisement." },
   { title: "Reserve securely", body: "Save a card to hold your space. You pay only when the campaign is confirmed." },
 ];
 
@@ -103,7 +103,7 @@ export default function Home() {
               <PriceCard
                 name="Square Advertisement"
                 price="$399 per zone"
-                detail="One square space on a shared postcard. Use the same artwork in up to four zones."
+                detail="One square space on a shared postcard. Choose your position and artwork in up to four areas."
                 diagram={<SizeDiagram size="standard" />}
               />
 

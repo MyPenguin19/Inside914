@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { BookingSteps } from "@/components/booking/booking-steps";
 import { CategoryCheckout } from "@/components/booking/category-checkout";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -14,9 +13,8 @@ export default function AreasPage() {
     <>
       <SiteHeader />
       <main className="page-width flex-1 py-6 sm:py-8">
-        <BookingSteps current={1} />
         <div className="mt-6">
-          <h1 className="font-display text-4xl font-medium tracking-tight">Choose your category and zones.</h1>
+          <h1 className="font-display text-4xl font-medium tracking-tight">Choose your areas.</h1>
           <p className="mt-2 max-w-2xl text-muted">
             Each area is one postcard mailed to homes in that part of Westchester. We plan the mailing routes for you.
           </p>

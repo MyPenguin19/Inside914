@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("category-first catalog presents four zones and retires direct slot selection", async ({ page }) => {
+test("area catalog presents four areas without a category requirement", async ({ page }) => {
   await page.goto("/areas");
-  await expect(page.getByRole("heading", { name: "Choose your category and zones." })).toBeVisible();
-  await expect(page.getByLabel("Choose your business category")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose your areas." })).toBeVisible();
+  await expect(page.getByLabel("Choose your business category")).toHaveCount(0);
   for (const area of ["Central", "Southern", "Northern", "Eastern"]) {
     await expect(page.getByRole("checkbox", { name: new RegExp(`${area} Westchester`) })).toBeVisible();
   }
@@ -13,7 +13,7 @@ test("category-first catalog presents four zones and retires direct slot selecti
   }
 });
 
-test("category selection fits mobile through desktop", async ({ page }) => {
+test("area selection fits mobile through desktop", async ({ page }) => {
   for (const width of [320, 375, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/areas");

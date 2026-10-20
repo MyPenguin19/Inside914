@@ -44,6 +44,9 @@ async function signIn(page: Page, who: { email: string; password: string }) {
 }
 
 test("signed out: every admin page sends you to the login page", async ({ page }) => {
+  const download = await page.request.post("/admin/print/00000000-0000-4000-8000-000000000101", { maxRedirects: 0 });
+  expect([303,307]).toContain(download.status());
+  expect(download.headers().location).toContain("/admin/login");
   for (const path of ["/admin/zones", "/admin/campaigns/new?draft=central-westchester-2027-01", "/admin", "/admin/advertisers", "/admin/payments", "/admin/settings", "/admin/campaigns/00000000-0000-4000-8000-000000000101"]) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/admin\/login$/);
@@ -64,15 +67,14 @@ test("wrong password and non-admin accounts are refused with the same message", 
 test("an admin signs in, sees real data in every section, and signs out", async ({ page }) => {
   await signIn(page, admin);
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByRole("heading", { name: "Overview", level: 1 })).toBeVisible();
-  await expect(page.getByText("Central Westchester").first()).toBeVisible(); // from the editions table
-  await expect(page.getByRole("heading", { name: "Requires attention" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Manage Inside914", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "1. Campaigns" })).toBeVisible();
 
   const nav = page.getByRole("navigation", { name: "Admin" });
   for (const [link, heading] of [
     ["Campaigns", "Campaigns"],
     ["Advertisers", "Advertisers"],
-    ["Artwork", "Artwork"],
+    ["Artwork Approval", "Artwork"],
     ["Payments", "Payments"],
     ["Settings", "Settings"],
   ]) {
@@ -98,7 +100,7 @@ test("an admin signs in, sees real data in every section, and signs out", async 
 
 test("admin pages fit a phone screen", async ({ page }) => {
   await signIn(page, admin);
-  await expect(page.getByRole("heading", { name: "Overview", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Manage Inside914", level: 1 })).toBeVisible();
   for (const width of [320, 375, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const path of ["/admin/zones", "/admin/campaigns/new?draft=central-westchester-2027-01", "/admin", "/admin/campaigns", "/admin/campaigns/00000000-0000-4000-8000-000000000101", "/admin/advertisers", "/admin/artwork", "/admin/payments", "/admin/settings"]) {

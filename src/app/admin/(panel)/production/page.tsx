@@ -1,6 +1,4 @@
-import { CollectionPanel } from "@/components/admin/collection-panel";
-import { ZoneReadiness } from "@/components/admin/zone-readiness";
-import { zoneReadiness } from "@/lib/admin/zone-readiness";
+import { PrintDownload } from "@/components/admin/print-download";
 import { Suspense } from "react";
 import { publishEvidence } from "@/app/admin/admin-actions";
 import { AssembledSide, type Placement } from "@/components/admin/assembled-postcard";
@@ -26,7 +24,7 @@ const KIND: Record<string, string> = {
 export default function ProductionPage({ searchParams }: PageProps<"/admin/production">) {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Production" description="Assembly, blockers and genuine mailing documentation for a campaign." />
+      <PageHeader title="Prepare your postcard" description="Download the front and back, then keep the printer’s approved proof and mailing records here." />
       <Suspense fallback={<PanelSkeleton />}>
         <Production searchParams={searchParams} />
       </Suspense>
@@ -153,14 +151,10 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
         </div>
       </Card>
 
-      {e.productModel === "square_v1" && <ZoneReadiness readiness={zoneReadiness(e, slots, bookings, consents)} />}
+      {e.productModel === "square_v1" && <PrintDownload editionId={e.id} />}
 
-      {e.productModel === "square_v1" && <CollectionPanel editionId={e.id} />}
-
-      <section aria-labelledby="blockers-title">
-        <h2 id="blockers-title" className="text-lg font-semibold">
-          Production blockers
-        </h2>
+      <details>
+        <summary className="cursor-pointer text-lg font-semibold">Before sending to the printer</summary>
         <ul className="mt-3 grid gap-2">
           {blockers.map((b) => (
             <li key={b} className="flex items-start gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-sm">
@@ -172,7 +166,7 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
         <div className="mt-4">
           <CampaignStatusControls edition={e} stats={stats} now={now} />
         </div>
-      </section>
+      </details>
 
       <section aria-labelledby="assembled-title">
         <h2 id="assembled-title" className="text-lg font-semibold">

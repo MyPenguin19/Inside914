@@ -36,7 +36,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByRole("region", {name:"Four-zone overview"})).toBeVisible();
+  await expect(page.getByRole("heading", {name:"Manage Inside914"})).toBeVisible();
   await page.goto(`/admin/campaigns/new?area=square-e2e-${zone}`);
   const price = page.getByLabel("Square ad per area ($)", { exact: false });
   await expect(price).toHaveValue("399");
@@ -56,6 +56,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   }
   await page.getByRole("button", { name: "Create draft campaign" }).click();
   await expect(page).toHaveURL(/\/admin\/campaigns\/[a-f0-9-]{36}$/);
+  await page.getByText("Campaign dates and details", {exact:true}).click();
   await expect(page.getByText("$399 square ad per area · 10 paid positions", { exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Front of the postcard" }).locator("button")).toHaveCount(6);
   await expect(page.getByRole("group", { name: "Back of the postcard" }).locator("button")).toHaveCount(4);
@@ -66,7 +67,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   const campaign = ok(await db.from("editions").select("id,status,product_model,unit_price_cents,double_unit_price_cents").eq("zone_id", zone).single());
   expect(campaign).toMatchObject({ status: "draft", product_model: "square_v1", unit_price_cents: 39900, double_unit_price_cents: null });
   expect(ok(await db.from("slots").select("id").eq("edition_id", campaign!.id))).toHaveLength(10);
-  await expect(page.getByRole("button", {name:"Activate & Charge Zone"})).toBeDisabled();
+  await expect(page.getByRole("link", {name:"Review payments"})).toBeVisible();
   await expect(page.getByText("0 of 10 valid confirmed reservations", {exact:true})).toBeVisible();
   await expect(page.getByText("Layout approved. Open this campaign when you're ready to accept reservations.")).toBeVisible();
   await expect(page.getByText("10 total positions", {exact:true})).toBeVisible();
@@ -80,11 +81,16 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await expect(page.getByText("Inside914 · House artwork pending", {exact:true})).toBeVisible();
   await expect(page.getByText("Inside Diagnostics · House artwork pending", {exact:true})).toBeVisible();
   await expect(page.getByText("Postal exclusion · No advertising", {exact:true})).toBeVisible();
-  await expect(page.getByRole("button", {name:"Activate & Charge Zone"})).toBeDisabled();
+  await page.getByRole("button", {name:"Download front"}).click();
+  await expect(page.getByText("All 10 paid positions must be reserved before downloading the complete postcard.")).toBeVisible();
   for (const width of [320,375,390,768,1440]) {
     await page.setViewportSize({width,height:1000});
     expect(await page.evaluate(()=>document.documentElement.scrollWidth), `production at ${width}`).toBeLessThanOrEqual(width);
   }
+  const front = page.getByRole("img", {name:"Assembled front of the postcard (not a print proof)"});
+  await front.scrollIntoViewIfNeeded();
+  expect((await front.boundingBox())!.height).toBeGreaterThan(100);
+  await expect(front.getByText("F1 unsold", {exact:true})).toBeVisible();
   await page.screenshot({path:"../../outputs/inside914-phase-f-production.png",fullPage:true});
   await page.goto("/pay/"+"x".repeat(43));
   await expect(page).toHaveURL(/\/pay\?invalid=1$/);

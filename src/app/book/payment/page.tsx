@@ -24,7 +24,7 @@ export default function PaymentPage({ searchParams }: PageProps<"/book/payment">
     <>
       <SiteHeader />
       <main className="page-width flex-1 py-6 sm:py-8">
-        <BookingSteps current={5} />
+        <BookingSteps current={4} />
         <Suspense fallback={<div className="mt-8 h-96 animate-pulse rounded-2xl border border-line bg-surface" />}>
           <Payment searchParams={searchParams} />
         </Suspense>

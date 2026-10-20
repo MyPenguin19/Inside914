@@ -20,7 +20,7 @@ const FILTERS: [BookingFilter, string][] = [
 export default function AdvertisersPage({ searchParams }: PageProps<"/admin/advertisers">) {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Advertisers" description="Reservations by zone, with category, artwork and saved-card readiness." />
+      <PageHeader title="Advertisers" description="Contact details, reserved positions, artwork and saved cards." />
       <Suspense fallback={<PanelSkeleton />}>
         <Advertisers searchParams={searchParams} />
       </Suspense>
@@ -66,14 +66,13 @@ async function Advertisers({ searchParams }: { searchParams: PageProps<"/admin/a
         <>
           <DataTable
             caption="Advertisers"
-            columns={["Business", "Category", "Selected zones", "Contact", "Email", "Phone", "Campaign", "Position", "Size", "Reservation", "Artwork", "Payment", "Amount"]}
+            columns={["Business", "Selected zones", "Contact", "Email", "Phone", "Campaign", "Position", "Size", "Reservation", "Artwork", "Payment", "Amount"]}
             rows={data.rows.map((b) => {
               const e = data.editions.get(b.editionId);
               return [
                 <Link key="b" href={`/admin/advertisers/${b.id}`} className="font-medium underline-offset-4 hover:underline">
                   {b.contact?.businessName}
                 </Link>,
-                b.categoryId ?? "Not recorded",
                 b.cartId ? (data.cartZones.get(b.cartId)?.join(", ") ?? e?.zoneName ?? "—") : e?.zoneName ?? "—",
                 b.contact?.contactName ?? "—",
                 b.contact?.email ?? "—",

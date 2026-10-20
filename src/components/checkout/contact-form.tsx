@@ -13,11 +13,12 @@ type Props = {
   action: (state: ContactFormState, form: FormData) => Promise<ContactFormState>;
   initial: Record<ContactField, string>;
   lockedCategory?: string;
+  hideCategory?: boolean;
   onDone?: () => void; // for actions that finish without a server redirect (design preview)
   submitLabel?: string;
 };
 
-export function ContactForm({ action, initial, onDone, lockedCategory, submitLabel = "Continue to payment details" }: Props) {
+export function ContactForm({ action, initial, onDone, lockedCategory, hideCategory, submitLabel = "Continue to payment details" }: Props) {
   const [state, formAction, pending] = useActionState(action, { values: initial });
   useEffect(() => {
     if (state.done) onDone?.();
@@ -49,7 +50,7 @@ export function ContactForm({ action, initial, onDone, lockedCategory, submitLab
         </Notice>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
-        <ContactFields values={values} errors={errors} lockedCategory={lockedCategory} />
+        <ContactFields values={values} errors={errors} lockedCategory={lockedCategory} hideCategory={hideCategory} />
       </div>
       <button type="submit" disabled={pending} className={buttonClass("primary", "lg", "mt-2 disabled:cursor-wait")}>
         {pending ? "Saving…" : submitLabel}
@@ -60,7 +61,7 @@ export function ContactForm({ action, initial, onDone, lockedCategory, submitLab
 
 // The business/contact fields on their own, so other forms (the design preview) can reuse them.
 // Render inside a grid: two per row on wider screens, in reading order.
-export function ContactFields({ values, errors, lockedCategory }: { lockedCategory?: string; values: Record<string, string>; errors: Partial<Record<ContactField, string>> }) {
+export function ContactFields({ values, errors, lockedCategory, hideCategory }: { hideCategory?: boolean; lockedCategory?: string; values: Record<string, string>; errors: Partial<Record<ContactField, string>> }) {
   const field = (name: ContactField) => ({ id: name, defaultValue: values[name], error: errors[name] });
   return (
     <>
@@ -77,14 +78,14 @@ export function ContactFields({ values, errors, lockedCategory }: { lockedCatego
       />
       <TextField {...field("phone")} label="Phone" type="tel" autoComplete="tel" inputMode="tel" required />
       <TextField {...field("website")} label="Website" autoComplete="url" inputMode="url" optional />
-      {lockedCategory ? <TextField id="category-display" label="Business category" value={lockedCategory} readOnly /> : <SelectField {...field("category")} label="Type of business" optional>
+      {!hideCategory && (lockedCategory ? <TextField id="category-display" label="Business category" value={lockedCategory} readOnly /> : <SelectField {...field("category")} label="Type of business" optional>
         <option value="">Choose one</option>
         {BUSINESS_CATEGORIES.map((c) => (
           <option key={c} value={c}>
             {c}
           </option>
         ))}
-      </SelectField>}
+      </SelectField>)}
     </>
   );
 }

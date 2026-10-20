@@ -1,3 +1,4 @@
+import { CollectionPanel } from "@/components/admin/collection-panel";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Filters, pageParam } from "@/components/admin/filters";
@@ -24,8 +25,7 @@ export default function PaymentsPage({ searchParams }: PageProps<"/admin/payment
     <div className="flex flex-col gap-6">
       <PageHeader title="Payments" description="Saved cards, authorized amounts and per-zone payment status." />
       <Notice tone="info" role="note">
-        Reserved value is <strong>not</strong> collected revenue, and a saved card (a Stripe SetupIntent) is not a payment.
-        Collection requires explicit zone activation. Live collection remains disabled pending release approval.
+        Advertisers save a card with $0 due today. You approve payment only after a campaign fills and its final artwork is approved. Charging is currently turned off.
       </Notice>
       <Suspense fallback={<PanelSkeleton />}>
         <Payments searchParams={searchParams} />
@@ -81,6 +81,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
 
   return (
     <>
+      {sel?.productModel === "square_v1" && <CollectionPanel editionId={sel.id} />}
       {sel && selStats && (
         <Card as="section" aria-labelledby="readiness-title">
           <div className="flex flex-wrap items-center justify-between gap-3">

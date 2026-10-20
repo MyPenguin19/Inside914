@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { ContactForm } from "@/components/checkout/contact-form";
+import { BookingSteps } from "@/components/booking/booking-steps";
 import { ReservationSummary } from "@/components/checkout/reservation-summary";
 import { buttonClass } from "@/components/ui/button";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -21,7 +21,6 @@ import {
   editAreaArtwork,
   reuseArtwork,
   releaseAreas,
-  submitCartContact,
 } from "./actions";
 export default function Page() {
   return (
@@ -52,14 +51,12 @@ async function Cart() {
   const views = await Promise.all(
     cart.members.map((b) => getReservationView(admin, b.id)),
   );
-  const square = cart.members.every(b=>b.productModel === "square_v1");
-  const category = cart.members[0].categoryId ? await admin.from("advertising_categories").select("name").eq("id",cart.members[0].categoryId).single() : null;
   const confirmed = cart.members.every((b) => b.status === "reserved");
   const expired = cartExpired(cart.members);
   const gate = cartGate(cart.members);
-  const contact = cart.members[0].contact;
   return (
     <div className="space-y-6">
+      {!confirmed && <BookingSteps current={2} />}
       <h1 className="text-3xl font-semibold">
         {confirmed ? "Your areas are reserved" : "Your area reservation"}
       </h1>
@@ -72,14 +69,8 @@ async function Cart() {
       <p>
         {confirmed
           ? "Nothing was charged today. Each campaign has its own reservation reference and confirmation."
-          : square ? "Upload and position one square ad. The same image and crop will be used in every selected zone." : "Upload artwork for each area, or reuse an image and position it for that area. All areas must be ready before checkout."}
+          : "Upload artwork for each area, or reuse an image and position it for that area. All areas must be ready before checkout."}
       </p>
-      {category?.data && <p className="font-semibold">Category: {category.data.name}</p>}
-      {square && !confirmed && !expired && <section className="space-y-3">
-        <h2 className="text-xl font-semibold">One square artwork for all selected zones</h2>
-        <form action={editAreaArtwork}><input type="hidden" name="bookingId" value={cart.members[0].id} /><button className={buttonClass("secondary")}>Upload or edit shared artwork</button></form>
-        <p>{!gate ? "Shared artwork ready for all zones." : "Upload once, crop to a square, then save for all zones."}</p>
-      </section>}
       {expired && (
         <p role="alert">
           This group is no longer available. Release the holds and choose your
@@ -94,7 +85,7 @@ async function Cart() {
             {b.reference && (
               <p className="font-semibold">Reference: {b.reference}</p>
             )}
-            {!square && !confirmed && !expired && (
+            {!confirmed && !expired && (
               <>
                 <p>
                   Artwork:{" "}
@@ -140,25 +131,7 @@ async function Cart() {
         Maximum authorized total: {formatPrice(cart.members.reduce((n, b) => n + b.priceCents, 0))}
       </p>
       <p>Due today: $0</p>
-      {!confirmed && !gate && (
-        <section className="max-w-xl">
-          <h2 className="mb-4 text-xl font-semibold">
-            Your business details for all areas
-          </h2>
-          <ContactForm
-            action={submitCartContact}
-            lockedCategory={category?.data?.name}
-            initial={{
-              businessName: contact?.business_name ?? "",
-              contactName: contact?.contact_name ?? "",
-              email: contact?.email ?? "",
-              phone: contact?.phone ?? "",
-              website: contact?.website ?? "",
-              category: contact?.category ?? "",
-            }}
-          />
-        </section>
-      )}
+      {!confirmed && !gate && <Link className={buttonClass("primary")} href="/book/cart/details">Continue to business details</Link>}
       {!confirmed && (
         <form action={releaseAreas}>
           <button className="underline">

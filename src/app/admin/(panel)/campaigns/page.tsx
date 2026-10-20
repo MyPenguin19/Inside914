@@ -14,7 +14,8 @@ const STATUSES = ["all", "open", "draft", "closed", "approved_to_print", "printe
 export default function CampaignsPage({ searchParams }: PageProps<"/admin/campaigns">) {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Campaigns" description="Every campaign (edition) in the database.">
+      <PageHeader title="Campaigns" description="Create a campaign, review its advertisers and artwork, then prepare the mailing.">
+        <ButtonLink href="/admin/zones" variant="secondary">Manage areas</ButtonLink>
         <ButtonLink href="/admin/campaigns/new">New campaign</ButtonLink>
       </PageHeader>
       <Suspense fallback={<PanelSkeleton />}>

@@ -3,47 +3,34 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import { getPricingMode } from "@/lib/pricing";
+
 import { getBookableEditions, getEditionCatalog } from "@/lib/catalog/queries";
-import { createPublicClient } from "@/lib/supabase/public";
+
 import { findRegion } from "@/lib/catalog/regions";
-import { createHoldToken, hashHoldToken } from "./hold-token";
-import { cartMemberToken, ownedCart } from "./cart";
+import { hashHoldToken } from "./hold-token";
+import { createCart, ownedCart } from "./cart";
 import { ARTWORK_BUCKET } from "@/lib/artwork/service";
 
 type Admin = SupabaseClient<Database>;
-export const ZoneSelection = z.object({ categoryId: z.string().regex(/^[a-z0-9-]{1,60}$/), editionIds: z.array(z.uuid()).min(1).max(4).refine(ids => new Set(ids).size === ids.length) });
+export const ZoneSelection = z.object({ selections: z.array(z.object({ editionId: z.uuid(), slotId: z.uuid() })).min(1).max(4).refine(items => new Set(items.map(i => i.editionId)).size === items.length) });
 export async function categoryCatalog() {
-  const db = createPublicClient();
-  const [editions, categories, availability] = await Promise.all([
-    getBookableEditions(), db.from("advertising_categories").select("id,name").order("name"),
-    db.from("category_availability").select("edition_id,category_id,occupancy"),
-  ]);
-  if (categories.error || availability.error) throw new Error("Could not load category availability.");
-  return { editions: editions.filter(e => e.productModel === "square_v1" && findRegion(e.zoneSlug)), categories: categories.data!, availability: availability.data! };
+  const editions = (await getBookableEditions()).filter(e => e.bookable && e.productModel === "square_v1" && findRegion(e.zoneSlug));
+  const catalogs = await Promise.all(editions.map(e => getEditionCatalog(e.id)));
+  return { editions: catalogs.filter((e): e is NonNullable<typeof e> => !!e && e.bookable) };
 }
 export async function createCategoryCart(admin: Admin, raw: unknown) {
   const input = ZoneSelection.parse(raw);
-  const { token, hash } = createHoldToken();
-  // Availability is advisory. The existing RPC locks categories and slots and rolls
-  // the entire cart back if any selection conflicts. Retry a competing slot once.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const catalogs = await Promise.all(input.editionIds.map(id => getEditionCatalog(id)));
-    const zones = new Set<string>();
-    const items = catalogs.map(c => {
-      if (!c || !c.bookable || c.productModel !== "square_v1" || !findRegion(c.zoneSlug) || zones.has(c.zoneSlug)) throw new Error("Choose one available campaign per zone.");
-      zones.add(c.zoneSlug);
-      const slot = c.slots.find(s => s.available);
-      if (!slot) throw new Error(`${c.zoneName} has no available positions.`);
-      return { edition_id: c.id, slot_ids: [slot.id], mode: "standard", token_hash: hashHoldToken(cartMemberToken(token,c.id)) };
-    });
-    const { data, error } = await admin.rpc("hold_category_cart", { p_category_id: input.categoryId, p_token_hash: hash, p_items: items, p_pricing_mode: getPricingMode() });
-    if (!error) return { id: data, token };
-    if (error.code === "INS03" && attempt === 0) continue;
-    if (error.code === "CAT05") throw new Error("Your category was just reserved in a selected zone. Review availability and choose again; nothing was held.");
-    throw new Error("A selected zone or category is unavailable. Review your selection; nothing was held.");
-  }
-  throw new Error("Please refresh availability and try again.");
+  const catalogs = await Promise.all(input.selections.map(i => getEditionCatalog(i.editionId)));
+  const zones = new Set<string>();
+  const items = catalogs.map((c, index) => {
+    if (!c || !c.bookable || c.productModel !== "square_v1" || !findRegion(c.zoneSlug) || zones.has(c.zoneSlug)) throw new Error("Choose one available campaign per area.");
+    zones.add(c.zoneSlug);
+    const slot = c.slots.find(s => s.id === input.selections[index].slotId && s.available);
+    if (!slot) throw new Error("A selected square is no longer available. Choose another square; nothing was held.");
+    return { editionId: c.id, slotIds: [slot.id], mode: "standard" };
+  });
+  // The database atomically locks every requested square; never substitute a position.
+  return createCart(admin, items);
 }
 
 // One upload/crop; independent private storage copies, committed atomically to all

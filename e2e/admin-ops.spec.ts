@@ -145,7 +145,7 @@ test("create a draft campaign (with validation), edit it, preserve fixed invento
 test("production, payments readiness, artwork queue and new pages render and fit a phone", async ({ page }) => {
   await signIn(page);
   await page.goto("/admin/production");
-  await expect(page.getByRole("heading", { name: "Production blockers" })).toBeVisible();
+  await page.getByText("Before sending to the printer", {exact:true}).click();
   await expect(main(page).getByText("Printer specifications aren't confirmed")).toBeVisible();
   await page.goto("/admin/payments");
   await expect(main(page).getByText("Fully reserved", { exact: true })).toBeVisible();

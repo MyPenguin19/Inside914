@@ -22,7 +22,7 @@ export default function ArtworkPage() {
     <>
       <SiteHeader />
       <main className="page-width flex-1 py-6 sm:py-8">
-        <BookingSteps current={3} />
+        <BookingSteps current={2} />
         <Suspense fallback={<div className="mt-8 h-96 animate-pulse rounded-2xl border border-line bg-surface" />}>
           <Studio />
         </Suspense>
@@ -42,16 +42,16 @@ async function Studio() {
     <div className="mt-8">
       <header className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Add your artwork</h1>
-        {booking.cartId && booking.productModel !== "square_v1" && <p className="mt-2 font-medium" data-testid="artwork-area">{booking.zoneName}</p>}
+        {booking.cartId && <p className="mt-2 font-medium" data-testid="artwork-area">{booking.zoneName}</p>}
         <p className="mt-2 text-muted">
-          {booking.productModel === "square_v1" ? "Upload one ad, then crop, drag and zoom to a square. Saving applies the same artwork to all selected zones." : "Upload your ad, then drag and zoom until it fits. You’ll see it on the postcard as you go."}
+          {booking.productModel === "square_v1" ? "Upload an ad for this area, then crop, drag and zoom to a square. Other areas keep their own artwork." : "Upload your ad, then drag and zoom until it fits. You’ll see it on the postcard as you go."}
         </p>
       </header>
       {booking.size === "both_sides" && <p className="mb-4 text-sm text-muted">This image and crop will be used on both front and back. You can review both sides on the next step.</p>}
       <ArtworkStudio
         key={booking.cartId ? `${booking.id}:${artwork?.version ?? "empty"}` : booking.id}
         nextHref={booking.cartId ? "/book/cart" : undefined}
-        continueLabel={booking.productModel === "square_v1" ? "Save artwork for all zones" : booking.cartId ? "Save artwork and return to areas" : undefined}
+        continueLabel={booking.cartId ? "Save artwork and return to areas" : undefined}
         hold={{ expiresAt: booking.expiresAt, extensionsLeft: booking.cartId ? 0 : MAX_EXTENSIONS - booking.holdExtensions }}
         ad={{
           side: area.side,

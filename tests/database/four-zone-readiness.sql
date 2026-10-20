@@ -32,7 +32,7 @@ insert into fixture select 'campaign'||right(k,1),public.admin_create_square_cam
 reset role;
 set constraints all immediate;
 set constraints all deferred;
-select pg_temp.assert((select count(*)=4 from editions where id in(select id from fixture where k like 'campaign%') and status='draft' and product_model='square_v1' and category_exclusivity and unit_price_cents=39900 and double_unit_price_cents is null),'four zones get fixed-price category-exclusive drafts');
+select pg_temp.assert((select count(*)=4 from editions where id in(select id from fixture where k like 'campaign%') and status='draft' and product_model='square_v1' and not category_exclusivity and unit_price_cents=39900 and double_unit_price_cents is null),'four zones get fixed-price drafts without category restrictions');
 select pg_temp.assert((select count(*)=40 from slots where edition_id in(select id from fixture where k like 'campaign%')),'exactly ten paid slots per campaign');
 select pg_temp.assert((select count(*)=24 from slots where edition_id in(select id from fixture where k like 'campaign%') and side='front' and width_in=2.5 and height_in=2.5),'six front squares per campaign');
 select pg_temp.reject(format('select public.admin_create_square_campaign(%L::jsonb)',pg_temp.payload((select id from fixture where k='zone1'))),'ADM04','duplicate month and zone rejected');
@@ -54,21 +54,21 @@ reset role;
 -- Restore the migrated owner approval after testing its absence.
 insert into private.approved_layout_templates select * from saved_layout_approval;
 update editions set status='open' where id in(select id from fixture where k like 'campaign%');
--- Fill every paid position using distinct categories. An eleventh request cannot oversell.
+-- Fill every paid position without requiring categories. An eleventh request cannot oversell.
 do $$
 declare s record; c text; i integer:=0; cats text[];
 begin
  select array_agg(id order by id) into cats from advertising_categories;
  for s in select * from slots where edition_id=(select id from fixture where k='campaign1') order by label limit 10 loop
   i:=i+1;c:=cats[i];
-  perform public.hold_category_cart(c,encode(extensions.gen_random_bytes(32),'hex'),jsonb_build_array(jsonb_build_object('edition_id',s.edition_id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))),'launch');
+  perform public.hold_cart(encode(extensions.gen_random_bytes(32),'hex'),jsonb_build_array(jsonb_build_object('edition_id',s.edition_id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))),'launch');
  end loop;
 end $$;
 set constraints all immediate;
 set constraints all deferred;
 select pg_temp.assert((select count(*)=10 and sum(price_cents)=399000 from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending'),'capacity is ten ads totaling $3,990');
-select pg_temp.reject(format('select public.hold_category_cart(%L,%L,%L::jsonb,''launch'')',
- (select id from advertising_categories order by id offset 10 limit 1),encode(extensions.gen_random_bytes(32),'hex'),
+select pg_temp.reject(format('select public.hold_cart(%L,%L::jsonb,''launch'')',
+ encode(extensions.gen_random_bytes(32),'hex'),
  (select jsonb_build_array(jsonb_build_object('edition_id',edition_id,'mode','standard','slot_ids',jsonb_build_array(id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))) from slots where edition_id=(select id from fixture where k='campaign1') limit 1)),
  'INS03','eleventh reservation cannot take an occupied position');
 select pg_temp.assert(not private.edition_is_full((select id from fixture where k='campaign1')),'ten holds are not ten confirmed reservations');
@@ -103,14 +103,14 @@ update payment_consents set terms_version='square-zones-v1' where edition_id=(se
 update booking_artwork set review_status='approved' where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign1'));
 select pg_temp.assert((public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'ten confirmed approved reservations eligible');
 
--- Fill every paid position using distinct categories. An eleventh request cannot oversell.
+-- Fill every paid position without requiring categories. An eleventh request cannot oversell.
 do $$
 declare s record; c text; i integer:=0; cats text[];
 begin
  select array_agg(id order by id) into cats from advertising_categories;
  for s in select * from slots where edition_id=(select id from fixture where k='campaign2') order by label limit 7 loop
   i:=i+1;c:=cats[i];
-  perform public.hold_category_cart(c,encode(extensions.gen_random_bytes(32),'hex'),jsonb_build_array(jsonb_build_object('edition_id',s.edition_id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))),'launch');
+  perform public.hold_cart(encode(extensions.gen_random_bytes(32),'hex'),jsonb_build_array(jsonb_build_object('edition_id',s.edition_id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))),'launch');
  end loop;
 end $$;
 set constraints all immediate;
@@ -146,14 +146,14 @@ update payment_consents set terms_version='square-zones-v1' where edition_id=(se
 update booking_artwork set review_status='approved' where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign2'));
 select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign2'))->>'ready')::boolean,'ten confirmed approved reservations eligible');
 
--- Fill every paid position using distinct categories. An eleventh request cannot oversell.
+-- Fill every paid position without requiring categories. An eleventh request cannot oversell.
 do $$
 declare s record; c text; i integer:=0; cats text[];
 begin
  select array_agg(id order by id) into cats from advertising_categories;
  for s in select * from slots where edition_id=(select id from fixture where k='campaign3') order by label limit 3 loop
   i:=i+1;c:=cats[i];
-  perform public.hold_category_cart(c,encode(extensions.gen_random_bytes(32),'hex'),jsonb_build_array(jsonb_build_object('edition_id',s.edition_id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))),'launch');
+  perform public.hold_cart(encode(extensions.gen_random_bytes(32),'hex'),jsonb_build_array(jsonb_build_object('edition_id',s.edition_id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))),'launch');
  end loop;
 end $$;
 set constraints all immediate;
@@ -189,21 +189,21 @@ update payment_consents set terms_version='square-zones-v1' where edition_id=(se
 update booking_artwork set review_status='approved' where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign3'));
 select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign3'))->>'ready')::boolean,'ten confirmed approved reservations eligible');
 
--- Fill every paid position using distinct categories. An eleventh request cannot oversell.
+-- Fill every paid position without requiring categories. An eleventh request cannot oversell.
 do $$
 declare s record; c text; i integer:=0; cats text[];
 begin
  select array_agg(id order by id) into cats from advertising_categories;
  for s in select * from slots where edition_id=(select id from fixture where k='campaign4') order by label limit 10 loop
   i:=i+1;c:=cats[i];
-  perform public.hold_category_cart(c,encode(extensions.gen_random_bytes(32),'hex'),jsonb_build_array(jsonb_build_object('edition_id',s.edition_id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))),'launch');
+  perform public.hold_cart(encode(extensions.gen_random_bytes(32),'hex'),jsonb_build_array(jsonb_build_object('edition_id',s.edition_id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))),'launch');
  end loop;
 end $$;
 set constraints all immediate;
 set constraints all deferred;
 select pg_temp.assert((select count(*)=10 and sum(price_cents)=399000 from bookings where edition_id=(select id from fixture where k='campaign4') and status='pending'),'capacity is ten ads totaling $3,990');
-select pg_temp.reject(format('select public.hold_category_cart(%L,%L,%L::jsonb,''launch'')',
- (select id from advertising_categories order by id offset 10 limit 1),encode(extensions.gen_random_bytes(32),'hex'),
+select pg_temp.reject(format('select public.hold_cart(%L,%L::jsonb,''launch'')',
+ encode(extensions.gen_random_bytes(32),'hex'),
  (select jsonb_build_array(jsonb_build_object('edition_id',edition_id,'mode','standard','slot_ids',jsonb_build_array(id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))) from slots where edition_id=(select id from fixture where k='campaign4') limit 1)),
  'INS03','eleventh reservation cannot take an occupied position');
 select pg_temp.assert(not private.edition_is_full((select id from fixture where k='campaign4')),'ten holds are not ten confirmed reservations');

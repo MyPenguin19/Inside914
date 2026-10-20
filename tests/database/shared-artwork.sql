@@ -31,7 +31,7 @@ insert into fixture select 'campaign'||right(k,1),public.admin_create_square_cam
 reset role;
 set constraints all immediate;
 set constraints all deferred;
-select pg_temp.assert((select count(*)=4 from editions where id in(select id from fixture where k like 'campaign%') and status='draft' and product_model='square_v1' and category_exclusivity and unit_price_cents=39900 and double_unit_price_cents is null),'four zones get fixed-price category-exclusive drafts');
+select pg_temp.assert((select count(*)=4 from editions where id in(select id from fixture where k like 'campaign%') and status='draft' and product_model='square_v1' and not category_exclusivity and unit_price_cents=39900 and double_unit_price_cents is null),'four zones get fixed-price drafts without category restrictions');
 select pg_temp.assert((select count(*)=40 from slots where edition_id in(select id from fixture where k like 'campaign%')),'exactly ten paid slots per campaign');
 select pg_temp.assert((select count(*)=24 from slots where edition_id in(select id from fixture where k like 'campaign%') and side='front' and width_in=2.5 and height_in=2.5),'six front squares per campaign');
 select pg_temp.reject(format('select public.admin_create_square_campaign(%L::jsonb)',pg_temp.payload((select id from fixture where k='zone1'))),'ADM04','duplicate month and zone rejected');
@@ -57,10 +57,10 @@ create function pg_temp.items() returns jsonb language sql as $$
  select jsonb_agg(jsonb_build_object('edition_id',f.id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex')))
  from fixture f join slots s on s.edition_id=f.id and s.label='F1' where f.k like 'campaign%'
 $$;
-insert into fixture values('cart',public.hold_category_cart('plumbing',encode(extensions.gen_random_bytes(32),'hex'),pg_temp.items(),'test'));
+insert into fixture values('cart',public.hold_cart(encode(extensions.gen_random_bytes(32),'hex'),pg_temp.items(),'test'));
 set constraints all immediate;
 set constraints all deferred;
-select pg_temp.assert((select count(*)=4 from bookings where cart_id=(select id from fixture where k='cart') and price_cents=39900 and size='standard' and category_id='plumbing'),'four-area cart reserves one $399 square per zone even in test mode');
+select pg_temp.assert((select count(*)=4 from bookings where cart_id=(select id from fixture where k='cart') and price_cents=39900 and size='standard' and category_id is null),'four-area cart reserves one $399 square per zone even in test mode');
 
 select pg_temp.assert(not has_function_privilege('anon','public.share_square_cart_artwork(text,uuid,timestamptz,jsonb)','execute'),'anonymous clients cannot share artwork directly');
 insert into booking_artwork(booking_id,storage_path,status,crop_x,crop_y,crop_width,crop_height,width_px,height_px,content_type,byte_size,zoom)
@@ -75,8 +75,7 @@ select public.share_square_cart_artwork(c.token_hash,a.id,a.updated_at,pg_temp.t
 select pg_temp.assert(private.square_cart_artwork_ready((select id from fixture where k='cart')),'one square image and crop are ready across four zones');
 select pg_temp.assert((select count(distinct shared_source_id)=1 and count(*)=4 from booking_artwork a join bookings b on b.id=a.booking_id where b.cart_id=(select id from fixture where k='cart')),'four members share one logical source');
 update booking_artwork set crop_x=30 where booking_id=(select id from bookings where cart_id=(select id from fixture where k='cart') order by id desc limit 1);
-select pg_temp.assert(not private.square_cart_artwork_ready((select id from fixture where k='cart')),'zone-specific crop cannot pass checkout');
-select pg_temp.reject(format('update bookings set status=''reserved'' where cart_id=%L',(select id from fixture where k='cart')),'ART01','confirmation refuses divergent artwork');
+select pg_temp.assert(private.square_cart_artwork_ready((select id from fixture where k='cart')),'area-specific crop is accepted');
 update booking_artwork set crop_x=20 where booking_id in(select id from bookings where cart_id=(select id from fixture where k='cart'));
 update booking_artwork set crop_height=400 where id=shared_source_id and booking_id in(select id from bookings where cart_id=(select id from fixture where k='cart'));
 select pg_temp.assert(not private.square_cart_artwork_ready((select id from fixture where k='cart')),'rectangular crop cannot pass checkout');

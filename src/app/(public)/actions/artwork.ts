@@ -13,7 +13,6 @@ import {
 } from "@/lib/artwork/service";
 import { CART_COOKIE, ownedCart } from "@/lib/booking/cart";
 import { getHeldBooking } from "@/lib/booking/held-booking";
-import { shareCartArtwork } from "@/lib/booking/category-checkout";
 import { HOLD_COOKIE } from "@/lib/booking/place-hold";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -26,7 +25,7 @@ async function holdToken() {
   const held = token ? await getHeldBooking(admin,token) : null;
   if (held?.productModel === "square_v1") {
     const cart = await ownedCart(admin,jar.get(CART_COOKIE)?.value);
-    if (!cart || cart.members[0].id !== held.id || cart.members.some(b=>b.status!=="pending" || !b.holdExpiresAt || Date.parse(b.holdExpiresAt)<=Date.now())) return undefined;
+    if (!cart || !cart.members.some(b => b.id === held.id) || cart.members.some(b=>b.status!=="pending" || !b.holdExpiresAt || Date.parse(b.holdExpiresAt)<=Date.now())) return undefined;
   }
   return token;
 }
@@ -62,9 +61,6 @@ export async function saveArtworkLayout(input: {
     const admin = createAdminClient();
     const token = await holdToken();
     const result = await saveLayout(admin,token,input);
-    if (result.ok && token && (await getHeldBooking(admin,token))?.productModel === "square_v1") {
-      await shareCartArtwork(admin,(await cookies()).get(CART_COOKIE)?.value);
-    }
     return result;
   });
 }

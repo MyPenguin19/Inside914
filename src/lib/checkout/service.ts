@@ -58,7 +58,15 @@ function toCheckoutBooking(row: Row): CheckoutBooking {
     stripeSetupIntentId: row.stripe_setup_intent_id,
     reference: row.reference,
     contact: row.booking_contacts,
-    artworkReady: row.booking_artwork?.status === "ready" && row.booking_artwork.crop_width !== null,
+    artworkReady: row.booking_artwork?.status === "ready" && row.booking_artwork.crop_width !== null &&
+      (row.editions?.product_model !== "square_v1" || (
+        row.booking_artwork.crop_height !== null && row.booking_artwork.crop_x !== null && row.booking_artwork.crop_y !== null &&
+        row.booking_artwork.width_px !== null && row.booking_artwork.height_px !== null && row.booking_artwork.zoom !== null &&
+        row.booking_artwork.crop_width > 0 && row.booking_artwork.crop_height > 0 &&
+        row.booking_artwork.crop_x >= 0 && row.booking_artwork.crop_y >= 0 &&
+        row.booking_artwork.crop_x + row.booking_artwork.crop_width <= row.booking_artwork.width_px &&
+        row.booking_artwork.crop_y + row.booking_artwork.crop_height <= row.booking_artwork.height_px &&
+        Math.abs(row.booking_artwork.crop_width - row.booking_artwork.crop_height) <= 1)),
   };
 }
 

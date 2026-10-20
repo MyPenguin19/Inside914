@@ -4,13 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export const ADMIN_NAV = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/zones", label: "Zones" },
   { href: "/admin/campaigns", label: "Campaigns" },
   { href: "/admin/advertisers", label: "Advertisers" },
-  { href: "/admin/artwork", label: "Artwork" },
+  { href: "/admin/artwork", label: "Artwork Approval" },
   { href: "/admin/payments", label: "Payments" },
-  { href: "/admin/production", label: "Production" },
 ];
 
 const isActive = (pathname: string, href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));

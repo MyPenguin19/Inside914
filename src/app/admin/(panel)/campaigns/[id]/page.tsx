@@ -1,4 +1,3 @@
-import { CollectionPanel } from "@/components/admin/collection-panel";
 import { ZoneReadiness } from "@/components/admin/zone-readiness";
 import { zoneReadiness } from "@/lib/admin/zone-readiness";
 import { POSTCARD_PRICES } from "@/lib/pricing";
@@ -12,7 +11,7 @@ import { PostcardMap } from "@/components/admin/postcard-map";
 import { Badge, DetailList, EmptyState, LoadError, PageHeader, PanelSkeleton, Stat } from "@/components/admin/ui";
 import type { SlotView } from "@/components/postcard/postcard-side";
 import { DataTable } from "@/components/ui/data-table";
-import { Card, StatusBadge } from "@/components/ui/primitives";
+import { StatusBadge } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { listConsents, listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
 import { artworkLabel, paymentLabel, positionLabel, reservationLabel } from "@/lib/admin/labels";
@@ -97,7 +96,11 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
 
       {edition.productModel === "square_v1" && <ZoneReadiness readiness={zoneReadiness(edition, slots, bookings, data.consents)} />}
 
-      {edition.productModel === "square_v1" && <CollectionPanel editionId={edition.id} />}
+      <div className="flex flex-wrap gap-3">
+        <ButtonLink href={`/admin/artwork?campaign=${edition.id}`} variant="secondary">Approve artwork</ButtonLink>
+        <ButtonLink href={`/admin/payments?campaign=${edition.id}`} variant="secondary">Review payments</ButtonLink>
+        <ButtonLink href={`/admin/production?campaign=${edition.id}`} variant="secondary">Download postcard</ButtonLink>
+      </div>
 
       <section aria-labelledby="status-title">
         <h2 id="status-title" className="text-lg font-semibold">
@@ -116,8 +119,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
         </div>
       </section>
 
-      <Card>
-        <h2 className="text-lg font-semibold">Campaign information</h2>
+      <details>
+        <summary className="cursor-pointer text-lg font-semibold">Campaign dates and details</summary>
         <div className="mt-4">
           <DetailList
             rows={[
@@ -136,7 +139,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
             ]}
           />
         </div>
-      </Card>
+      </details>
 
       <section aria-labelledby="inventory-title">
         <h2 id="inventory-title" className="text-lg font-semibold">
@@ -176,12 +179,11 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           ) : (
             <DataTable
               caption="Reservations and active holds in this campaign"
-              columns={["Business", "Category", "Position", "Product", "Status", "Artwork", "Payment", "Amount"]}
+              columns={["Business", "Position", "Product", "Status", "Artwork", "Payment", "Amount"]}
               rows={active.map((b) => [
                 <Link key="b" href={`/admin/advertisers/${b.id}`} className="font-medium underline-offset-4 hover:underline">
                   {b.contact?.businessName ?? "No details yet"}
                 </Link>,
-                b.categoryId ?? "Not recorded",
                 positionLabel(b, labels),
                 edition.productModel === "square_v1" ? "Square" : bookingSizeLabel(b.size),
                 <Badge key="s" label={reservationLabel(b, now)} />,

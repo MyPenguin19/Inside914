@@ -8,7 +8,7 @@ export default function Page() {
       <SiteHeader />
       <main className="page-width flex-1 py-8">
         <h1 className="mb-6 text-3xl font-semibold">
-          Choose your category and zones
+          Choose your areas
         </h1>
         <Suspense fallback={<p>Loading available campaigns…</p>}>
           <CategoryCheckout />

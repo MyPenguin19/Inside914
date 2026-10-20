@@ -1,3 +1,4 @@
+import { BookingSteps } from "@/components/booking/booking-steps";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import Link from "next/link";
@@ -58,8 +59,9 @@ async function Payment() {
     .join("; ");
   return (
     <div className="space-y-6">
-      <Link className="underline" href="/book/cart">
-        ← Back to your areas
+      <BookingSteps current={4} />
+      <Link className="underline" href="/book/cart/details">
+        ← Back to business details
       </Link>
       <h1 className="text-3xl font-semibold">Reserve your areas</h1>
       <p>

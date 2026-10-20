@@ -76,7 +76,7 @@ export async function holdAreas(raw: unknown) {
 export async function editAreaArtwork(form: FormData) {
   const secret = await token();
   const cart = await ownedCart(createAdminClient(), secret);
-  const member = cart?.members[0]?.productModel === "square_v1" ? cart.members[0] : cart?.members.find((b) => b.id === form.get("bookingId"));
+  const member = cart?.members.find((b) => b.id === form.get("bookingId"));
   if (
     !secret ||
     !member ||
@@ -93,8 +93,6 @@ export async function editAreaArtwork(form: FormData) {
   redirect("/book/artwork");
 }
 export async function reuseArtwork(form: FormData) {
-  const current = await ownedCart(createAdminClient(),await token());
-  if (current?.members.some(b=>b.productModel === "square_v1")) redirect("/book/cart");
   await copyCartArtwork(
     createAdminClient(),
     await token(),
