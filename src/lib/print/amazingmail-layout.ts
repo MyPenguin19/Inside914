@@ -33,7 +33,8 @@ function paidGrid(side: "front" | "back", columns: number, left: number) {
   }));
 }
 
-// Region allocations only, not final house artwork. Split the available rectangle
+// Historical allocations retained for geometry regression checks. Current exports use
+// the single housePanel below. Split the available rectangle
 // equally into two stacked regions. Their common edge and the lower postal edge
 // have no additional gutter. Final house artwork and print proof still need approval.
 const houseWidth = live.x + live.width - postal.x;
@@ -59,6 +60,7 @@ export const AMAZINGMAIL_9X6_LAYOUT = {
     ...paidGrid("back", 2, live.x),
   ],
   houseRegions,
+  housePanel: { side: "back" as const, ...inches({ x: postal.x, y: live.y, width: houseWidth, height: postal.y - live.y }) },
 } as const;
 
 // Translate every kind of region through the same origin conversion. Do not clip

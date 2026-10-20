@@ -1,15 +1,14 @@
-import { CollectionPanel } from "@/components/admin/collection-panel";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Filters, pageParam } from "@/components/admin/filters";
-import { Badge, EmptyState, LoadError, PageHeader, Pagination, PanelSkeleton, Stat } from "@/components/admin/ui";
+import { EmptyState, LoadError, PageHeader, Pagination, PanelSkeleton, Stat } from "@/components/admin/ui";
 import { DataTable } from "@/components/ui/data-table";
-import { Notice, StatusBadge } from "@/components/ui/primitives";
+import { Notice } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { DetailList } from "@/components/admin/ui";
 import { Card } from "@/components/ui/primitives";
 import { listConsents, listEditionBookings, listEditions, listSlots, PAGE_SIZE, searchBookings, type BookingFilter } from "@/lib/admin/data";
-import { paymentLabel, reservationLabel } from "@/lib/admin/labels";
+import { simplePaymentStatus } from "@/lib/admin/operations";
 import { campaignStats, isConfirmed, paymentReadinessDetail } from "@/lib/admin/metrics";
 import { isTestStripeId } from "@/lib/dev/test-mode";
 import { formatIssueMonth, formatPrice, formatTimestamp } from "@/lib/format-admin";
@@ -23,7 +22,7 @@ const FILTERS: [BookingFilter, string][] = [
 export default function PaymentsPage({ searchParams }: PageProps<"/admin/payments">) {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Payments" description="Saved cards, authorized amounts and per-zone payment status." />
+      <PageHeader title="Payments" description="See who has saved a card, paid or needs attention." />
       <Notice tone="info" role="note">
         Advertisers save a card with $0 due today. You approve payment only after a campaign fills and its final artwork is approved. Charging is currently turned off.
       </Notice>
@@ -55,7 +54,9 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
     const consents = await listConsents(supabase, [...new Set([...result.rows, ...all.filter(isConfirmed)].map((b) => b.id))]);
     const {data:charges,error:chargeError}=await supabase.from("zone_charges").select("booking_id,amount_cents,status,stripe_mode");
     if(chargeError) throw new Error("Could not load collection ledger");
-    data = { charges: new Map(charges.map(c=>[c.booking_id,c])), ...result, all, slots, consents, selected, editionList: editions, editions: new Map(editions.map((e) => [e.id, e])) };
+    const collection = selected?.productModel === "square_v1" ? await supabase.rpc("admin_collection_preview",{p_id:selected.id}) : {data:null,error:null};
+    if(collection.error) throw new Error("Could not verify campaign readiness");
+    data = { collectionReady:(collection.data as {ready?:boolean}|null)?.ready === true, charges: new Map(charges.map(c=>[c.booking_id,c])), ...result, all, slots, consents, selected, editionList: editions, editions: new Map(editions.map((e) => [e.id, e])) };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin payments failed");
     return <LoadError what="payments" />;
@@ -81,7 +82,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
 
   return (
     <>
-      {sel?.productModel === "square_v1" && <CollectionPanel editionId={sel.id} />}
+
       {sel && selStats && (
         <Card as="section" aria-labelledby="readiness-title">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -100,10 +101,8 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
               </form>
             )}
           </div>
-          <p className="mt-1 text-sm text-muted">
-            Fully reserved is not the same as payment-ready. Review and authorize each zone from its campaign or production page.
-          </p>
-          <div className="mt-4">
+          <p className="mt-2"><Link className="underline" href={`/admin/campaigns/${sel.id}`}>Open campaign to review artwork and payments</Link></p>
+          <details className="mt-4"><summary className="cursor-pointer">Advanced details</summary>
             <DetailList
               rows={[
                 ["Fully reserved", selStats.fullyReserved ? "Yes" : `No (${selStats.reservedUnits} of ${selStats.sellableUnits} sellable units)`],
@@ -116,7 +115,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
                 ["Reservation deadline", daysLeft > 0 ? `${formatTimestamp(sel.artworkDeadline)} (in ${daysLeft} ${daysLeft === 1 ? "day" : "days"})` : `Passed ${formatTimestamp(sel.artworkDeadline)}`],
               ]}
             />
-          </div>
+          </details>
         </Card>
       )}
 
@@ -132,38 +131,16 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
         <>
           <DataTable
             caption="Payment authorizations"
-            columns={["Advertiser", "Campaign", "Reference", "Authorized", "Card", "Setup status", "Consent", "Readiness", "Collected", "Collection status", "Reservation", "Updated"]}
+            columns={["Business", "Area", "Amount", "Status"]}
             rows={data.rows.map((b) => {
               const e = data.editions.get(b.editionId);
-              const devTest = isTestStripeId(b.stripeCustomerId);
+              const charge = data.charges.get(b.id);
+              const paidReady = sel?.id === b.editionId && data.collectionReady;
               return [
-                <Link key="b" href={`/admin/advertisers/${b.id}`} className="font-medium underline-offset-4 hover:underline">
-                  {b.contact?.businessName}
-                </Link>,
+                <Link key="b" href={`/admin/advertisers/${b.id}`} className="font-medium underline-offset-4 hover:underline">{b.contact?.businessName ?? "Advertiser"}</Link>,
                 e ? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}` : "—",
-                b.reference ?? "—",
-                <span key="a" className="whitespace-nowrap">
-                  {formatPrice(b.priceCents)}
-                  {b.pricingMode === "test" && e?.productModel !== "square_v1" && <span className="ml-1.5 text-xs text-warning">test price</span>}
-                  {devTest && <span className="ml-1.5 text-xs text-warning">dev TEST</span>}
-                </span>,
-                <Badge key="p" label={paymentLabel(b)} />,
-                b.stripeSetupStatus ?? (b.stripeSetupIntentId ? "started" : "—"),
-                data.consents.has(b.id) ? `Yes · ${formatPrice(data.consents.get(b.id)!.amountCents)}` : "No",
-                (() => {
-                  const r = paymentReadinessDetail(b, data.consents.get(b.id));
-                  return r.ready ? (
-                    <Badge key="ready" label={{ text: "Payment-ready", tone: "success" }} />
-                  ) : (
-                    <span key="blk" className="text-xs text-muted" title={r.blockers.join("; ")}>
-                      <Badge label={{ text: "Blocked", tone: "warning" }} /> <span className="block pt-1">{r.blockers[0]}</span>
-                    </span>
-                  );
-                })(),
-                formatPrice(data.charges.get(b.id)?.status === "succeeded" ? data.charges.get(b.id)!.amount_cents : 0),
-                data.charges.has(b.id) ? `${data.charges.get(b.id)!.stripe_mode} · ${data.charges.get(b.id)!.status.replaceAll("_"," ")}` : "Not activated",
-                <StatusBadge key="r" tone={reservationLabel(b, now).tone}>{reservationLabel(b, now).text}</StatusBadge>,
-                formatTimestamp(b.stripeSetupStatusAt ?? b.confirmedAt ?? b.createdAt),
+                `${formatPrice(b.priceCents)}${isTestStripeId(b.stripeCustomerId) || charge?.stripe_mode === "test" ? " (test)" : ""}`,
+                simplePaymentStatus(charge?.status, ["cancelled","released"].includes(b.status), !!paidReady, !!b.stripePaymentMethodId),
               ];
             })}
           />

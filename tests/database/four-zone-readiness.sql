@@ -101,6 +101,9 @@ select id,'final_proof','Synthetic approved final proof including both house ads
 select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'wrong consent terms or unapproved artwork block collection');
 update payment_consents set terms_version='square-zones-v1' where edition_id=(select id from fixture where k='campaign1');
 update booking_artwork set review_status='approved' where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign1'));
+insert into storage.objects(bucket_id,name) select 'house-artwork','house/'||id||'.png' from fixture where k='admin';
+insert into house_artwork(singleton,storage_path,width_px,height_px,updated_by) select true,'house/'||id||'.png',1495,1043,id from fixture where k='admin' on conflict(singleton) do nothing;
+update mailing_evidence set uploaded_at=clock_timestamp(),published_at=clock_timestamp() where edition_id=(select id from fixture where k='campaign1');
 select pg_temp.assert((public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'ten confirmed approved reservations eligible');
 
 -- Fill every paid position without requiring categories. An eleventh request cannot oversell.
@@ -236,6 +239,7 @@ select id,'final_proof','Synthetic approved final proof including both house ads
 select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign4'))->>'ready')::boolean,'wrong consent terms or unapproved artwork block collection');
 update payment_consents set terms_version='square-zones-v1' where edition_id=(select id from fixture where k='campaign4');
 update booking_artwork set review_status='approved' where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign4'));
+update mailing_evidence set uploaded_at=clock_timestamp(),published_at=clock_timestamp() where edition_id=(select id from fixture where k='campaign4');
 select pg_temp.assert((public.admin_collection_preview((select id from fixture where k='campaign4'))->>'ready')::boolean,'ten confirmed approved reservations eligible');
 
 select pg_temp.assert((select array_agg(n order by k)=array[10,7,3,10]::bigint[] from (select f.k,count(b.id) n from fixture f left join bookings b on b.edition_id=f.id and b.status='reserved' where f.k like 'campaign%' group by f.k) counts),'Central/Southern/Northern/Eastern confirmed counts exactly 10/7/3/10');

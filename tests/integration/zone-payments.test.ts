@@ -20,8 +20,10 @@ beforeAll(()=>{
  const dir=mkdtempSync(join(tmpdir(),"inside914-payment-test-")),path=join(dir,"fixtures.sql");
  try{writeFileSync(path,sql);const out=execFileSync("python3",["scripts/local-test-db.py","-At","-f",path],{encoding:"utf8",stdio:["ignore","pipe","pipe"]});fixture=JSON.parse(out.split("\n").find(l=>l.startsWith('FIXTURE:'))!.slice(8));}finally{unlinkSync(path);rmdirSync(dir);}
 });
-afterAll(()=>{
+afterAll(async()=>{
  if(!fixture.campaign1)return;
+ const removed=await db.storage.from("house-artwork").remove([`house/${fixture.admin}.png`]);
+ expect(removed.error).toBeNull();
  const ids=[1,2,3,4].map(n=>`'${fixture['campaign'+n]}'`).join(",");
  command(`begin;
  create temporary table clean_carts as select distinct cart_id id from bookings where edition_id in(${ids});
@@ -34,6 +36,7 @@ afterAll(()=>{
  delete from reservation_carts where id in(select id from clean_carts);
  delete from zones where id in(${[1,2,3,4].map(n=>`'${fixture['zone'+n]}'`).join(',')});
  delete from admin_events where admin_user_id='${fixture.admin}' or target_id in(${ids}) or target_id in(select id::text from clean_bookings);
+ delete from house_artwork where updated_by='${fixture.admin}';
  delete from auth.users where id='${fixture.admin}';
  delete from private.approved_layout_templates where template_key='amazingmail-9x6-ten-square-draft' and approval_reference='TRANSACTION-ONLY TEST; rolled back; NOT printer approval';commit;`);
 });

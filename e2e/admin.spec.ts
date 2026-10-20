@@ -47,6 +47,10 @@ test("signed out: every admin page sends you to the login page", async ({ page }
   const download = await page.request.post("/admin/print/00000000-0000-4000-8000-000000000101", { maxRedirects: 0 });
   expect([303,307]).toContain(download.status());
   expect(download.headers().location).toContain("/admin/login");
+  for(const method of ["get","post"] as const) {
+    const house=await page.request[method]("/admin/house-artwork", {maxRedirects:0});
+    expect([303,307]).toContain(house.status());
+  }
   for (const path of ["/admin/zones", "/admin/campaigns/new?draft=central-westchester-2027-01", "/admin", "/admin/advertisers", "/admin/payments", "/admin/settings", "/admin/campaigns/00000000-0000-4000-8000-000000000101"]) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/admin\/login$/);
@@ -81,6 +85,7 @@ test("an admin signs in, sees real data in every section, and signs out", async 
     await nav.getByRole("link", { name: link }).click();
     await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
   }
+  await page.getByText("Advanced configuration", {exact:true}).click();
   await expect(page.getByRole("main")).toContainText("Supabase"); // status rows stream in after the heading
   const settings = await page.getByRole("main").innerText(); // the visible page (Next keeps the previous one hidden)
   expect(settings).toMatch(/Supabase\s+Connected/);

@@ -16,7 +16,7 @@ export async function activateZone(_previous:ActionResult,form:FormData):Promise
     const stripe=getCollectionStripe(); // Disabled/release gate precedes any writes or API calls.
     await verifyStripeAccount(stripe);
     const {error}=await supabase.rpc("admin_prepare_zone_collection",{p_id:parsed.data});
-    if(error) return {message:"Activation blocked: "+error.message};
+    if(error) return {message:"Campaign is not ready to charge. Review artwork, saved cards and the final proof."};
     const admin=createAdminClient();
     const {error:bindingError}=await admin.rpc("bind_zone_collection",{p_id:parsed.data,p_mode:stripe.context.mode,p_account:stripe.context.accountId});
     if(bindingError) throw new Error("Collection account binding failed");
@@ -25,8 +25,8 @@ export async function activateZone(_previous:ActionResult,form:FormData):Promise
     let errors=0;
     for(const c of charges ?? []) { try { await collectCharge(admin,stripe,c.id); } catch { errors++; } }
     refresh();
-    return {ok:errors===0,message:errors ? `${errors} requests need reconciliation. Retry uses the same payment intents. Check Stripe webhooks before proceeding.` : "Collection requests submitted. Signed webhooks determine payment status; other zones are unchanged."};
-  } catch { return {message:"Collection unavailable. Check collection configuration and the ledger before retrying."}; }
+    return {ok:errors===0,message:errors ? `${errors} payments need attention. Review the payment list before retrying.` : "Payments requested for this campaign only. Status updates when payments are verified."};
+  } catch { return {message:"Charging is unavailable. No further payments were requested. Contact the owner for help."}; }
 }
 export async function recoveryLink(_previous:{url?:string;message?:string},form:FormData):Promise<{url?:string;message?:string}> {
   await requireAdmin();
@@ -40,4 +40,14 @@ export async function recoveryLink(_previous:{url?:string;message?:string},form:
     const token=await issueRecovery(db,id);
     return {url:`/pay/${token}`};
   } catch {return {message:"Recovery unavailable or overdue. Review this payment before taking further action."};}
+}
+
+export async function markCampaignMailed(_previous:ActionResult,form:FormData):Promise<ActionResult> {
+  const {supabase}=await requireAdmin();
+  const id=z.uuid().safeParse(form.get("id"));
+  if(!id.success) return {message:"Invalid campaign."};
+  const {error}=await supabase.rpc("admin_mark_square_mailed",{p_id:id.data});
+  if(error) return {message:"This campaign is not ready to mail. Check payments, artwork and the current approved printer proof."};
+  refresh();
+  return {ok:true,message:"Campaign marked as mailed."};
 }

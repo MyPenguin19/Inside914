@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -10,9 +11,12 @@ const zone = randomUUID();
 const email = `square-e2e-${randomUUID()}@example.com`;
 const password = randomBytes(24).toString("base64url");
 let user: string;
+let previousHouse: Record<string,unknown>|null = null;
+const housePaths: string[] = [];
 function ok<T>(r: { data: T; error: unknown }) { expect(r.error).toBeNull(); return r.data; }
 
 test.beforeAll(async () => {
+  previousHouse=ok(await db.from("house_artwork").select("*").eq("singleton",true).maybeSingle());
   const created = await db.auth.admin.createUser({ email, password, email_confirm: true });
   expect(created.error).toBeNull();
   user = created.data.user!.id;
@@ -20,6 +24,9 @@ test.beforeAll(async () => {
   ok(await db.from("zones").insert({ id: zone, name: `Square fixture ${zone}`, slug: `square-e2e-${zone}`, household_count: 5000 }));
 });
 test.afterAll(async () => {
+  if(previousHouse) ok(await db.from("house_artwork").upsert(previousHouse));
+  else ok(await db.from("house_artwork").delete().eq("updated_by",user));
+  if(housePaths.length) ok(await db.storage.from("house-artwork").remove(housePaths));
   ok(await db.from("editions").delete().eq("zone_id", zone));
   ok(await db.from("zones").delete().eq("id", zone));
   if (user) {
@@ -29,6 +36,7 @@ test.afterAll(async () => {
 });
 
 test("admin creates a $399 ten-square draft; form and inventory fit mobile through desktop", async ({ page }) => {
+  test.setTimeout(120000);
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/admin/login");
@@ -37,6 +45,13 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", {name:"Manage Inside914"})).toBeVisible();
+  await page.goto("/admin/settings");
+  const image = await sharp({create:{width:1495,height:1043,channels:3,background:"blue"}}).png().toBuffer();
+  await page.getByLabel("House artwork (PNG or JPEG, up to 3 MB)").setInputFiles({name:"house.png",mimeType:"image/png",buffer:image});
+  await page.getByRole("button",{name:previousHouse ? "Replace artwork" : "Save house artwork"}).click();
+  await expect(page.getByRole("status")).toContainText("House artwork saved");
+  housePaths.push(ok(await db.from("house_artwork").select("storage_path").single())!.storage_path);
+  await expect(page.getByAltText("Current permanent house advertisement")).toBeVisible();
   await page.goto(`/admin/campaigns/new?area=square-e2e-${zone}`);
   const price = page.getByLabel("Square ad per area ($)", { exact: false });
   await expect(price).toHaveValue("399");
@@ -68,9 +83,9 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   expect(campaign).toMatchObject({ status: "draft", product_model: "square_v1", unit_price_cents: 39900, double_unit_price_cents: null });
   expect(ok(await db.from("slots").select("id").eq("edition_id", campaign!.id))).toHaveLength(10);
   await expect(page.getByRole("link", {name:"Review payments"})).toBeVisible();
-  await expect(page.getByText("0 of 10 valid confirmed reservations", {exact:true})).toBeVisible();
+  await expect(page.getByText("0 of 10 spots filled", {exact:true})).toBeVisible();
   await expect(page.getByText("Layout approved. Open this campaign when you're ready to accept reservations.")).toBeVisible();
-  await expect(page.getByText("10 total positions", {exact:true})).toBeVisible();
+  await expect(page.getByText("Campaign not open yet", {exact:true})).toBeVisible();
   await page.getByRole("button", {name:"Open for reservations", exact:true}).click();
   expect(ok(await db.from("editions").select("status").eq("id",campaign!.id).single())!.status).toBe("draft");
   await page.getByRole("button", {name:"Open now", exact:true}).click();
@@ -78,20 +93,39 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   expect(ok(await db.from("editions").select("status").eq("id",campaign!.id).single())!.status).toBe("open");
   expect(ok(await db.from("slot_availability").select("slot_id").eq("edition_id",campaign!.id).eq("available",true))).toHaveLength(10);
   await page.goto(`/admin/production?campaign=${campaign!.id}`);
-  await expect(page.getByText("Inside914 · House artwork pending", {exact:true})).toBeVisible();
-  await expect(page.getByText("Inside Diagnostics · House artwork pending", {exact:true})).toBeVisible();
-  await expect(page.getByText("Postal exclusion · No advertising", {exact:true})).toBeVisible();
-  await page.getByRole("button", {name:"Download front"}).click();
-  await expect(page.getByText("All 10 paid positions must be reserved before downloading the complete postcard.")).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/admin/campaigns/${campaign!.id}$`));
+  await expect(page.getByText("PREVIEW — NOT READY TO MAIL", {exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Charge Advertisers & Prepare Mailing",exact:true})).toBeDisabled();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", {name:"Download front",exact:true}).click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toContain("-PREVIEW.png");
+  const path=await download.path();
+  expect(await sharp(path!).metadata()).toMatchObject({width:7300,height:4900,density:800});
+  const back=await page.request.post(`/admin/print/${campaign!.id}`,{headers:{origin:"http://localhost:3000"},multipart:{side:"back"}});
+  expect(back.status()).toBe(200);
+  expect(back.headers()["x-postcard-readiness"]).toBe("preview");
+  const pixel=[...await sharp(await back.body()).extract({left:5000,top:1000,width:1,height:1}).removeAlpha().raw().toBuffer()];
+  expect(pixel).toEqual([0,0,255]);
+  const before=ok(await db.from("editions").select("status").eq("id",campaign!.id).single());
+  expect(before!.status).toBe("open");
+  expect(ok(await db.from("zone_charges").select("id").eq("edition_id",campaign!.id))).toHaveLength(0);
   for (const width of [320,375,390,768,1440]) {
     await page.setViewportSize({width,height:1000});
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth), `production at ${width}`).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth), `campaign operations at ${width}`).toBeLessThanOrEqual(width);
   }
-  const front = page.getByRole("img", {name:"Assembled front of the postcard (not a print proof)"});
-  await front.scrollIntoViewIfNeeded();
-  expect((await front.boundingBox())!.height).toBeGreaterThan(100);
-  await expect(front.getByText("F1 unsold", {exact:true})).toBeVisible();
-  await page.screenshot({path:"../../outputs/inside914-phase-f-production.png",fullPage:true});
+  await page.getByRole("button",{name:"Preview postcard",exact:true}).click();
+  await expect(page.getByAltText("Back current postcard")).toBeVisible({timeout:20000});
+  await page.screenshot({path:"../../outputs/inside914-campaign-operations.png",fullPage:true});
+  await page.goto("/admin/settings");
+  const replacement=await sharp({create:{width:1495,height:1043,channels:3,background:"green"}}).png().toBuffer();
+  await page.getByLabel("House artwork (PNG or JPEG, up to 3 MB)").setInputFiles({name:"replacement.png",mimeType:"image/png",buffer:replacement});
+  await page.getByRole("button",{name:"Replace artwork",exact:true}).click();
+  await expect(page.getByRole("status")).toContainText("House artwork saved");
+  housePaths.push(ok(await db.from("house_artwork").select("storage_path").single())!.storage_path);
+  const next=await page.request.post(`/admin/print/${campaign!.id}`,{headers:{origin:"http://localhost:3000"},multipart:{side:"back"}});
+  expect(next.status()).toBe(200);
+  expect([...await sharp(await next.body()).extract({left:5000,top:1000,width:1,height:1}).removeAlpha().raw().toBuffer()]).toEqual([0,128,0]);
   await page.goto("/pay/"+"x".repeat(43));
   await expect(page).toHaveURL(/\/pay\?invalid=1$/);
   await expect(page.getByRole("heading",{name:"Payment link unavailable"})).toBeVisible();

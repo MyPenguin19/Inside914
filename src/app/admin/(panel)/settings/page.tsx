@@ -1,3 +1,4 @@
+import { HouseArtworkForm } from "@/components/admin/house-artwork-form";
 import { Suspense } from "react";
 import { PageHeader, PanelSkeleton } from "@/components/admin/ui";
 import { Card, StatusBadge, type Tone } from "@/components/ui/primitives";
@@ -9,7 +10,7 @@ import { getPricingMode, TEST_PRICES } from "@/lib/pricing";
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Settings" description="Read-only configuration status. Secret values are never shown." />
+      <PageHeader title="Settings" description="Manage the permanent house advertisement and review configuration." />
       <Suspense fallback={<PanelSkeleton />}>
         <Settings />
       </Suspense>
@@ -29,6 +30,7 @@ function attempt<T>(fn: () => T): T | null {
 
 async function Settings() {
   const { supabase } = await requireAdmin();
+  const { data: house, error: houseError } = await supabase.from("house_artwork").select("updated_at").eq("singleton", true).maybeSingle();
   const { error: dbError } = await supabase.from("editions").select("id", { head: true, count: "exact" });
   const pricing = attempt(() => getPricingMode());
   const stripeMode = attempt(() => getStripeKeyMode());
@@ -65,7 +67,9 @@ async function Settings() {
   ];
 
   return (
-    <Card className="p-0">
+    <>
+    {houseError ? <p role="alert">Could not load house artwork settings.</p> : <HouseArtworkForm updatedAt={house?.updated_at ?? null} />}
+    <details><summary className="cursor-pointer">Advanced configuration</summary><Card className="mt-4 p-0">
       <ul className="divide-y divide-line">
         {rows.map((r) => (
           <li key={r.label} className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
@@ -77,6 +81,6 @@ async function Settings() {
           </li>
         ))}
       </ul>
-    </Card>
+    </Card></details></>
   );
 }

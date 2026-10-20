@@ -54,19 +54,19 @@ export function CampaignStatusControls({ edition: e, stats, now }: { edition: Ad
         consequence={<>Records that the owner approved this campaign for production. Every sellable space must be reserved and every reservation needs approved artwork. This does not charge anyone.</>} />,
     );
   }
-  if (e.status === "approved_to_print") {
+  if (e.status === "approved_to_print" && e.productModel !== "square_v1") {
     controls.push(
       <ConfirmAction key="printed" label="Mark as printed" action={setCampaignStatus} fields={f("mark_printed")} confirmLabel="Mark printed"
         consequence={<>Needs a printer confirmation uploaded as evidence. Printed is not mailed.</>} />,
     );
   }
-  if (e.status === "printed") {
+  if (e.status === "printed" && e.productModel !== "square_v1") {
     controls.push(
       <ConfirmAction key="mailed" label="Mark as mailed" action={setCampaignStatus} fields={f("mark_mailed")} confirmLabel="Mark mailed"
         consequence={<>Needs a postal acceptance or mailing confirmation uploaded as evidence. Postal acceptance is not proof of delivery to each home.</>} />,
     );
   }
-  if (e.status === "mailed") {
+  if (e.status === "mailed" && e.productModel !== "square_v1") {
     controls.push(
       <ConfirmAction key="complete" label="Mark as completed" action={setCampaignStatus} fields={f("complete")} confirmLabel="Complete"
         consequence={<>Closes out the campaign. It can&apos;t be edited afterwards.</>} />,

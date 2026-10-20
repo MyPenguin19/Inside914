@@ -113,7 +113,43 @@ select id,'final_proof','Synthetic approved final proof including both house ads
 select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'wrong consent terms or unapproved artwork block collection');
 update payment_consents set terms_version='square-zones-v1' where edition_id=(select id from fixture where k='campaign1');
 update booking_artwork set review_status='approved' where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign1'));
+-- Synthetic house metadata exists only in the isolated local test transaction.
+insert into storage.objects(bucket_id,name) select 'house-artwork','house/'||id||'.png' from fixture where k='admin';
+insert into public.house_artwork(singleton,storage_path,width_px,height_px,updated_by)
+select true,'house/'||id||'.png',1495,1043,id from fixture where k='admin' on conflict(singleton) do nothing;
+update mailing_evidence set uploaded_at=clock_timestamp(),published_at=clock_timestamp() where edition_id=(select id from fixture where k='campaign1');
 select pg_temp.assert((public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'ten confirmed approved reservations eligible');
+-- Exercise the real guarded mutation, including its audit event.
+savepoint house_mutation;
+set local role authenticated;
+select public.admin_set_house_artwork('house/'||(select id from fixture where k='admin')||'.png',1495,1043);
+select pg_temp.assert((select count(*)=1 from house_artwork where updated_by=(select id from fixture where k='admin')),'admin house replacement persists');
+select pg_temp.assert(exists(select 1 from admin_events where admin_user_id=(select id from fixture where k='admin') and event_type='house_artwork.replaced'),'house replacement audited');
+reset role;
+rollback to house_mutation;
+-- New operational safeguards, using rollback-only changes to ready fixtures.
+savepoint readiness_checks;
+update bookings set stripe_setup_status='failed' where id=(select id from bookings where edition_id=(select id from fixture where k='campaign1') and status='reserved' limit 1);
+select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'unusable saved card blocks collection');
+rollback to readiness_checks;
+update booking_artwork set review_status='pending' where booking_id=(select id from bookings where edition_id=(select id from fixture where k='campaign1') and status='reserved' limit 1);
+select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'unapproved artwork blocks collection');
+rollback to readiness_checks;
+update bookings set status='released' where id=(select id from bookings where edition_id=(select id from fixture where k='campaign1') and status='reserved' limit 1);
+select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'nine confirmed positions cannot collect');
+rollback to readiness_checks;
+update house_artwork set updated_at=clock_timestamp();
+select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'replaced house requires a new proof');
+rollback to readiness_checks;
+select pg_temp.assert(not has_table_privilege('authenticated','public.house_artwork','UPDATE'),'browser cannot overwrite house metadata');
+select pg_temp.assert(not has_function_privilege('anon','public.admin_set_house_artwork(text,integer,integer)','EXECUTE'),'anonymous house mutation denied');
+select pg_temp.assert(not has_function_privilege('anon','public.admin_mark_square_mailed(uuid)','EXECUTE'),'anonymous mailing denied');
+select set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+set local role authenticated;
+select pg_temp.assert((select count(*)=0 from house_artwork),'non-admin cannot read house metadata');
+select pg_temp.reject('select public.admin_set_house_artwork(''house/00000000-0000-4000-8000-000000000000.png'',1495,1043)','ADM01','non-admin cannot replace house');
+reset role;
+select set_config('request.jwt.claim.sub',(select id::text from fixture where k='admin'),true);
 select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign2'))->>'ready')::boolean,'another zone remains ineligible');
 select set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
 select pg_temp.reject(format('select public.admin_prepare_zone_collection(%L)',(select id from fixture where k='campaign1')),'ADM01','non-admin cannot activate');
@@ -160,4 +196,27 @@ select pg_temp.assert((select status='succeeded' and recovery_hash is null from 
 select pg_temp.assert(public.record_zone_payment((select id from fixture where k='charge'),'pi_fixture','requires_payment_method','evt_late_failure',120)='stale','success cannot regress to failure');
 select pg_temp.assert((select count(*)=2 from email_outbox where booking_id=(select booking_id from zone_charges where id=(select id from fixture where k='charge')) and kind in ('payment_needed','payment_receipt')),'one recovery notice and one receipt queued');
 select pg_temp.reject(format('select public.record_zone_payment(%L,''pi_wrong'',''succeeded'',''evt_wrong'',130)',(select id from fixture where k='charge')),'P0001','different intent cannot replace ledger intent');
+-- A simulated verified ledger, not Stripe API requests: 8/10 must remain unready.
+do $$ declare c public.zone_charges; begin
+ for c in select * from zone_charges where edition_id=(select id from fixture where k='campaign1') and status<>'succeeded' order by id limit 7 loop
+  perform public.record_zone_payment(c.id,'pi_fixture_'||c.id,'succeeded','evt_fixture_'||c.id,400);
+ end loop;
+end $$;
+select pg_temp.assert((select count(*)=8 from zone_charges where edition_id=(select id from fixture where k='campaign1') and status='succeeded'),'eight verified payments recorded');
+select pg_temp.assert(not public.admin_mail_readiness((select id from fixture where k='campaign1')),'partial payments cannot be ready to mail');
+select pg_temp.reject(format('select public.admin_mark_square_mailed(%L)',(select id from fixture where k='campaign1')),'P0001','partial campaign cannot be marked mailed');
+do $$ declare c public.zone_charges; begin
+ for c in select * from zone_charges where edition_id=(select id from fixture where k='campaign1') and status<>'succeeded' loop
+  perform public.record_zone_payment(c.id,'pi_fixture_'||c.id,'succeeded','evt_fixture_'||c.id,401);
+ end loop;
+end $$;
+select pg_temp.assert(public.admin_mail_readiness((select id from fixture where k='campaign1')),'ten verified payments plus current proof make ready to mail');
+select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'fully paid campaign cannot request more payments');
+savepoint replaced_house;
+update house_artwork set updated_at=clock_timestamp();
+select pg_temp.assert(not public.admin_mail_readiness((select id from fixture where k='campaign1')),'house replacement invalidates mail readiness even when paid');
+rollback to replaced_house;
+select pg_temp.assert(public.admin_mark_square_mailed((select id from fixture where k='campaign1'))='done','owner can record external mailing without compulsory receipt upload');
+select pg_temp.assert(public.admin_mark_square_mailed((select id from fixture where k='campaign1'))='already','mark mailed is idempotent');
+select pg_temp.assert((select count(*)=0 from zone_charges where edition_id in(select id from fixture where k in('campaign2','campaign3','campaign4'))),'other areas remain financially independent');
 rollback;

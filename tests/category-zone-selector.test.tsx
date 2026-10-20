@@ -31,3 +31,11 @@ test("lost square race refreshes availability without substituting another posit
  await waitFor(()=>expect(refresh).toHaveBeenCalled());
  expect(push).not.toHaveBeenCalled();expect(screen.getByRole("alert").textContent).toContain("nothing held");
 });
+
+test.each([[1,"$399"],[2,"$798"],[3,"$1,197"],[4,"$1,596"]] as const)("%i areas show the correct authorization with zero due today",(count,total)=>{
+ render(<CategoryZoneSelector {...props}/>);
+ for(const region of REGIONS.slice(0,count)) fireEvent.click(screen.getByRole("checkbox",{name:new RegExp(region.name)}));
+ expect(screen.getByText(`Maximum authorized total: ${total}`)).toBeTruthy();
+ expect(screen.getByText("Due today: $0")).toBeTruthy();
+ expect(screen.queryByLabelText("Choose your business category")).toBeNull();
+});

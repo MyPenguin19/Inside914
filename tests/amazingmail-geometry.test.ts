@@ -153,3 +153,12 @@ describe("Phase D origin and clearance regression", () => {
     }
   });
 });
+
+test("combined permanent house panel preserves the approved printable extent",()=>{
+ expect(layout.housePanel).toEqual({side:"back",x:5.2,y:0.1875,width:3.7375,height:2.6075});
+ expect(inside(layout.housePanel,layout.live)).toBe(true);
+ expect(overlaps(layout.housePanel,layout.postal)).toBe(false);
+ expect(right(layout.housePanel)).toBe(right(layout.live));
+ expect(u(layout.postal.width)-u(layout.housePanel.width)).toBe(187500);
+ expect(bottom(layout.housePanel)).toBe(u(layout.postal.y));
+});

@@ -15,6 +15,8 @@ export type Database = {
   }
   public: {
     Tables: {
+      house_artwork: { Row: {singleton:boolean;storage_path:string;width_px:number;height_px:number;updated_at:string;updated_by:string|null}; Insert: {singleton?:boolean;storage_path:string;width_px:number;height_px:number;updated_at?:string;updated_by?:string|null}; Update: {storage_path?:string;width_px?:number;height_px?:number;updated_at?:string;updated_by?:string|null}; Relationships: [] };
+
       zone_charges: { Row: ZoneChargeRow; Insert: Partial<ZoneChargeRow>; Update: Partial<ZoneChargeRow>; Relationships: [] };
       zone_payment_events: { Row: {id:string;charge_id:string;created_at:string}; Insert: {id:string;charge_id:string;created_at?:string}; Update: {id?:string;charge_id?:string;created_at?:string}; Relationships: [] };
 
@@ -925,6 +927,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_set_house_artwork: { Args: {p_path:string;p_width:number;p_height:number}; Returns: undefined };
+      admin_mail_readiness: { Args: {p_id:string}; Returns: boolean };
+      admin_mark_square_mailed: { Args: {p_id:string}; Returns: string };
+
       admin_collection_preview: { Args: {p_id:string}; Returns: Json };
       admin_prepare_zone_collection: { Args: {p_id:string}; Returns: Json };
       bind_zone_collection: { Args: {p_id:string;p_mode:string;p_account:string}; Returns: undefined };

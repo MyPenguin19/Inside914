@@ -1,5 +1,9 @@
-import { ZoneReadiness } from "@/components/admin/zone-readiness";
-import { zoneReadiness } from "@/lib/admin/zone-readiness";
+import { PrintDownload } from "@/components/admin/print-download";
+import { CollectionPanel } from "@/components/admin/collection-panel";
+import { PrinterRecords } from "@/components/admin/printer-records";
+import { ConfirmAction } from "@/components/admin/confirm-action";
+import { markCampaignMailed } from "@/app/admin/collection-actions";
+import { campaignOperationStatus } from "@/lib/admin/operations";
 import { POSTCARD_PRICES } from "@/lib/pricing";
 import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
@@ -40,7 +44,12 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
     if (!edition) notFound();
     const [slots, bookings] = await Promise.all([listSlots(supabase, [id]), listEditionBookings(supabase, [id])]);
     const consents = await listConsents(supabase, bookings.map(b => b.id));
-    data = { edition, slots, bookings, consents };
+    const [mail, collection, ledger] = edition.productModel === "square_v1" ? await Promise.all([
+      supabase.rpc("admin_mail_readiness", {p_id:id}), supabase.rpc("admin_collection_preview", {p_id:id}),
+      supabase.from("zone_charges").select("status").eq("edition_id",id),
+    ]) : [{data:false,error:null},{data:null,error:null},{data:[],error:null}];
+    if(mail.error || collection.error || ledger.error) throw new Error("Could not verify campaign readiness");
+    data = { edition, slots, bookings, consents, mailReady:mail.data === true, chargeReady:(collection.data as {ready?:boolean}|null)?.ready === true, charges:ledger.data ?? [] };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error; // notFound()
     console.error(error instanceof Error ? error.message : "admin campaign failed");
@@ -51,6 +60,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
   const stats = campaignStats(edition, slots, bookings, now);
   const states = slotStates(edition, slots, bookings, now);
   const labels = new Map(slots.map((s) => [s.id, { label: s.label, side: s.side }]));
+  const approved = bookings.filter(b=>isConfirmed(b) && b.artworkReview === "approved").length;
+  const operationStatus = campaignOperationStatus({status:edition.status,paused:!!edition.pausedAt,filled:stats.reservedUnits,approved,paid:data.charges.filter(c=>c.status==="succeeded").length,issues:data.charges.filter(c=>["requires_action","requires_payment_method","canceled"].includes(c.status)).length,chargeReady:data.chargeReady,mailReady:data.mailReady});
   const active = bookings.filter((b) => isConfirmed(b) || isLiveHold(b, now));
 
   const views = (side: "front" | "back"): SlotView[] =>
@@ -74,8 +85,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           <PageHeader title={edition.name ?? edition.zoneName} description={`${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)} edition`}>
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge tone={edition.status === "open" && !edition.pausedAt ? "success" : edition.pausedAt ? "warning" : "neutral"}>
-                {edition.status.replaceAll("_", " ")}
-                {edition.pausedAt ? " · paused" : ""}
+                {edition.productModel === "square_v1" ? operationStatus : edition.status.replaceAll("_", " ")}
               </StatusBadge>
               {!["cancelled", "completed"].includes(edition.status) && (
                 <ButtonLink href={`/admin/campaigns/${edition.id}/edit`} variant="secondary">
@@ -88,18 +98,21 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
       </div>
 
       <section aria-label="Reservation progress" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Stat label="Reserved units" value={`${stats.reservedUnits} of ${stats.totalUnits}`} note={`${stats.filledPercent}% filled`} />
-        <Stat label="On hold" value={String(stats.heldUnits)} />
-        {edition.status === "draft" ? <Stat label="Inventory" value={`${stats.totalUnits} total positions`} note="Campaign not open yet" /> : <Stat label="Available" value={String(stats.availableUnits)} />}
-        <Stat label="Reserved value" value={formatPrice(stats.reservedValueCents)} note="Authorized, not collected" />
+        <Stat label="Spots filled" value={`${stats.reservedUnits} of ${stats.totalUnits}`} note={edition.status === "draft" ? "Campaign not open yet" : `${stats.filledPercent}% filled`} />
+        <Stat label="Authorized value" value={formatPrice(stats.reservedValueCents)} note="Not collected at reservation" />
+        <Stat label="Artwork approved" value={`${approved} of ${stats.reservations}`} />
+        <Stat label="Payment methods ready" value={`${stats.paymentMethodsReady} of ${stats.reservations}`} />
       </section>
 
-      {edition.productModel === "square_v1" && <ZoneReadiness readiness={zoneReadiness(edition, slots, bookings, data.consents)} />}
+      {edition.productModel === "square_v1" && <>
+        <PrintDownload editionId={id} ready={data.mailReady} filled={stats.reservedUnits} />
+        <CollectionPanel editionId={id} />
+        {data.mailReady && !["mailed","completed"].includes(edition.status) && <ConfirmAction label="Mark as mailed" action={markCampaignMailed} fields={{id}} confirmLabel="Mark mailed" consequence={<>Confirm you uploaded the final front and back to AmazingMail and submitted the mailing. This records your confirmation and does not order a mailing or charge anyone.</>} />}
+      </>}
 
       <div className="flex flex-wrap gap-3">
         <ButtonLink href={`/admin/artwork?campaign=${edition.id}`} variant="secondary">Approve artwork</ButtonLink>
         <ButtonLink href={`/admin/payments?campaign=${edition.id}`} variant="secondary">Review payments</ButtonLink>
-        <ButtonLink href={`/admin/production?campaign=${edition.id}`} variant="secondary">Download postcard</ButtonLink>
       </div>
 
       <section aria-labelledby="status-title">
@@ -107,7 +120,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           Status
         </h2>
         {stats.fullyReserved && (
-          <p className="mt-1 text-sm text-accent">Every sellable space is reserved. That is not the same as payment-ready: see Payments.</p>
+          <p className="mt-1 text-sm text-accent">All spaces are reserved. Review artwork and payments above before preparing the mailing.</p>
         )}
         {stats.blockedUnits > 0 && (
           <p className="mt-1 text-sm text-muted">
@@ -118,6 +131,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           <CampaignStatusControls edition={edition} stats={stats} now={now} />
         </div>
       </section>
+
+      {edition.productModel === "square_v1" && <PrinterRecords editionId={id} />}
 
       <details>
         <summary className="cursor-pointer text-lg font-semibold">Campaign dates and details</summary>

@@ -60,3 +60,11 @@ Performance informational findings: ten unindexed foreign keys (mostly admin/rev
 ## Stop boundary
 
 Stopped after applying and verifying the approved schema. Next work remains separately authorized: Vercel credentials/environment configuration, production Auth configuration, first-admin bootstrap, real owner-approved catalog data, webhook/email connectivity and deployment. No credentials were printed or committed in this operation.
+
+## Campaign operations release — October 20, 2026
+
+Applied only `20261020045228_campaign_operations_house_artwork.sql` after a fresh 35-migration content audit and verified logical database backup. Production records it as `20261020052758_campaign_operations_house_artwork`. SQL MD5: `b22c03e55905ba8e7a0b6aa31f64ad23`; source SHA-256: `b553181592892d5d5288b2bff3d7c9db9424aebbadcfdf545d318a95ee68b3fb`.
+
+Verified the private PNG bucket, house-artwork RLS/admin-only read policy, restricted RPC execution and fixed search paths, and enabled mailing-readiness trigger. Campaign and booking row digests remained identical before/after application. Central and Eastern remain open with one confirmed reservation each; Northern and Southern still have no campaigns. No blind database push or history repair was performed.
+
+Backup verification read the complete custom archive and restored campaign/booking data into temporary local tables with exact matching digests. Database backups do not include Storage file bytes. The backup remains private and outside Git. This release preserves `LIVE_COLLECTION_RELEASED=false` and production `INSIDE914_COLLECTION_MODE=disabled`. No Stripe operations are part of release verification.

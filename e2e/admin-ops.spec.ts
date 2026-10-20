@@ -122,7 +122,7 @@ test("create a draft campaign (with validation), edit it, preserve fixed invento
   await page.getByLabel("Artwork submission deadline").fill(`${year}-02-12T23:59`);
   await page.getByRole("button", { name: "Create draft campaign" }).click();
   await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
-  await expect(main(page).getByText("draft", { exact: true }).first()).toBeVisible();
+  await expect(main(page).getByText("Draft", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("group", { name: "Front of the postcard" })).toBeVisible(); // 16 spaces were created
 
   // Edit the name.
@@ -134,12 +134,12 @@ test("create a draft campaign (with validation), edit it, preserve fixed invento
 
   // The square campaign retains ten positions and requires explicit opening.
   await expect(main(page).getByRole("button", { name: "Open for reservations" })).toBeVisible();
-  await expect(main(page).getByText("10 total positions")).toBeVisible();
+  await expect(main(page).getByText("Campaign not open yet")).toBeVisible();
 
   // Cancel the draft.
   await main(page).getByRole("button", { name: "Cancel campaign" }).click();
   await main(page).getByRole("button", { name: "Cancel campaign" }).last().click();
-  await expect(main(page).getByText("cancelled", { exact: true }).first()).toBeVisible();
+  await expect(main(page).getByText("Cancelled", { exact: true }).first()).toBeVisible();
 });
 
 test("production, payments readiness, artwork queue and new pages render and fit a phone", async ({ page }) => {
@@ -148,6 +148,7 @@ test("production, payments readiness, artwork queue and new pages render and fit
   await page.getByText("Before sending to the printer", {exact:true}).click();
   await expect(main(page).getByText("Printer specifications aren't confirmed")).toBeVisible();
   await page.goto("/admin/payments");
+  await page.getByText("Advanced details", {exact:true}).click();
   await expect(main(page).getByText("Fully reserved", { exact: true })).toBeVisible();
   await expect(main(page).getByRole("button", { name: /charge/i })).toHaveCount(0);
   await page.goto("/admin/artwork?filter=approved");

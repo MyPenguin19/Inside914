@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { PrintDownload } from "@/components/admin/print-download";
 import { Suspense } from "react";
 import { publishEvidence } from "@/app/admin/admin-actions";
@@ -82,6 +83,7 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
 
   if (!data) return <EmptyState title="No campaigns yet." />;
   const { editions, edition: e, slots, bookings, confirmed, consents, artworks, evidence, evidenceLinks } = data;
+  if (e.productModel === "square_v1") redirect(`/admin/campaigns/${e.id}`);
   const stats = campaignStats(e, slots, bookings, now);
   const placements: Placement[] = confirmed.map((b, i) => ({
     slots: slots.filter((s) => b.claims.some((c) => !c.released && c.slotId === s.id)),
