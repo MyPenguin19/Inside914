@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("artwork");
     if (!(file instanceof File) || file.size <= 0 || file.size > 3_000_000) throw new Error("Upload a PNG or JPEG smaller than 3 MB.");
-    const image = await normalizeHouse(Buffer.from(await file.arrayBuffer()));
+    const image = await normalizeHouse(Buffer.from(await file.arrayBuffer()), JSON.parse(String(form.get("crop") ?? "null")));
     const path = `house/${randomUUID()}.png`;
     const admin = createAdminClient(); // authorization above precedes privileged storage access
     const { error } = await admin.storage.from("house-artwork").upload(path, image.input, { contentType: "image/png", upsert: false });

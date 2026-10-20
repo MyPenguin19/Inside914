@@ -6,13 +6,22 @@ export const EXPORT_DPI = 800;
 export const EXPORT_SIZE = { width: 7300, height: 4900 };
 export type PrintImage = { label: string; input: Buffer; crop: PrintRectangle };
 
-export async function normalizeHouse(input: Buffer) {
+export const POSTCARD_BACKGROUND = "#f4f2ec";
+export const HOUSE_OUTPUT = { width: 2990, height: 2086 };
+
+export async function normalizeHouse(input: Buffer, crop: PrintRectangle) {
   if (!sniffImageType(input.subarray(0,16))) throw new Error("Use a PNG or JPEG image.");
-  const normalized = await sharp(input, { limitInputPixels: 40_000_000 }).rotate().png().toBuffer();
-  const meta = await sharp(normalized).metadata();
-  const region = layout.housePanel;
-  if (meta.width < Math.ceil(region.width * 300) || meta.height < Math.ceil(region.height * 300)) throw new Error("House artwork needs at least 1122 × 783 pixels. Recommended: 2990 × 2086 pixels.");
-  return { input: normalized, width: meta.width, height: meta.height };
+  const oriented = await sharp(input, { limitInputPixels: 40_000_000 }).rotate().toBuffer();
+  const meta = await sharp(oriented).metadata();
+  if (!crop || ![crop.x,crop.y,crop.width,crop.height].every(Number.isSafeInteger) ||
+      crop.x < 0 || crop.y < 0 || crop.width < 1122 || crop.height < 783 ||
+      crop.x + crop.width > meta.width || crop.y + crop.height > meta.height ||
+      Math.abs(crop.width - crop.height * HOUSE_OUTPUT.width / HOUSE_OUTPUT.height) > 2) {
+    throw new Error("Choose a valid house crop of at least 1122 × 783 pixels at the fixed panel ratio.");
+  }
+  const normalized = await sharp(oriented).extract({left:crop.x,top:crop.y,width:crop.width,height:crop.height})
+    .resize(HOUSE_OUTPUT.width,HOUSE_OUTPUT.height,{fit:"cover"}).flatten({background:POSTCARD_BACKGROUND}).png().toBuffer();
+  return { input: normalized, ...HOUSE_OUTPUT };
 }
 
 // The same renderer serves current-state previews and mail-ready downloads.
@@ -39,9 +48,16 @@ export async function renderPostcard(side: "front" | "back", ads: PrintImage[], 
   }
   if (side === "back" && house) {
     const region = layout.housePanel;
-    const source = await normalizeHouse(house);
-    const input = await sharp(source.input).resize(Math.round(region.width * EXPORT_DPI), Math.round(region.height * EXPORT_DPI), { fit: "contain", background: "white" }).png().toBuffer();
-    layers.push({ input, left: Math.round(region.x * EXPORT_DPI), top: Math.round(region.y * EXPORT_DPI) });
+    const meta = await sharp(house).metadata();
+    if (meta.width !== HOUSE_OUTPUT.width || meta.height !== HOUSE_OUTPUT.height) {
+      throw new Error("Re-save the permanent house artwork using the crop editor in Settings before downloading the back.");
+    }
+    layers.push({ input: house, left: Math.round(region.x * EXPORT_DPI), top: Math.round(region.y * EXPORT_DPI) });
   }
-  return sharp({ create: { ...EXPORT_SIZE, channels: 3, background: "white" } }).composite(layers).withMetadata({ density: EXPORT_DPI }).png().toBuffer();
+  if (side === "back") {
+    const postal = layout.postal;
+    layers.push({input: await sharp({create:{width:Math.round(postal.width*EXPORT_DPI),height:Math.round(postal.height*EXPORT_DPI),channels:3,background:"white"}}).png().toBuffer(),
+      left:Math.round(postal.x*EXPORT_DPI),top:Math.round(postal.y*EXPORT_DPI)});
+  }
+  return sharp({ create: { ...EXPORT_SIZE, channels: 3, background: POSTCARD_BACKGROUND } }).composite(layers).withMetadata({ density: EXPORT_DPI }).png().toBuffer();
 }

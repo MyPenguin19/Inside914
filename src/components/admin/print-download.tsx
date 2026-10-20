@@ -12,7 +12,7 @@ export function PrintDownload({ editionId, ready = false, filled }: { editionId:
   return <Card><h2 className="text-xl font-semibold">Current postcard</h2>
     <p className="my-3 font-medium">{ready ? "Ready to mail" : "PREVIEW — NOT READY TO MAIL"}</p>
     {filled !== undefined && <p className="mb-3 text-sm">{filled} of 10 spots filled</p>}
-    <p className="mb-3 text-sm text-muted">Download the current front and back at any time. Empty spaces show Available placeholders. The back uses your permanent house artwork from Settings; until configured, that panel stays blank. Downloads do not charge anyone or change campaign status.</p>
+    <p className="mb-3 text-sm text-muted">Download the current front and back at any time. Empty spaces show Available placeholders. The back uses your permanent house artwork from Settings; until configured, that panel shows the postcard background. Downloads do not charge anyone or change campaign status.</p>
     <Button variant="secondary" disabled={busy} onClick={async () => {
       setBusy(true); setMessage(""); const urls: string[] = [];
       try {

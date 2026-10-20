@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { expect, test } from "vitest";
 import sharp from "sharp";
-import { renderPostcard, normalizeHouse, EXPORT_DPI, EXPORT_SIZE } from "@/lib/print/export";
+import { renderPostcard, normalizeHouse, EXPORT_DPI, EXPORT_SIZE, HOUSE_OUTPUT } from "@/lib/print/export";
 import { AMAZINGMAIL_9X6_LAYOUT as layout } from "@/lib/print/amazingmail-layout";
 const solid = (color: string, width = 900, height = 900) => sharp({ create: { width, height, channels: 3, background: color } }).png().toBuffer();
 test("front/back exports preserve every paid square, the permanent house panel and a blank postal region", async () => {
-  const red = await solid("red"); const blue = await solid("blue", 1495, 1043);
+  const red = await solid("red"); const blue = await solid("blue", 2990, 2086);
   for (const side of ["front", "back"] as const) {
     const png = await renderPostcard(side, layout.paidSlots.filter(s => s.side === side).map(s => ({ label: s.label, input: red, crop: { x: 0, y: 0, width: 900, height: 900 } })), side === "back" ? blue : undefined);
     const meta = await sharp(png).metadata(); expect(meta).toMatchObject({ ...EXPORT_SIZE, density: EXPORT_DPI, format: "png" });
@@ -16,7 +16,7 @@ test("front/back exports preserve every paid square, the permanent house panel a
       expect(await pixel(s.x + 2.5 - 1/EXPORT_DPI, s.y + 1.25)).toEqual([255,0,0]);
     }
     if (side === "back") {
-      expect(await pixel(5.195, 4)).toEqual([255,255,255]);
+      expect(await pixel(5.195, 4)).toEqual([244,242,236]);
       const postalCrop = await sharp(png).extract({ left: layout.postal.x*EXPORT_DPI, top: layout.postal.y*EXPORT_DPI, width: layout.postal.width*EXPORT_DPI, height: layout.postal.height*EXPORT_DPI }).toBuffer();
       const postal = await sharp(postalCrop).stats();
       expect(postal.channels.slice(0,3).every(c => c.min === 255 && c.max === 255)).toBe(true);
@@ -29,7 +29,7 @@ test("preview exports allow empty positions and a missing house panel but reject
   expect(await sharp(blank).metadata()).toMatchObject(EXPORT_SIZE);
   const image = await solid("red");
   await expect(renderPostcard("front", [{label:"F1",input:image,crop:{x:0,y:0,width:0,height:0}}])).rejects.toThrow("valid square crop");
-  await expect(normalizeHouse(await solid("red",500,500))).rejects.toThrow("1122 × 783");
+  await expect(normalizeHouse(await solid("red",500,500),{x:0,y:0,width:500,height:349})).rejects.toThrow("1122 × 783");
 }, 30000);
 test.each([1,4,9,10])("current-state export works with %i occupied positions, including unapproved artwork", async count => {
   const image = await solid("red");
@@ -45,11 +45,50 @@ test.each([1,4,9,10])("current-state export works with %i occupied positions, in
   }
 },30000);
 test("replacing the permanent house image changes future renders without changing postal pixels", async()=> {
- const a=await renderPostcard("back",[],await solid("blue",1495,1043));
- const b=await renderPostcard("back",[],await solid("green",1495,1043));
+ const a=await renderPostcard("back",[],await solid("blue",2990,2086));
+ const b=await renderPostcard("back",[],await solid("green",2990,2086));
  expect(a.equals(b)).toBe(false);
  for(const png of [a,b]) {
   const stats=await sharp(await sharp(png).extract({left:4160,top:2236,width:3140,height:2664}).toBuffer()).stats();
   expect(stats.channels.slice(0,3).every(c=>c.min===255 && c.max===255)).toBe(true);
  }
 },30000);
+
+test("explicit house crop normalizes to a full panel without padding and rejects unsafe crops",async()=>{
+ const source=await solid("blue",2000,1600);
+ const normalized=await normalizeHouse(source,{x:100,y:100,width:1495,height:1043});
+ expect(normalized).toMatchObject(HOUSE_OUTPUT);
+ const stats=await sharp(normalized.input).stats();
+ expect(stats.channels.slice(0,3).map(c=>[c.min,c.max])).toEqual([[0,0],[0,0],[255,255]]);
+ for(const crop of [{x:-1,y:0,width:1495,height:1043},{x:1000,y:0,width:1495,height:1043},{x:0,y:0,width:1500,height:1500},{x:0,y:0,width:700,height:488},{x:0.1,y:0,width:1495,height:1043}]) {
+  await expect(normalizeHouse(source,crop)).rejects.toThrow("valid house crop");
+ }
+ await expect(renderPostcard("back",[],source)).rejects.toThrow("crop editor");
+ const png=await renderPostcard("back",[],normalized.input);
+ const panel=await sharp(await sharp(png).extract({left:4160,top:150,...HOUSE_OUTPUT}).png().toBuffer()).stats();
+ expect(panel.channels.slice(0,3).map(c=>[c.min,c.max])).toEqual([[0,0],[0,0],[255,255]]);
+},30000);
+
+test.each(["front","back"] as const)("%s background covers every permitted outer-edge pixel",async side=>{
+ const png=await renderPostcard(side,[]);
+ const {data,info}=await sharp(png).removeAlpha().raw().toBuffer({resolveWithObject:true});
+ for(let y=0;y<4900;y++)for(const x of [0,7299]) {
+  const offset=(y*info.width+x)*info.channels;
+  expect([...data.subarray(offset,offset+3)]).toEqual(side==="back" && x>=4160 && y>=2236 ? [255,255,255] : [244,242,236]);
+ }
+ for(let x=0;x<7300;x++)for(const y of [0,4899]) {
+  const offset=(y*info.width+x)*info.channels;
+  expect([...data.subarray(offset,offset+3)]).toEqual(side==="back" && x>=4160 && y>=2236 ? [255,255,255] : [244,242,236]);
+ }
+},30000);
+
+test("house normalization respects the administrator's selected source rectangle",async()=>{
+ const blue=await solid("blue",4000,1800);
+ const source=await sharp(blue).composite([{input:await solid("red",2000,1800),left:0,top:0}]).png().toBuffer();
+ for(const [x,color] of [[100,[255,0,0]],[2200,[0,0,255]]] as const) {
+  const result=await normalizeHouse(source,{x,y:100,width:1495,height:1043});
+  const stats=await sharp(result.input).stats();
+  expect(stats.channels.slice(0,3).map(c=>c.min)).toEqual(color);
+  expect(stats.channels.slice(0,3).map(c=>c.max)).toEqual(color);
+ }
+});
