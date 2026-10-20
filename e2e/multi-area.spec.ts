@@ -44,7 +44,7 @@ test("three areas keep selected squares and separate artwork with one saved card
   await page.goto("/areas");
   const selected = [names[0], names[1], names[3]];
   for (const name of selected) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
-  await expect(page.getByText("Maximum authorized total: $1,197", { exact: true })).toBeVisible();
+  await expect(page.getByText("Total if all selected campaigns fill: $1,197", { exact: true })).toBeVisible();
   await expect(page.getByText("Due today: $0", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Continue with selected areas" }).click();
   for (const [i, name] of selected.entries()) await page.getByRole("region", { name, exact: true }).getByRole("button", { name: new RegExp(`position ${["F2", "B3", "F6"][i]}:`) }).click();

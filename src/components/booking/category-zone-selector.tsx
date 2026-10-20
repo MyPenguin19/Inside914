@@ -45,10 +45,10 @@ export function CategoryZoneSelector({ editions }: CategoryCatalog) {
       </section>)}
       <Button variant="secondary" disabled={pending} onClick={() => setStep(1)}>Change areas</Button>
     </div>}
-    <Card><h2 className="text-xl font-semibold">Selected: {chosen.length} areas</h2>
+    <Card><h2 className="text-xl font-semibold">Selected: {chosen.length} {chosen.length === 1 ? "area" : "areas"}</h2>
       <p className="mt-2 text-muted">{homes > 0 ? `Potential combined reach: approximately ${homes.toLocaleString()} households, provisional.` : "Household reach awaits confirmation."}</p>
-      <p className="mt-3 font-semibold">Maximum authorized total: {formatPrice(total)}</p><p>Due today: $0</p>
-      <p className="my-3 text-sm text-muted">Save your card at checkout. Each area is charged separately at $399 only after all 10 spaces are reserved and the campaign is approved.</p>
+      <p className="mt-3 font-semibold">{chosen.length === 1 ? "Total if this campaign fills" : chosen.length === 2 ? "Total if both campaigns fill" : "Total if all selected campaigns fill"}: {formatPrice(total)}</p><p>Due today: $0</p>
+      <p className="my-3 text-sm text-muted">Each selected area is handled independently. You are charged $399 only when that area&apos;s campaign fills and is approved.</p>
       {step === 1 ? <Button disabled={!chosen.length} onClick={() => { setStep(2); setMessage(""); }}>Continue with selected areas</Button> :
         <Button disabled={!chosen.length || chosen.some(e => !positions[e.id]) || pending} onClick={() => start(async () => {
           const result = await holdAreas({ selections: chosen.map(e => ({ editionId: e.id, slotId: positions[e.id] })) });

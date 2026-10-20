@@ -11,7 +11,7 @@ test("areas need no category and each selected area needs an explicit square", a
  hold.mockResolvedValue({ok:true});render(<CategoryZoneSelector {...props}/>);
  expect(screen.queryByLabelText("Choose your business category")).toBeNull();
  for(const name of [/Central/,/Southern/])fireEvent.click(screen.getByRole("checkbox",{name}));
- expect(screen.getByText("Maximum authorized total: $798")).toBeTruthy();
+ expect(screen.getByText("Total if both campaigns fill: $798")).toBeTruthy();
  expect(screen.getByText(/10,000 households, provisional/)).toBeTruthy();
  expect(screen.getByText("Due today: $0")).toBeTruthy();
  fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
@@ -35,7 +35,7 @@ test("lost square race refreshes availability without substituting another posit
 test.each([[1,"$399"],[2,"$798"],[3,"$1,197"],[4,"$1,596"]] as const)("%i areas show the correct authorization with zero due today",(count,total)=>{
  render(<CategoryZoneSelector {...props}/>);
  for(const region of REGIONS.slice(0,count)) fireEvent.click(screen.getByRole("checkbox",{name:new RegExp(region.name)}));
- expect(screen.getByText(`Maximum authorized total: ${total}`)).toBeTruthy();
+ expect(screen.getByText(`${count === 1 ? "Total if this campaign fills" : count === 2 ? "Total if both campaigns fill" : "Total if all selected campaigns fill"}: ${total}`)).toBeTruthy();
  expect(screen.getByText("Due today: $0")).toBeTruthy();
  expect(screen.queryByLabelText("Choose your business category")).toBeNull();
 });

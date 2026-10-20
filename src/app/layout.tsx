@@ -21,7 +21,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "Inside914",
-  description: "Your business in 5,000 local mailboxes. Reserve a space on Central Westchester's shared postcard.",
+  description: "Shared direct-mail advertising across Westchester County. Choose your areas and advertising squares at $399 per area, with $0 due today.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

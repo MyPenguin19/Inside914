@@ -5,43 +5,43 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, Eyebrow, SectionHeading } from "@/components/ui/primitives";
 
 const TRUST = [
-  { title: "Reserve without an upfront charge", body: "Save your space today. You're only charged if the postcard fills and the campaign is approved." },
-  { title: "Preview your advertisement", body: "See exactly where your ad sits on the postcard before you reserve." },
-  { title: "Follow campaign progress", body: "A private page shows each step, from artwork approval to printing and mailing." },
-  { title: "Receive mailing documentation", body: "When it's available, we share the documentation for your edition's mailing." },
+  { title: "Reserve without paying upfront", body: "Save your space today. Nothing is charged at reservation." },
+  { title: "Preview your advertisement", body: "See your selected position and artwork before the postcard is mailed." },
+  { title: "Follow campaign progress", body: "See when your area fills, artwork is approved, and the campaign moves toward mailing." },
+  { title: "Receive mailing documentation", body: "After mailing, access the available documentation for your campaign." },
 ];
 
 const STEPS = [
-  { title: "Choose your areas", body: "Choose one to four Westchester areas at $399 per area." },
-  { title: "Choose squares and artwork", body: "Pick a square in each area, then upload a separate ad or reuse the same image." },
-  { title: "Add your business details", body: "Tell us how to contact you about your advertisement." },
-  { title: "Reserve securely", body: "Save a card to hold your space. You pay only when the campaign is confirmed." },
+  { title: "Choose your areas", body: "Choose the Westchester areas where you want your business advertised." },
+  { title: "Choose squares and artwork", body: "Choose your square in each area and upload artwork for each campaign. Reuse the same artwork if you want." },
+  { title: "Add your business details", body: "Enter your business and contact information once." },
+  { title: "Reserve securely", body: "Save a card to reserve your spaces. Nothing is charged today. You only pay for an area when its campaign fills and is approved." },
 ];
 
 const FAQ = [
   {
     q: "How does shared mail work?",
-    a: "A small group of local businesses share one large, professionally printed postcard. Each business has its own space, and Inside914 handles printing and mailing to homes in the area. Sharing the card keeps the cost per business far lower than a solo mailing.",
+    a: "Multiple local businesses share one professionally printed postcard mailed within a selected Westchester area. Each campaign has 10 paid advertising spaces. Choose one or multiple areas, with a separate square and artwork for each.",
   },
   {
     q: "When am I charged?",
-    a: "Not when you reserve. You save a card and authorize the amount shown. We charge it only once every space on the postcard is reserved and we approve the campaign for production.",
+    a: "Nothing is charged when you reserve. Your card is saved securely. Each selected area is independent: you are charged $399 for an area only after that campaign fills and is approved.",
   },
   {
     q: "What if the postcard doesn't fill?",
-    a: "If the campaign isn't fully reserved by its deadline, your reservation is canceled and you aren't charged anything.",
+    a: "You are not charged for an area unless its campaign fills and is approved. If it isn't fully reserved by its deadline, that reservation is canceled without charge. Other selected areas are handled independently.",
   },
   {
     q: "What happens after I reserve?",
-    a: "You get a confirmation email with a private link to your reservation. We review your artwork, and you can follow the campaign's progress on that page.",
+    a: "You receive a confirmation email with a private link to your reservation. Each area moves from reservation to artwork review, a filled campaign, final preparation, payment, and mailing. Follow progress on your private campaign page.",
   },
   {
     q: "How does mailing verification work?",
-    a: "Your private Verified Mail page shows each stage of the campaign. When the mailing has been submitted, we add the mailing documentation for your edition so you can see it for yourself.",
+    a: "Your private campaign page shows campaign progress and the mailing documentation made available after mailing. It does not provide tracking for individual mailpieces.",
   },
   {
     q: "Can I change my artwork?",
-    a: "Yes. Before you reserve, you can replace or adjust your image as often as you like. After reserving, contact us and we'll help with changes before the artwork deadline.",
+    a: "Yes. Before reserving, you can replace or adjust your artwork. After reserving, contact us for help with changes before the applicable artwork deadline and final approval or production lock.",
   },
 ];
 
@@ -53,15 +53,14 @@ export default function Home() {
         {/* Hero */}
         <section className="page-width grid items-center gap-10 overflow-x-clip pb-12 pt-10 md:grid-cols-[1.15fr_1fr] md:gap-12 md:pb-16 md:pt-14">
           <div>
-            <Eyebrow>Central Westchester · Shared postcard</Eyebrow>
+            <Eyebrow>WESTCHESTER COUNTY · SHARED DIRECT MAIL</Eyebrow>
             <h1 className="mt-4 font-display text-[2.6rem] font-medium leading-[1.05] tracking-tight sm:text-6xl">
               Your Business.
               <br />
-              5,000 Local Mailboxes.
+              Thousands of Local Mailboxes.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-              Reach homeowners across Central Westchester with one professionally printed shared postcard. Choose your
-              advertising space, upload your artwork, and reserve without paying upfront.
+              Reach homeowners across Westchester with professionally printed shared postcards. Choose the areas you want to advertise in, select your space, upload your artwork, and reserve without paying upfront.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <ButtonLink href="/areas" size="lg">
@@ -71,7 +70,7 @@ export default function Home() {
                 How It Works
               </ButtonLink>
             </div>
-            <p className="mt-4 text-sm text-muted">Square ad $399 per zone · One image across your zones · $0 today</p>
+            <p className="mt-4 text-sm text-muted">$399 per area · Choose one or multiple areas · $0 today</p>
           </div>
           <PostcardIllustration />
         </section>
@@ -96,20 +95,20 @@ export default function Home() {
             <SectionHeading
               id="pricing-title"
               eyebrow="Pricing"
-              title="Simple, fixed prices."
-              intro="One price per space, the same for every advertiser. Nothing is charged until the campaign is confirmed."
+              title="Simple, fixed pricing."
+              intro="$399 for one advertising square in one Westchester area. Choose as many available areas as you want. Nothing is charged today."
             />
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               <PriceCard
                 name="Square Advertisement"
-                price="$399 per zone"
-                detail="One square space on a shared postcard. Choose your position and artwork in up to four areas."
+                price="$399 per area"
+                detail="One 2.5″ × 2.5″ advertising space on a shared postcard mailed within your selected Westchester area."
                 diagram={<SizeDiagram size="standard" />}
               />
 
             </div>
             <p className="mt-6 text-sm text-muted">
-              Each selected zone is an independent campaign with 10 paid square ads on a 9″ × 6″ postcard. Household reach and print layout remain provisional.
+              Each area is its own campaign with 10 advertising spaces.
             </p>
           </div>
         </section>
@@ -121,7 +120,7 @@ export default function Home() {
               id="verified-title"
               eyebrow="Inside914 Verified Mail"
               title="Advertising you can actually follow."
-              intro="Direct mail usually asks you to take it on faith. With Verified Mail, every advertiser gets a private page that shows where their campaign stands."
+              intro="Know what’s happening after you reserve. Inside914 gives each advertiser a private campaign page so you can follow your advertisement from reservation through mailing."
             />
             <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {TRUST.map((item) => (
@@ -157,8 +156,8 @@ export default function Home() {
         <section className="page-width pb-14 md:pb-16">
           <Card tone="dark" className="flex flex-col items-start justify-between gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
             <div>
-              <h2 className="font-display text-3xl font-medium">Ready to see the open spaces?</h2>
-              <p className="mt-2 text-background/75">Pick your spot on the first Central Westchester postcard.</p>
+              <h2 className="font-display text-3xl font-medium">Ready to advertise locally?</h2>
+              <p className="mt-2 text-background/75">See available spaces across our Westchester advertising areas.</p>
             </div>
             <ButtonLink href="/areas" size="lg" variant="inverse">
               View Available Spaces

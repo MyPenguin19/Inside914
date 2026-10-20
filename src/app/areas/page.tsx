@@ -16,14 +16,13 @@ export default function AreasPage() {
         <div className="mt-6">
           <h1 className="font-display text-4xl font-medium tracking-tight">Choose your areas.</h1>
           <p className="mt-2 max-w-2xl text-muted">
-            Each area is one postcard mailed to homes in that part of Westchester. We plan the mailing routes for you.
+            Choose one or more Westchester areas. Each area has its own shared postcard campaign and its own available advertising spaces. $399 per selected area · 10 spaces per campaign · $0 today
           </p>
         </div>
         {CAMPAIGN_DETAILS_PROVISIONAL && (
           <div className="mt-6">
             <Notice tone="warning" role="note">
-              <strong>Provisional campaign details.</strong> Dates, household counts and the postcard layout shown here are
-              placeholders and may change before the campaign is confirmed.
+              <strong>Campaign details.</strong> Mailing dates and household reach are confirmed before production. Final print layout is subject to printer approval.
             </Notice>
           </div>
         )}

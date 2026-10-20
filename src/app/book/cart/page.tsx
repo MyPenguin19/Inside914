@@ -128,7 +128,7 @@ async function Cart() {
         ))}
       </div>
       <p className="text-xl font-semibold">
-        Maximum authorized total: {formatPrice(cart.members.reduce((n, b) => n + b.priceCents, 0))}
+        Total if all selected campaigns fill: {formatPrice(cart.members.reduce((n, b) => n + b.priceCents, 0))}
       </p>
       <p>Due today: $0</p>
       {!confirmed && !gate && <Link className={buttonClass("primary")} href="/book/cart/details">Continue to business details</Link>}
