@@ -35,7 +35,7 @@ function paidGrid(side: "front" | "back", columns: number, left: number) {
 
 // Region allocations only, not final house artwork. Split the available rectangle
 // equally into two stacked regions. Their common edge and the lower postal edge
-// have no additional gutter. Final content/clearance approval is still required.
+// have no additional gutter. Final house artwork and print proof still need approval.
 const houseWidth = live.x + live.width - postal.x;
 const houseHeight = (postal.y - live.y) / 2;
 const houseRegions = ["inside914", "inside-diagnostics"].map((id, index) => ({
@@ -44,10 +44,11 @@ const houseRegions = ["inside914", "inside-diagnostics"].map((id, index) => ({
   ...inches({ x: postal.x, y: live.y + index * houseHeight, width: houseWidth, height: houseHeight }),
 }));
 
-// Used for draft inventory only. This does not grant printer approval.
+// Owner-approved reservation layout for AmazingMail 566132; not final print-proof approval.
+// Keep the existing key so approval applies to the exact versioned campaign geometry.
 export const AMAZINGMAIL_9X6_LAYOUT = {
   key: "amazingmail-9x6-ten-square-draft",
-  approved: false,
+  approved: true,
   coordinateSystem: "file-top-left",
   file: inches(file),
   trim: inches(trim),

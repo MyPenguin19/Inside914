@@ -22,7 +22,6 @@ const {
   ownedCart,
   startCartPayment,
   completeCart,
-  copyCartArtwork,
   CART_TERMS,
 } = await import("@/lib/booking/cart");
 const { placeHold } = await import("@/lib/booking/place-hold");
@@ -146,8 +145,8 @@ describe("multi-area groups, isolated local campaigns", () => {
             issue_month: "2098-01-01",
             status: "open",
             artwork_deadline: "2097-12-15T23:59:00Z",
-            unit_price_cents: 50000,
-            double_unit_price_cents: 90000,
+            unit_price_cents: 39900,
+            double_unit_price_cents: null,
             layout_template: layout,
           })
         ).error,
@@ -262,7 +261,7 @@ describe("multi-area groups, isolated local campaigns", () => {
     try {
       const c = await held();
       expect(c.cart.members).toHaveLength(4);
-      expect(c.cart.members.reduce((n, b) => n + b.priceCents, 0)).toBe(200000);
+      expect(c.cart.members.reduce((n, b) => n + b.priceCents, 0)).toBe(159600);
       expect(await ownedCart(db, "wrong-token")).toBeNull();
     } finally {
       process.env.INSIDE914_PRICING_MODE = "test";
@@ -305,19 +304,7 @@ describe("multi-area groups, isolated local campaigns", () => {
       (await db.from("bookings").select("id").in("edition_id", editions)).data,
     ).toHaveLength(0);
   });
-  test("mixed sizes retain per-area prices and claim counts", async () => {
-    const c = await createCart(db, [
-      choices()[0],
-      { ...choices()[1], slotIds: slots[1].slice(0, 2), mode: "double" },
-      { ...choices()[2], slotIds: slots[2].slice(0, 8), mode: "full_side" },
-      { ...choices()[3], slotIds: slots[3], mode: "both_sides" },
-    ]);
-    carts.push(c.id);
-    const group = (await ownedCart(db, c.token))!;
-    expect(
-      group.members.map((b) => b.priceCents).sort((a, b) => a - b),
-    ).toEqual([100, 200, 160000, 290000]);
-  });
+
   test("racing groups have exactly one winner; losing group leaves no partial inventory", async () => {
     const results = await Promise.allSettled([
       createCart(db, choices()),
@@ -416,26 +403,5 @@ describe("multi-area groups, isolated local campaigns", () => {
       ).data!.every((b) => b.status === "released"),
     ).toBe(true);
   });
-  test("art copies are independent, require positioning, and reject foreign members", async () => {
-    const c = await ready();
-    const [source, target] = c.cart.members;
-    await copyCartArtwork(db, c.token, source.id, target.id);
-    const { data } = await db
-      .from("booking_artwork")
-      .select("booking_id,storage_path,crop_width")
-      .in("booking_id", [source.id, target.id]);
-    expect(new Set(data!.map((a) => a.storage_path)).size).toBe(2);
-    expect(
-      data!.find((a) => a.booking_id === target.id)?.crop_width,
-    ).toBeNull();
-    await expect(
-      copyCartArtwork(db, "wrong", source.id, target.id),
-    ).rejects.toThrow();
-    await expect(
-      copyCartArtwork(db, c.token, source.id, randomUUID()),
-    ).rejects.toThrow();
-    expect(
-      await completeCart(db, fakeStripe as unknown as StripeClient, c.id),
-    ).toBe("artwork_missing");
-  });
+
 });

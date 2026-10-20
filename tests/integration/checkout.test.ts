@@ -120,16 +120,7 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
   });
 
   describe("server-side pricing and consent", () => {
-    test("consent records the booking's own TEST price: $1 standard, $2 double, marked as test", async () => {
-      const standard = await prepare(["F1"]);
-      const double = await prepare(["F3", "F4"]);
-      const amount = async (id: string) =>
-        (await admin.from("payment_consents").select("amount_cents, terms_version, edition_id, pricing_mode").eq("booking_id", id).single()).data;
-      expect(await amount(standard.bookingId)).toEqual({ amount_cents: 100, terms_version: TERMS_VERSION, edition_id: EDITION, pricing_mode: "test" });
-      expect(await amount(double.bookingId)).toMatchObject({ amount_cents: 200, pricing_mode: "test" });
-      expect(double.stripe.intent(double.setupIntentId!).metadata).toMatchObject({ amount_cents: "200", size: "double", pricing_mode: "test" });
-      expect(await bookingRow(standard.bookingId)).toMatchObject({ price_cents: 100, pricing_mode: "test" });
-    });
+
 
     test("consent must be an explicit true for the current terms", async () => {
       const { token } = await prepare(["F5"], { consent: false });
@@ -162,13 +153,7 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
       expect(data?.available).toBe(false);
     });
 
-    test("double: both units are confirmed together as one $2 (test price) reservation", async () => {
-      const { bookingId, stripe, setupIntentId } = await prepare(["B5", "B6"]);
-      stripe.succeed(setupIntentId!);
-      expect(await checkout.completeReservation(admin, stripe, bookingId)).toBe("confirmed");
-      expect(await bookingRow(bookingId)).toMatchObject({ status: "reserved", size: "double", price_cents: 200, pricing_mode: "test" });
-      expect(await liveClaims(bookingId)).toHaveLength(2);
-    });
+
 
     test("simultaneous confirmations: exactly one confirms, the rest are no-ops, one email queued", async () => {
       const { bookingId, stripe, setupIntentId } = await prepare(["B7"]);

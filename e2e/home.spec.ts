@@ -6,15 +6,15 @@ test("homepage: hero, Verified Mail, how it works, pricing, FAQ and footer", asy
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your Business.5,000 Local Mailboxes.");
   await expect(page.getByText(/reserve without paying upfront/)).toBeVisible();
   await expect(page.getByRole("img", { name: /Illustration of the shared Inside914 postcard/ })).toBeVisible();
-  await expect(page.getByText("Illustration only: sample ads, provisional layout.")).toBeVisible();
 
-  for (const heading of ["Advertising you can actually follow.", "Four simple steps.", "Simple, fixed prices.", "Good to know."]) {
+  for (const heading of ["Four simple steps.", "Simple, fixed prices.", "Good to know."]) {
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
   }
   const pricing = page.locator("#pricing");
-  await expect(pricing).toContainText("Standard Advertisement");
-  await expect(pricing).toContainText("$500");
-  await expect(pricing).toContainText("$900");
+  await expect(pricing).toContainText("Square Advertisement");
+  await expect(pricing).toContainText("$399 per zone");
+  await expect(pricing).toContainText("10 paid square ads");
+  await expect(pricing).not.toContainText("Double");
 
   // FAQ answers open on click (and keyboard: summary elements are focusable).
   const question = page.getByText("What if the postcard doesn't fill?");

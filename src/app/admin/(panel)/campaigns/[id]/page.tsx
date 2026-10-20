@@ -91,7 +91,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
       <section aria-label="Reservation progress" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label="Reserved units" value={`${stats.reservedUnits} of ${stats.totalUnits}`} note={`${stats.filledPercent}% filled`} />
         <Stat label="On hold" value={String(stats.heldUnits)} />
-        <Stat label="Available" value={String(stats.availableUnits)} />
+        {edition.status === "draft" ? <Stat label="Inventory" value={`${stats.totalUnits} total positions`} note="Campaign not open yet" /> : <Stat label="Available" value={String(stats.availableUnits)} />}
         <Stat label="Reserved value" value={formatPrice(stats.reservedValueCents)} note="Authorized, not collected" />
       </section>
 

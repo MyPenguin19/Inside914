@@ -31,13 +31,15 @@ type EditionRow = {
   artwork_deadline: string;
   mail_date: string | null;
   status: string;
+  reservations_paused_at: string | null;
+  reservations_open_at: string | null;
   unit_price_cents: number;
   double_unit_price_cents: number | null;
   zones: { slug: string; name: string; household_count: number } | null;
 };
 
 const EDITION_COLUMNS =
-  "id, issue_month, artwork_deadline, mail_date, status, product_model, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
+  "id, issue_month, artwork_deadline, mail_date, status, reservations_paused_at, reservations_open_at, product_model, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
 
 // Prices shown are what a hold would cost under the active pricing configuration (lib/pricing).
 // priced=false is ONLY for views that never show these prices (an existing reservation shows its
@@ -58,7 +60,8 @@ function toSummary(row: EditionRow, slots: { available: boolean }[], priced = tr
     doublePriceCents: prices.doublePriceCents,
     pricingMode: prices.mode,
     ...(row.product_model === "square_v1" ? {} : POSTCARD_PRICES),
-    bookable: row.status === "open" && Date.parse(row.artwork_deadline) > Date.now(),
+    bookable: row.status === "open" && !row.reservations_paused_at &&
+      (!row.reservations_open_at || Date.parse(row.reservations_open_at) <= Date.now()) && Date.parse(row.artwork_deadline) > Date.now(),
     totalUnits: slots.length,
     availableUnits: slots.filter((s) => s.available).length,
   };

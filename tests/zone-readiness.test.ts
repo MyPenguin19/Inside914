@@ -7,9 +7,9 @@ const slots = SQUARE_TEMPLATE.slots.map((s,i) => ({...s,id:`s${i}`,editionId:"e"
 const bookings: AdminBooking[] = slots.map((s,i) => ({id:`b${i}`,editionId:"e",categoryId:`cat-${i}`,status:"reserved",size:"standard",priceCents:39900,pricingMode:"launch",holdExpiresAt:null,reference:null,createdAt:"2026-10-19",confirmedAt:"2026-10-19",stripeCustomerId:"cus",stripeSetupIntentId:null,stripePaymentMethodId:"pm",stripeSetupStatus:null,stripeSetupStatusAt:null,contact:null,artwork:{status:"ready",cropped:true,square:true,updatedAt:"2026-10-19"},artworkReview:"approved",claims:[{slotId:s.id,released:false}]}));
 const consents = new Map(bookings.map(b => [b.id,{amountCents:39900}]));
 const evaluate = (rows=bookings) => zoneReadiness(edition,slots,rows,consents);
-test("ten valid reservations do not enable charging or imply printer approval", () => {
+test("ten valid reservations do not enable charging or approve the final print proof", () => {
   const result=evaluate();expect(result.validCount).toBe(10);expect(result.ready).toBe(false);
-  expect(result.checks.filter(c=>!c.ready).map(c=>c.label)).toEqual(["Printer layout approved","House artwork and final proof approved"]);
+  expect(result.checks.filter(c=>!c.ready).map(c=>c.label)).toEqual(["House artwork and final proof approved"]);
 });
 test("nine is not full and other zones cannot fill it",()=>{
   expect(evaluate([...bookings.slice(0,9),{...bookings[9],editionId:"other"}]).validCount).toBe(9);

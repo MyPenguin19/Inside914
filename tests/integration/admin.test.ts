@@ -68,35 +68,35 @@ describe.skipIf(!secretKey)("admin access and data (real Supabase Auth + RLS)", 
     expect((await asAdmin.from("admins").select("user_id")).data).toHaveLength(1); // only its own row
   });
 
-  test("dashboard counts match the database: a confirmed double is 2 units, 1 reservation, its stored amount", async () => {
+  test("dashboard counts match the database: a confirmed single is 1 unit, 1 reservation, its stored amount", async () => {
     await service.from("bookings").delete().eq("edition_id", EDITION);
-    const double = await placeHold(service, { slotIds: [slotIds.B1, slotIds.B2] });
+    const reserved = await placeHold(service, { slotIds: [slotIds.B1] });
     const held = await placeHold(service, { slotIds: [slotIds.B3] });
     const expired = await placeHold(service, { slotIds: [slotIds.B4] });
-    if (!double.ok || !held.ok || !expired.ok) throw new Error("holds failed");
+    if (!reserved.ok || !held.ok || !expired.ok) throw new Error("holds failed");
     await service
       .from("bookings")
       .update({ status: "reserved", confirmed_at: new Date().toISOString(), reference: "IN914-ADMNTS", stripe_payment_method_id: "pm_admintest" })
-      .eq("id", double.bookingId);
-    await service.from("booking_contacts").insert({ booking_id: double.bookingId, business_name: "Admin Test Co", contact_name: "Pat", email: "admin-test-co@example.com", phone: "+19145550100" });
+      .eq("id", reserved.bookingId);
+    await service.from("booking_contacts").insert({ booking_id: reserved.bookingId, business_name: "Admin Test Co", contact_name: "Pat", email: "admin-test-co@example.com", phone: "+19145550100" });
     await service.from("bookings").update({ hold_expires_at: new Date(Date.now() - 1000).toISOString() }).eq("id", expired.bookingId);
 
     const edition = (await data.listEditions(asAdmin)).find((e) => e.id === EDITION)!;
     const [slots, bookings] = await Promise.all([data.listSlots(asAdmin, [EDITION]), data.listEditionBookings(asAdmin, [EDITION])]);
     const stats = campaignStats(edition, slots, bookings, Date.now());
     expect(stats).toMatchObject({
-      reservedUnits: 2,
+      reservedUnits: 1,
       reservations: 1,
       heldUnits: 1, // the expired hold does not count
-      availableUnits: slots.length - 3,
+      availableUnits: slots.length - 2,
       advertisers: 1,
-      reservedValueCents: double.priceCents, // what the booking stores ($2 in test pricing)
+      reservedValueCents: reserved.priceCents, // use the stored amount, not a catalog estimate
       paymentMethodsReady: 1,
     });
 
     // Search, filter and pagination run in the database.
     const found = await data.searchBookings(asAdmin, { filter: "confirmed", q: "admin test", page: 1 });
-    expect(found.rows.map((b) => b.id)).toEqual([double.bookingId]);
+    expect(found.rows.map((b) => b.id)).toEqual([reserved.bookingId]);
     expect(found.total).toBe(1);
     expect((await data.searchBookings(asAdmin, { filter: "confirmed", q: "no-such-business", page: 1 })).total).toBe(0);
     expect((await data.searchBookings(asAdmin, { filter: "pending", page: 1 })).rows).toEqual([]); // holds without details aren't advertisers

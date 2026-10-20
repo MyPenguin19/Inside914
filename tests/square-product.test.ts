@@ -14,7 +14,7 @@ test.each([{ unit_price_cents: "1" }, { unit_price_cents: "500" }, { double_pric
   expect(CampaignForm.safeParse({ ...FIRST_CAMPAIGN_DEFAULTS, zone_id: "00000000-0000-4000-8000-000000000001", ...changes }).success).toBe(false);
 });
 test("only ten paid squares are copied into inventory, in trim coordinates", () => {
-  expect(SQUARE_TEMPLATE.approved).toBe(false);
+  expect(SQUARE_TEMPLATE.approved).toBe(true);
   expect(SQUARE_TEMPLATE.slots).toHaveLength(10);
   expect(SQUARE_TEMPLATE.slots.filter(s => s.side === "front")).toHaveLength(6);
   expect(SQUARE_TEMPLATE.slots.filter(s => s.side === "back")).toHaveLength(4);

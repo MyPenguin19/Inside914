@@ -39,15 +39,17 @@ test.afterAll(async()=>{
   }
   if(user){ok(await db.from("admin_events").delete().eq("admin_user_id",user));await admin?.auth.signOut();expect((await db.auth.admin.deleteUser(user)).error).toBeNull();}
 });
-test("category-first four-zone checkout uses one square artwork and one simulated setup",async({page,browser})=>{
+test("category-first three-zone checkout uses one square artwork and one simulated setup",async({page,browser})=>{
   test.setTimeout(60000);
+  const stripeRequests: string[] = [];
+  await page.context().route(/https:\/\/api\.stripe\.com\//, route => { stripeRequests.push(route.request().url()); return route.abort(); });
   await page.goto("/areas");
   await expect(page.getByRole("link",{name:"Account",exact:true})).toHaveCount(0);
   await page.getByLabel("Choose your business category").selectOption("plumbing");
   for(const name of names.slice(0,2))await page.getByRole("checkbox",{name:new RegExp(name)}).check();
   await expect(page.getByText("Maximum authorized total: $798",{exact:true})).toBeVisible();
-  for(const name of names.slice(2))await page.getByRole("checkbox",{name:new RegExp(name)}).check();
-  await expect(page.getByText("Maximum authorized total: $1,596",{exact:true})).toBeVisible();
+  for(const name of [names[3]])await page.getByRole("checkbox",{name:new RegExp(name)}).check();
+  await expect(page.getByText("Maximum authorized total: $1,197",{exact:true})).toBeVisible();
   await expect(page.getByText("Due today: $0",{exact:true})).toBeVisible();
   for(const width of [320,375,390,768,1440]){await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);}
   await page.getByRole("button",{name:"Continue with selected zones"}).click();
@@ -56,12 +58,13 @@ test("category-first four-zone checkout uses one square artwork and one simulate
   // Separate visitor sees exclusive category occupancy, without customer identity.
   const other=await browser.newContext(); const second=await other.newPage();
   await second.goto("/areas");await second.getByLabel("Choose your business category").selectOption("plumbing");
-  for(const name of names)await expect(second.getByRole("checkbox",{name:new RegExp(name)})).toBeDisabled();
+  for(const name of [names[0],names[1],names[3]])await expect(second.getByRole("checkbox",{name:new RegExp(name)})).toBeDisabled();
+  await expect(second.getByRole("checkbox",{name:/Northern Westchester/})).toBeEnabled();
   await second.getByLabel("Choose your business category").selectOption("hvac");
   await expect(second.getByRole("checkbox",{name:/Central Westchester/})).toBeEnabled();await other.close();
   await page.getByRole("button",{name:"Upload or edit shared artwork"}).click();
   await expect(page).toHaveURL(/\/book\/artwork$/);
-  const image=await sharp({create:{width:1200,height:900,channels:3,background:{r:40,g:100,b:160}}}).png().toBuffer();
+  const image=await sharp({create:{width:1200,height:1200,channels:3,background:{r:40,g:100,b:160}}}).png().toBuffer();
   await page.getByLabel("Ad image file").setInputFiles({name:"shared.png",mimeType:"image/png",buffer:image});
   await expect(page.getByRole("button",{name:"Save artwork for all zones"})).toBeEnabled();
   await page.getByRole("button",{name:"Save artwork for all zones"}).click();
@@ -73,11 +76,16 @@ test("category-first four-zone checkout uses one square artwork and one simulate
   await page.getByLabel("Phone",{exact:false}).fill("9145550123");
   await page.getByRole("button",{name:"Continue to payment details"}).click();
   await expect(page).toHaveURL(/\/book\/cart\/payment$/);
+  await expect(page.getByRole("checkbox")).not.toBeChecked();
+  await expect(page.getByRole("button",{name:/Simulate.*card|Reserve.*TEST|Confirm TEST|Simulate reservation/i})).toBeDisabled();
   await page.getByRole("checkbox").check();
   await page.getByRole("button",{name:/Simulate.*card|Reserve.*TEST|Confirm TEST|Simulate reservation/i}).click();
   await expect(page.getByRole("heading",{name:"Your areas are reserved"})).toBeVisible();
   const bookings=ok(await db.from("bookings").select("id,status,price_cents,category_id,stripe_setup_intent_id,stripe_payment_method_id").in("edition_id",ids))!;
-  expect(bookings).toHaveLength(4);expect(bookings.every(b=>b.status==="reserved"&&b.price_cents===39900&&b.category_id==="plumbing")).toBe(true);
+  const availability=ok(await db.from("category_availability").select("edition_id,occupancy").in("edition_id",ids).eq("category_id","plumbing"))!;
+  expect(availability.filter(a=>a.occupancy==="available").map(a=>a.edition_id)).toEqual([ids[2]]);
+  expect(stripeRequests).toEqual([]);
+  expect(bookings).toHaveLength(3);expect(bookings.every(b=>b.status==="reserved"&&b.price_cents===39900&&b.category_id==="plumbing")).toBe(true);
   expect(bookings.filter(b=>b.stripe_setup_intent_id)).toHaveLength(1);
   expect(new Set(bookings.map(b=>b.stripe_payment_method_id)).size).toBe(1);
   const art=ok(await db.from("booking_artwork").select("shared_source_id,crop_x,crop_y,crop_width,crop_height,zoom,storage_path").in("booking_id",bookings.map(b=>b.id)))!;
@@ -89,8 +97,10 @@ test("category-first four-zone checkout uses one square artwork and one simulate
     expect(downloaded.error).toBeNull();
     expect(Buffer.from(await downloaded.data!.arrayBuffer()).equals(image)).toBe(true);
   }
+  expect(ok(await db.from("zone_charges").select("id").in("edition_id",ids))).toHaveLength(0);
+  expect(bookings.every(b=>b.stripe_payment_method_id?.startsWith("pm_devtest_"))).toBe(true);
   const consents=ok(await db.from("payment_consents").select("amount_cents,stripe_setup_intent_id").in("booking_id",bookings.map(b=>b.id)))!;
-  expect(consents).toHaveLength(4);expect(consents.every(c=>c.amount_cents===39900)).toBe(true);
+  expect(consents).toHaveLength(3);expect(consents.every(c=>c.amount_cents===39900)).toBe(true);
   const reviewer=await browser.newContext();const reviewPage=await reviewer.newPage();
   await reviewPage.goto("/admin/login");
   await reviewPage.getByLabel("Email").fill(adminEmail);await reviewPage.getByLabel("Password").fill(adminPassword);
@@ -98,14 +108,14 @@ test("category-first four-zone checkout uses one square artwork and one simulate
   await reviewPage.goto("/admin/advertisers?q=Shared%20Square%20Fixture");
   await expect(reviewPage.getByRole("columnheader",{name:"Category",exact:true})).toBeVisible();
   const reservationRows=reviewPage.getByRole("row").filter({hasText:"Shared Square Fixture"});
-  await expect(reservationRows).toHaveCount(4);
+  await expect(reservationRows).toHaveCount(3);
   for (const row of await reservationRows.all()) {
     await expect(row).toContainText("plumbing");
     const selected=row.getByRole("cell").nth(2);
-    for (const name of names) await expect(selected).toContainText(name);
+    for (const name of [names[0],names[1],names[3]]) await expect(selected).toContainText(name);
   }
   await reviewPage.goto("/admin/payments?q=Shared%20Square%20Fixture");
-  await expect(reviewPage.getByRole("row").filter({hasText:"Shared Square Fixture"})).toHaveCount(4);
+  await expect(reviewPage.getByRole("row").filter({hasText:"Shared Square Fixture"})).toHaveCount(3);
   await expect(reviewPage.getByRole("columnheader",{name:"Collection status",exact:true})).toBeVisible();
   await reviewer.close();
   for(const path of ["/account/signup","/account/login","/account/reset-password","/dashboard","/dashboard/recurring"]){await page.goto(path);await expect(page).toHaveURL(/\/areas$/);}
