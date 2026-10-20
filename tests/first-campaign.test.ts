@@ -20,8 +20,9 @@ describe("first campaign proposal", () => {
     expect(() => getPricingMode({ NODE_ENV: "production", VERCEL_ENV: "production", INSIDE914_PRICING_MODE: "test" })).toThrow(/forbidden/);
     expect(() => getPricingMode({ NODE_ENV: "production", VERCEL_ENV: "production" })).toThrow(/must be set/);
   });
-  test("all sixteen positions fill the card; none is an approved template", () => {
-    expect(LAYOUT_TEMPLATES.every((t) => !t.approved)).toBe(true);
+  test("legacy sixteen-position template stays unapproved", () => {
+    expect(LAYOUT_TEMPLATES[0].approved).toBe(false);
+    expect(LAYOUT_TEMPLATES.filter(t => t.approved).map(t => t.key)).toEqual(["amazingmail-9x6-ten-square-draft"]);
     for (const side of ["front", "back"]) {
       const slots = LAYOUT_TEMPLATES[0].slots.filter((s) => s.side === side);
       expect(slots).toHaveLength(8);

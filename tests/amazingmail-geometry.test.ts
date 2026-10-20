@@ -98,10 +98,10 @@ describe("AmazingMail 566132 nominal geometry (not printer approval)", () => {
     expect(overlaps({ ...lowerHouse, height: lowerHouse.height + 0.001 }, layout.postal)).toBe(true);
   });
 
-  test("registers draft inventory without approving it or changing historical dimensions", () => {
-    expect(layout.approved).toBe(false);
-    expect(spec.status).toBe("provisional");
-    expect(LAYOUT_TEMPLATES.find((t) => t.key === layout.key)?.approved).toBe(false);
+  test("approves only the exact square reservation geometry without changing historical dimensions", () => {
+    expect(layout.approved).toBe(true);
+    expect(spec.status).toBe("approved");
+    expect(LAYOUT_TEMPLATES.find((t) => t.key === layout.key)?.approved).toBe(true);
     expect(PRINT_SPEC.trimInches).toEqual({ width: 6.5, height: 12 });
     expect(PRINT_SPEC.bleedInches).toBeNull();
   });
@@ -144,7 +144,7 @@ describe("Phase D origin and clearance regression", () => {
     expect(backSquareFit({columnGap:0.125,rowGap:0,postalClearance:0}).maximumSquareInches).toBe(2.44375);
     expect(backSquareFit({columnGap:0,rowGap:0.750001,postalClearance:0}).fitsRequestedTile).toBe(false);
     expect(layout.paidSlots.every(s => s.width === 2.5 && s.height === 2.5)).toBe(true);
-    expect(layout.approved).toBe(false);
+    expect(layout.approved).toBe(true);
   });
 
   test.each([-1, NaN, Infinity])("rejects invalid allowances %s", value => {

@@ -68,6 +68,14 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   expect(ok(await db.from("slots").select("id").eq("edition_id", campaign!.id))).toHaveLength(10);
   await expect(page.getByRole("button", {name:"Activate & Charge Zone"})).toBeDisabled();
   await expect(page.getByText("0 of 10 valid confirmed reservations", {exact:true})).toBeVisible();
+  await expect(page.getByText("Layout approved. Open this campaign when you're ready to accept reservations.")).toBeVisible();
+  await expect(page.getByText("10 total positions", {exact:true})).toBeVisible();
+  await page.getByRole("button", {name:"Open for reservations", exact:true}).click();
+  expect(ok(await db.from("editions").select("status").eq("id",campaign!.id).single())!.status).toBe("draft");
+  await page.getByRole("button", {name:"Open now", exact:true}).click();
+  await expect(page.getByRole("button", {name:"Pause new reservations", exact:true})).toBeVisible();
+  expect(ok(await db.from("editions").select("status").eq("id",campaign!.id).single())!.status).toBe("open");
+  expect(ok(await db.from("slot_availability").select("slot_id").eq("edition_id",campaign!.id).eq("available",true))).toHaveLength(10);
   await page.goto(`/admin/production?campaign=${campaign!.id}`);
   await expect(page.getByText("Inside914 · House artwork pending", {exact:true})).toBeVisible();
   await expect(page.getByText("Inside Diagnostics · House artwork pending", {exact:true})).toBeVisible();

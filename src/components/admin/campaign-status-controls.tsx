@@ -25,7 +25,7 @@ export function CampaignStatusControls({ edition: e, stats, now }: { edition: Ad
         consequence={<>No one can start a new hold. Existing reservations stay, and customers already in checkout can still finish.</>} />,
     );
   }
-  if (e.status === "open" && e.pausedAt) {
+  if (e.status === "open" && e.pausedAt && layoutApproved) {
     controls.push(
       <ConfirmAction key="resume" label="Resume reservations" action={setCampaignStatus} fields={f("resume")} confirmLabel="Resume"
         consequence={<>Customers can hold spaces again until the reservation deadline.</>} />,
@@ -74,7 +74,8 @@ export function CampaignStatusControls({ edition: e, stats, now }: { edition: Ad
   }
   return (
     <div className="flex flex-col gap-4">
-      {!layoutApproved && <Notice tone="warning" role="note"><strong>Layout approval required.</strong> This layout remains provisional. Printer acceptance of postal clearance, bleed, safe margins and final house artwork is required before opening reservations. No layout is currently approved.</Notice>}
+      {!layoutApproved && <Notice tone="warning" role="note">{e.status === "draft" ? "Campaign created successfully. It is still a draft and cannot accept reservations until the postcard layout is approved." : "Layout approval required. This campaign cannot accept new reservations until its postcard layout is approved."}</Notice>}
+      {layoutApproved && e.status === "draft" && <Notice role="note">Layout approved. Open this campaign when you&apos;re ready to accept reservations.</Notice>}
       {missed && (
         <Notice tone="danger" role="alert">
           <strong>Deadline passed: {stats.reservedUnits} of {stats.sellableUnits} spaces reserved.</strong> The reservation deadline ({formatDeadline(e.artworkDeadline)}) passed before the

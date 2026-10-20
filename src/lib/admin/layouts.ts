@@ -2,8 +2,8 @@ import { AMAZINGMAIL_9X6_LAYOUT, fileToTrim } from "@/lib/print/amazingmail-layo
 import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
 
 // Layout geometry uses inches from the trimmed card's top-left. Historical campaigns
-// retain their 6.5 × 12 layout. New drafts use the provisional 9 × 6 square template;
-// neither template is printer-approved.
+// retain their 6.5 × 12 layout. New drafts use the owner-approved 9 × 6 reservation layout.
+// Historical layouts remain unapproved; final print proofs require separate review.
 
 export type TemplateSlot = { side: "front" | "back"; label: string; x: number; y: number; width: number; height: number };
 export type LayoutTemplate = { key: string; label: string; description: string; approved: boolean; slots: TemplateSlot[] };
@@ -22,8 +22,8 @@ function grid(side: "front" | "back", rows: number, top: number, unitHeight: num
 export const SQUARE_TEMPLATE: LayoutTemplate = {
   key: SQUARE_PRODUCT.layoutKey,
   label: "9 × 6 postcard — 10 square ads",
-  description: "Ten paid 2.5″ square positions: six front, four back. Postal and house regions are excluded. Printer clearance approval is still required before opening.",
-  approved: false,
+  description: "Ten paid 2.5″ square positions: six front, four back. Postal and house regions are excluded. Owner-approved reservation geometry; final house artwork and print proof require separate approval.",
+  approved: AMAZINGMAIL_9X6_LAYOUT.approved,
   slots: AMAZINGMAIL_9X6_LAYOUT.paidSlots.map(fileToTrim),
 };
 

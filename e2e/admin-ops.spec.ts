@@ -79,7 +79,7 @@ test("each geographic area prepares its own draft without copying dates or inven
       await expect(page.getByLabel("Mailing month")).toHaveValue("");
       await expect(page.getByLabel("Reservation deadline")).toHaveValue("");
       await expect(page.getByLabel("Artwork submission deadline")).toHaveValue("");
-      await expect(page.getByLabel("Standard price ($)")).toHaveValue("500");
+      await expect(page.getByLabel("Square ad per area ($)")).toHaveValue("399");
       if (area.slug !== "central-westchester") await expect(page.getByLabel("Target mailing quantity (homes)")).toHaveValue("");
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     }
@@ -98,12 +98,12 @@ test("January proposal loads exact dates and prices without creating a campaign"
   await expect(page.getByLabel("Artwork submission deadline")).toHaveValue("2026-12-20T23:59");
   await expect(page.getByLabel("Mailing window: first day")).toHaveValue("2027-01-11");
   await expect(page.getByLabel("Mailing window: last day")).toHaveValue("2027-01-15");
-  await expect(page.getByLabel("Standard price ($)")).toHaveValue("500");
-  await expect(page.getByLabel("Double price ($)")).toHaveValue("900");
+  await expect(page.getByLabel("Square ad per area ($)")).toHaveValue("399");
+  await expect(page.getByLabel("Double price ($)")).toHaveCount(0);
   await expect(page.getByLabel("Target mailing quantity (homes)")).toHaveValue("5000");
 });
 
-test("create a draft campaign (with validation), edit it, block a space, see the rules enforced, cancel it", async ({ page }) => {
+test("create a draft campaign (with validation), edit it, preserve fixed inventory, cancel it", async ({ page }) => {
   await signIn(page);
   await page.goto("/admin/campaigns");
   await page.getByRole("link", { name: "New campaign" }).click();
@@ -132,19 +132,9 @@ test("create a draft campaign (with validation), edit it, block a space, see the
   await main(page).getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("heading", { name: `${name} (edited)`, level: 1 })).toBeVisible();
 
-  // Block a space (reason required), then unblock it.
-  const f1 = main(page).getByRole("row").filter({ hasText: "Front F1" });
-  await f1.getByRole("button", { name: "Block" }).click();
-  await main(page).getByLabel("Reason (internal)").fill("Reserved for an Inside914 notice");
-  await main(page).getByRole("button", { name: "Block space" }).click();
-  await expect(main(page).getByRole("row").filter({ hasText: "Front F1" })).toContainText("Blocked: Reserved for an Inside914 notice");
-  await main(page).getByRole("row").filter({ hasText: "Front F1" }).getByRole("button", { name: "Unblock" }).click();
-  await main(page).getByRole("button", { name: "Unblock" }).last().click();
-  await expect(main(page).getByRole("row").filter({ hasText: "Front F1" })).not.toContainText("Blocked:");
-
-  // Provisional geometry cannot be offered for sale.
-  await expect(main(page).getByText("Layout approval required.")).toBeVisible();
-  await expect(main(page).getByRole("button", { name: "Open for reservations" })).toHaveCount(0);
+  // The square campaign retains ten positions and requires explicit opening.
+  await expect(main(page).getByRole("button", { name: "Open for reservations" })).toBeVisible();
+  await expect(main(page).getByText("10 total positions")).toBeVisible();
 
   // Cancel the draft.
   await main(page).getByRole("button", { name: "Cancel campaign" }).click();
@@ -159,7 +149,6 @@ test("production, payments readiness, artwork queue and new pages render and fit
   await expect(main(page).getByText("Printer specifications aren't confirmed")).toBeVisible();
   await page.goto("/admin/payments");
   await expect(main(page).getByText("Fully reserved", { exact: true })).toBeVisible();
-  await expect(main(page).getByText(/there is no charge button/)).toBeVisible();
   await expect(main(page).getByRole("button", { name: /charge/i })).toHaveCount(0);
   await page.goto("/admin/artwork?filter=approved");
   await expect(page.getByRole("heading", { name: "Artwork", level: 1 })).toBeVisible();

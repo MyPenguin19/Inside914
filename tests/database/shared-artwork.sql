@@ -39,6 +39,8 @@ select pg_temp.reject(format('select public.admin_create_square_campaign(%L::jso
 select set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
 select pg_temp.reject(format('select public.admin_create_square_campaign(%L::jsonb)',pg_temp.payload((select id from fixture where k='zone1'))),'ADM01','non-admin rejected');
 select set_config('request.jwt.claim.sub',(select id::text from fixture where k='admin'),true);
+create temporary table saved_layout_approval as select * from private.approved_layout_templates where template_key='amazingmail-9x6-ten-square-draft';
+delete from private.approved_layout_templates where template_key='amazingmail-9x6-ten-square-draft';
 select pg_temp.reject(format('update editions set status=''open'' where id=%L',(select id from fixture where k='campaign1')),'ADM04','printer gate blocks opening');
 select pg_temp.reject(format('update editions set unit_price_cents=100 where id=%L',(select id from fixture where k='campaign1')),'23514','database prevents repricing');
 select pg_temp.reject(format('update editions set product_model=''legacy'' where id=%L',(select id from fixture where k='campaign1')),'MVP01','model cannot downgrade');
@@ -48,8 +50,8 @@ select pg_temp.reject(format('update slots set width_in=1 where edition_id=%L',(
 set local role anon;
 select pg_temp.assert((select count(*)=0 from editions where id in(select id from fixture where k like 'campaign%')),'drafts invisible publicly');
 reset role;
--- Test-only simulated approval is visible solely inside this transaction and never committed.
-insert into private.approved_layout_templates(template_key,approval_reference) values('amazingmail-9x6-ten-square-draft','TRANSACTION-ONLY TEST; rolled back; NOT printer approval');
+-- Restore the migrated owner approval after testing its absence.
+insert into private.approved_layout_templates select * from saved_layout_approval;
 update editions set status='open' where id in(select id from fixture where k like 'campaign%');
 create function pg_temp.items() returns jsonb language sql as $$
  select jsonb_agg(jsonb_build_object('edition_id',f.id,'mode','standard','slot_ids',jsonb_build_array(s.id),'token_hash',encode(extensions.gen_random_bytes(32),'hex')))

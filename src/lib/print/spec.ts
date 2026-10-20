@@ -19,7 +19,7 @@ export const PRINT_SPEC = {
 // The source dimension arrows anchor the postal panel at the BLEED FILE edges.
 // These labeled dimensions establish nominal geometry, not approval of a print run.
 export const AMAZINGMAIL_9X6_SPEC = {
-  status: "provisional",
+  status: "approved",
   sources: {
     front: "https://assets.xpressdocs.com/dserv/tpl/1500/2/566132.jpg",
     back: "https://assets.xpressdocs.com/dserv/tpl/1500/1/566132.jpg",

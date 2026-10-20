@@ -76,12 +76,6 @@ describe.skipIf(!enabled)("Stripe test mode: saved cards, no charges", () => {
     expect(cards.data).toHaveLength(1);
   });
 
-  test("a $2 (test price) double reservation is authorized as one SetupIntent", async () => {
-    const ctx = await readyForCard(["F3", "F4"]);
-    const intent = await getStripe().setupIntents.retrieve(ctx.setupIntentId);
-    expect(intent.metadata).toMatchObject({ amount_cents: "200", size: "double", pricing_mode: "test" });
-  });
-
   test("a declined card can't be saved, so the reservation isn't confirmed", async () => {
     const stripe = getStripe();
     const ctx = await readyForCard(["F5"]);
