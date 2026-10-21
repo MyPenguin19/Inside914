@@ -1,3 +1,4 @@
+import { loadHouseArtwork } from "@/lib/print/house-artwork";
 import { PrintDownload } from "@/components/admin/print-download";
 import { CollectionPanel } from "@/components/admin/collection-panel";
 import { PrinterRecords } from "@/components/admin/printer-records";
@@ -49,7 +50,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
       supabase.from("zone_charges").select("status").eq("edition_id",id),
     ]) : [{data:false,error:null},{data:null,error:null},{data:[],error:null}];
     if(mail.error || collection.error || ledger.error) throw new Error("Could not verify campaign readiness");
-    data = { edition, slots, bookings, consents, mailReady:mail.data === true, chargeReady:(collection.data as {ready?:boolean}|null)?.ready === true, charges:ledger.data ?? [] };
+    const houseReady = edition.productModel === "square_v1" && !!await loadHouseArtwork(supabase);
+    data = { houseReady, edition, slots, bookings, consents, mailReady:houseReady && mail.data === true, chargeReady:houseReady && (collection.data as {ready?:boolean}|null)?.ready === true, charges:ledger.data ?? [] };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error; // notFound()
     console.error(error instanceof Error ? error.message : "admin campaign failed");
@@ -105,7 +107,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
       </section>
 
       {edition.productModel === "square_v1" && <>
-        <PrintDownload editionId={id} ready={data.mailReady} filled={stats.reservedUnits} />
+        <PrintDownload editionId={id} ready={data.mailReady} houseReady={data.houseReady} filled={stats.reservedUnits} />
         <CollectionPanel editionId={id} />
         {data.mailReady && !["mailed","completed"].includes(edition.status) && <ConfirmAction label="Mark as mailed" action={markCampaignMailed} fields={{id}} confirmLabel="Mark mailed" consequence={<>Confirm you uploaded the final front and back to AmazingMail and submitted the mailing. This records your confirmation and does not order a mailing or charge anyone.</>} />}
       </>}

@@ -1,4 +1,5 @@
 "use server";
+import { loadHouseArtwork } from "@/lib/print/house-artwork";
 
 import { randomUUID } from "node:crypto";
 import { refresh } from "next/cache";
@@ -289,6 +290,13 @@ export async function publishEvidence(_prev: ActionResult, form: FormData): Prom
   const id = uuid.safeParse(form.get("evidence_id"));
   if (!id.success) return { message: "That evidence doesn't exist." };
   const publish = form.get("publish") === "true";
+  if (publish) {
+    const { data: evidence, error: evidenceError } = await supabase.from("mailing_evidence").select("kind,edition_id,editions(product_model)").eq("id", id.data).single();
+    if (evidenceError || !evidence) return { message: "Could not verify this proof. Please retry." };
+    if (evidence.kind === "final_proof" && evidence.editions?.product_model === "square_v1" && !await loadHouseArtwork(supabase)) {
+      return { message: "Permanent house artwork needs attention. Re-save it in Settings before approving the final proof." };
+    }
+  }
   const { data, error } = await supabase.rpc("admin_publish_evidence", { p_id: id.data, p_publish: publish });
   if (error) return { message: adminErrorMessage(error) };
   return done(data === "already" ? "Already done: nothing changed." : publish ? "Published." : "Unpublished.");

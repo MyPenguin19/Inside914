@@ -9,6 +9,19 @@ export type PrintImage = { label: string; input: Buffer; crop: PrintRectangle };
 export const POSTCARD_BACKGROUND = "#f4f2ec";
 export const HOUSE_OUTPUT = { width: 2990, height: 2086 };
 
+// Decode as well as inspect metadata: truncated/corrupt images are not production-ready.
+export async function validHouseArtwork(input?: Buffer): Promise<Buffer | undefined> {
+  if (!input) return undefined;
+  try {
+    const image = sharp(input, { limitInputPixels: 40_000_000, failOn: "warning" });
+    const meta = await image.metadata();
+    if (meta.width !== HOUSE_OUTPUT.width || meta.height !== HOUSE_OUTPUT.height ||
+        (meta.pages ?? 1) !== 1 || (meta.orientation ?? 1) !== 1) return undefined;
+    await image.raw().toBuffer();
+    return input;
+  } catch { return undefined; }
+}
+
 export async function normalizeHouse(input: Buffer, crop: PrintRectangle) {
   if (!sniffImageType(input.subarray(0,16))) throw new Error("Use a PNG or JPEG image.");
   const oriented = await sharp(input, { limitInputPixels: 40_000_000 }).rotate().toBuffer();
@@ -48,11 +61,8 @@ export async function renderPostcard(side: "front" | "back", ads: PrintImage[], 
   }
   if (side === "back" && house) {
     const region = layout.housePanel;
-    const meta = await sharp(house).metadata();
-    if (meta.width !== HOUSE_OUTPUT.width || meta.height !== HOUSE_OUTPUT.height) {
-      throw new Error("Re-save the permanent house artwork using the crop editor in Settings before downloading the back.");
-    }
-    layers.push({ input: house, left: Math.round(region.x * EXPORT_DPI), top: Math.round(region.y * EXPORT_DPI) });
+    const valid = await validHouseArtwork(house);
+    if (valid) layers.push({ input: valid, left: Math.round(region.x * EXPORT_DPI), top: Math.round(region.y * EXPORT_DPI) });
   }
   if (side === "back") {
     const postal = layout.postal;

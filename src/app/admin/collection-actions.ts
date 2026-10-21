@@ -1,4 +1,5 @@
 "use server";
+import { loadHouseArtwork } from "@/lib/print/house-artwork";
 import { z } from "zod";
 import { refresh } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
@@ -14,6 +15,7 @@ export async function activateZone(_previous:ActionResult,form:FormData):Promise
   if(!parsed.success) return {message:"Invalid campaign."};
   try {
     const stripe=getCollectionStripe(); // Disabled/release gate precedes any writes or API calls.
+    if (!await loadHouseArtwork(supabase)) return {message:"Permanent house artwork needs attention. Re-save it in Settings."};
     await verifyStripeAccount(stripe);
     const {error}=await supabase.rpc("admin_prepare_zone_collection",{p_id:parsed.data});
     if(error) return {message:"Campaign is not ready to charge. Review artwork, saved cards and the final proof."};
@@ -46,6 +48,7 @@ export async function markCampaignMailed(_previous:ActionResult,form:FormData):P
   const {supabase}=await requireAdmin();
   const id=z.uuid().safeParse(form.get("id"));
   if(!id.success) return {message:"Invalid campaign."};
+  if (!await loadHouseArtwork(supabase)) return {message:"Permanent house artwork needs attention. Re-save it in Settings."};
   const {error}=await supabase.rpc("admin_mark_square_mailed",{p_id:id.data});
   if(error) return {message:"This campaign is not ready to mail. Check payments, artwork and the current approved printer proof."};
   refresh();

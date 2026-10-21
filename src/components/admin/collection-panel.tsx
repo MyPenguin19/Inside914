@@ -1,3 +1,4 @@
+import { loadHouseArtwork } from "@/lib/print/house-artwork";
 import { requireAdmin } from "@/lib/admin/auth";
 import { getCollectionContext } from "@/lib/payments/environment";
 import { activateZone } from "@/app/admin/collection-actions";
@@ -17,12 +18,13 @@ export async function CollectionPanel({editionId}:{editionId:string}) {
   ]);
   let configured=true;try {getCollectionContext();} catch {configured=false;}
   const result=preview as {ready?:boolean;existing?:boolean;reason?:string}|null;
-  const ready=configured && !error && !ledgerError && result?.ready===true;
+  const houseReady=!!await loadHouseArtwork(supabase);
+  const ready=houseReady && configured && !error && !ledgerError && result?.ready===true;
   return <Card><h2 className="text-lg font-semibold">Payments for this campaign</h2>
     <p className="mt-2 text-sm text-muted">Advertisers save a card with $0 due when they reserve. Once all 10 spaces are filled and the final postcard proof is approved, review and charge $399 per advertiser ($3,990 total).</p>
     {!configured && <p className="mt-2 text-sm">Charging is currently turned off. Advertisers can still reserve spaces and save their cards.</p>}
     {result?.reason && <p className="mt-2 text-sm">Next: {collectionReason(result.reason)}</p>}
-    {result?.ready && !result.existing && <p className="mt-2 text-sm">All payment checks passed. Review the advertisers below before approving collection.</p>}
+    {houseReady && result?.ready && !result.existing && <p className="mt-2 text-sm">All payment checks passed. Review the advertisers below before approving collection.</p>}
     {(error || ledgerError) && <p role="alert">Could not verify payment readiness. Collection is blocked.</p>}
     {!!bookings?.length && !charges?.length && <div className="mt-3"><DataTable caption="Payment authorization preview" columns={["Advertiser","Reference","Amount"]} rows={bookings.map(b=>[b.booking_contacts?.business_name ?? "Advertiser",b.reference ?? "—","$399"])}/></div>}
     {!!charges?.length && <p className="mt-3">Payments received: {charges.filter(c=>c.status==="succeeded").length} of 10 · Needs attention: {charges.filter(c=>["requires_action","requires_payment_method","canceled"].includes(c.status)).length}</p>}

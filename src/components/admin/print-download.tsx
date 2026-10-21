@@ -4,13 +4,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/primitives";
-export function PrintDownload({ editionId, ready = false, filled }: { editionId: string; ready?: boolean; filled?: number }) {
+export function PrintDownload({ editionId, ready = false, houseReady = false, filled }: { editionId: string; ready?: boolean; houseReady?: boolean; filled?: number }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [previews, setPreviews] = useState<string[]>([]);
   useEffect(() => () => previews.forEach(url => URL.revokeObjectURL(url)), [previews]);
   return <Card><h2 className="text-xl font-semibold">Current postcard</h2>
     <p className="my-3 font-medium">{ready ? "Ready to mail" : "PREVIEW — NOT READY TO MAIL"}</p>
+    {!houseReady && <p role="alert" className="mb-3 text-sm">Permanent house artwork needs attention. Re-save the house advertisement in Settings before the campaign can become Ready to Mail. <a className="underline" href="/admin/settings">Go to Settings</a></p>}
     {filled !== undefined && <p className="mb-3 text-sm">{filled} of 10 spots filled</p>}
     <p className="mb-3 text-sm text-muted">Download the current front and back at any time. Empty spaces show Available placeholders. The back uses your permanent house artwork from Settings; until configured, that panel shows the postcard background. Downloads do not charge anyone or change campaign status.</p>
     <Button variant="secondary" disabled={busy} onClick={async () => {
@@ -19,7 +20,7 @@ export function PrintDownload({ editionId, ready = false, filled }: { editionId:
         for (const side of ["front", "back"]) {
           const body = new FormData(); body.set("side", side);
           const response = await fetch(`/admin/print/${editionId}`, {method:"POST",body});
-          if (!response.ok || !response.headers.get("content-type")?.startsWith("image/png")) throw new Error("Could not load preview. Please retry or sign in again.");
+          if (!response.ok || !response.headers.get("content-type")?.startsWith("image/png")) throw new Error(response.redirected || response.status === 401 || response.status === 403 ? "Please sign in again." : response.headers.get("content-type")?.includes("text/html") ? "Could not load preview. Please retry." : await response.text());
           urls.push(URL.createObjectURL(await response.blob()));
         }
         setPreviews(urls);

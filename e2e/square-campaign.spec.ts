@@ -36,7 +36,7 @@ test.afterAll(async () => {
 });
 
 test("admin creates a $399 ten-square draft; form and inventory fit mobile through desktop", async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(240000);
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/admin/login");
@@ -126,6 +126,30 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await page.getByRole("button",{name:"Preview postcard",exact:true}).click();
   await expect(page.getByAltText("Back current postcard")).toBeVisible({timeout:20000});
   await page.screenshot({path:"../../outputs/inside914-campaign-operations.png",fullPage:true});
+  // Legacy, missing and unreadable global artwork must never disable current-state exports.
+  const normalizedHouse=ok(await db.from("house_artwork").select("*").single())!;
+  for (const kind of ["missing","legacy","unreadable"]) {
+    if (kind === "missing") ok(await db.from("house_artwork").delete().eq("singleton",true));
+    else {
+      const path=`house/${randomUUID()}.png`;housePaths.push(path);
+      ok(await db.storage.from("house-artwork").upload(path,kind === "legacy" ? image : Buffer.from("corrupt"),{contentType:"image/png"}));
+      ok(await db.from("house_artwork").upsert({...normalizedHouse,storage_path:path,width_px:2000,height_px:1600}));
+    }
+    await page.reload();
+    await expect(page.getByRole("alert").filter({hasText:"Permanent house artwork needs attention"})).toBeVisible();
+    await page.getByRole("button",{name:"Preview postcard",exact:true}).click();
+    await expect(page.getByAltText("Front current postcard")).toBeVisible({timeout:20000});
+    await expect(page.getByAltText("Back current postcard")).toBeVisible({timeout:20000});
+    if(kind === "legacy") await page.screenshot({path:"../../outputs/inside914-house-fallback.png",fullPage:true});
+    for(const side of ["front","back"]) {
+      const response=await page.request.post(`/admin/print/${campaign!.id}`,{headers:{origin:"http://localhost:3000"},multipart:{side}});
+      expect(response.status()).toBe(200);
+      expect(response.headers()["x-postcard-readiness"]).toBe("preview");
+      if(side === "back") expect([...await sharp(await response.body()).extract({left:5000,top:1000,width:1,height:1}).removeAlpha().raw().toBuffer()]).toEqual([244,242,236]);
+    }
+    await expect(page.getByRole("button",{name:"Charge Advertisers & Prepare Mailing",exact:true})).toBeDisabled();
+  }
+  ok(await db.from("house_artwork").upsert(normalizedHouse));
   await page.goto("/admin/settings");
   const replacement=await sharp({create:{width:2000,height:1600,channels:3,background:"green"}}).png().toBuffer();
   await expect(page.getByLabel("House artwork (PNG or JPEG, up to 3 MB)")).toBeEnabled();

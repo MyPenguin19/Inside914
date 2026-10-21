@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, test } from "vitest";
 import sharp from "sharp";
-import { renderPostcard, normalizeHouse, EXPORT_DPI, EXPORT_SIZE, HOUSE_OUTPUT } from "@/lib/print/export";
+import { renderPostcard, normalizeHouse, EXPORT_DPI, EXPORT_SIZE, HOUSE_OUTPUT, validHouseArtwork } from "@/lib/print/export";
 import { AMAZINGMAIL_9X6_LAYOUT as layout } from "@/lib/print/amazingmail-layout";
 const solid = (color: string, width = 900, height = 900) => sharp({ create: { width, height, channels: 3, background: color } }).png().toBuffer();
 test("front/back exports preserve every paid square, the permanent house panel and a blank postal region", async () => {
@@ -63,7 +63,7 @@ test("explicit house crop normalizes to a full panel without padding and rejects
  for(const crop of [{x:-1,y:0,width:1495,height:1043},{x:1000,y:0,width:1495,height:1043},{x:0,y:0,width:1500,height:1500},{x:0,y:0,width:700,height:488},{x:0.1,y:0,width:1495,height:1043}]) {
   await expect(normalizeHouse(source,crop)).rejects.toThrow("valid house crop");
  }
- await expect(renderPostcard("back",[],source)).rejects.toThrow("crop editor");
+ expect(await validHouseArtwork(source)).toBeUndefined();
  const png=await renderPostcard("back",[],normalized.input);
  const panel=await sharp(await sharp(png).extract({left:4160,top:150,...HOUSE_OUTPUT}).png().toBuffer()).stats();
  expect(panel.channels.slice(0,3).map(c=>[c.min,c.max])).toEqual([[0,0],[0,0],[255,255]]);
@@ -92,3 +92,18 @@ test("house normalization respects the administrator's selected source rectangle
   expect(stats.channels.slice(0,3).map(c=>c.max)).toEqual(color);
  }
 });
+
+ test.each(["missing", "legacy", "unreadable"])("%s house artwork falls back without affecting front, paid slots or postal exclusion", async kind => {
+  const house = kind === "missing" ? undefined : kind === "legacy" ? await solid("blue",2000,1600) : Buffer.from("not an image");
+  expect(await validHouseArtwork(house)).toBeUndefined();
+  for (const side of ["front","back"] as const) {
+    const png = await renderPostcard(side,[],house);
+    expect(await sharp(png).metadata()).toMatchObject(EXPORT_SIZE);
+    if (side === "back") {
+      const panel = await sharp(await sharp(png).extract({left:4160,top:150,...HOUSE_OUTPUT}).png().toBuffer()).stats();
+      expect(panel.channels.slice(0,3).map(c=>[c.min,c.max])).toEqual([[244,244],[242,242],[236,236]]);
+      const postal = await sharp(await sharp(png).extract({left:4160,top:2236,width:3140,height:2664}).png().toBuffer()).stats();
+      expect(postal.channels.slice(0,3).every(c=>c.min===255 && c.max===255)).toBe(true);
+    }
+  }
+},30000);

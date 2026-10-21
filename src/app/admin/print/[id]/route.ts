@@ -1,3 +1,4 @@
+import { loadHouseArtwork } from "@/lib/print/house-artwork";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -31,21 +32,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         ads.push({ label, input: Buffer.from(await file.data.arrayBuffer()), crop: { x: a.crop_x, y: a.crop_y, width: a.crop_width, height: a.crop_height } });
       }
     }
-    let house: Buffer | undefined;
-    if (side.data === "back") {
-      const { data, error } = await supabase.from("house_artwork").select("storage_path").eq("singleton", true).maybeSingle();
-      if (error) throw new Error("Could not load house artwork settings.");
-      if (data) {
-        const file = await admin.storage.from("house-artwork").download(data.storage_path);
-        if (file.error || !file.data) throw new Error("Could not read house artwork. Please retry.");
-        house = Buffer.from(await file.data.arrayBuffer());
-      }
-    }
+    // Failure to load/validate house artwork never blocks either side. It only
+    // downgrades the shared final-readiness label and leaves the back panel blank.
+    const house = await loadHouseArtwork(supabase);
     // Downloads never approve a campaign or alter payments. Readiness is a separate DB check.
     const readiness = await supabase.rpc("admin_mail_readiness", { p_id: id });
-    const ready = !readiness.error && readiness.data === true;
+    const ready = !!house && !readiness.error && readiness.data === true;
     const png = await renderPostcard(side.data, ads, house, occupied);
-    return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Content-Disposition": `attachment; filename="inside914-${id}-${side.data}${ready ? "" : "-PREVIEW"}.png"`, "X-Postcard-Readiness": ready ? "ready" : "preview", "Cache-Control": "private, no-store" } });
+    return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Content-Disposition": `attachment; filename="inside914-${id}-${side.data}${ready ? "" : "-PREVIEW"}.png"`, "X-Postcard-Readiness": ready ? "ready" : "preview", "X-House-Artwork-Ready": house ? "true" : "false", "Cache-Control": "private, no-store" } });
   } catch (error) {
     return new Response(error instanceof Error ? error.message : "Could not create the postcard.", { status: 400, headers: { "Cache-Control": "no-store" } });
   }
