@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "main": false,
       "revision/shared-postcard-mvp": false,
-      "feature/campaign-management-pricing": false
+      "feature/campaign-management-pricing": false,
+      "feature/artwork-quality-review": false
     }
   },
   "crons": [{ "path": "/api/internal/email-outbox", "schedule": "0 14 * * *" }]

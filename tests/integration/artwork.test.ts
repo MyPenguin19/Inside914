@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 import { makeImage } from "../fixtures/images";
+import { assessArtworkQuality } from "@/lib/artwork/review-quality";
 
 vi.mock("server-only", () => ({}));
 const { placeHold } = await import("@/lib/booking/place-hold");
@@ -81,6 +82,22 @@ describe.skipIf(!secretKey)("artwork storage", () => {
     const names = (await objectsFor(token)).map((o) => o.name);
     expect(names).toHaveLength(1);
     expect(names).not.toContain(oldObject.name);
+  });
+
+  test("quality assessment of a saved private crop leaves bytes and review decisions unchanged", async () => {
+    const token=await hold("F5");
+    const bytes=await makeImage("png",1000,800);
+    const upload=await uploadAndFinalize(token,bytes);
+    if (!upload.ok) throw new Error("upload");
+    expect(await artwork.saveLayout(admin,token,{artworkId:upload.artwork.id,crop:{x:100,y:100,width:495,height:495},zoom:1})).toEqual({ok:true});
+    const before=await admin.from("booking_artwork").select("*").eq("id",upload.artwork.id).single();
+    expect(before.error).toBeNull();
+    const view=await artwork.getArtwork(admin,before.data!.booking_id);
+    expect(assessArtworkQuality(view!,view!.crop,{width:2.2925,height:2.815})).toMatchObject({ppi:215,status:"REVIEW"});
+    const response=await fetch(view!.viewUrl);
+    expect(Buffer.from(await response.arrayBuffer()).equals(bytes)).toBe(true);
+    const after=await admin.from("booking_artwork").select("*").eq("id",upload.artwork.id).single();
+    expect(after.data).toEqual(before.data);
   });
 
   test("disguised or broken files are rejected and deleted", async () => {

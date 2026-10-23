@@ -1,10 +1,10 @@
-import { containedPpi } from "@/lib/print/image-fit";
 import { placementDimensions } from "@/lib/print/layouts";
 import { CroppedImage } from "@/components/artwork/cropped-image";
 import { PostcardPreview } from "@/components/artwork/postcard-preview";
-import { QualityNote } from "@/components/artwork/artwork-studio";
+import { OriginalArtwork } from "./original-artwork";
+import { assessArtworkQuality } from "@/lib/artwork/review-quality";
 import type { AdminSlot } from "@/lib/admin/metrics";
-import { adArea, resolutionLevel } from "@/lib/artwork/rules";
+import { adArea } from "@/lib/artwork/rules";
 import type { ArtworkView } from "@/lib/artwork/service";
 
 // The advertiser's artwork: cropped ad in its place on the postcard, the resolution check, and a
@@ -14,9 +14,11 @@ export function AdPlacement({ artwork, own, slots, dimensions, layoutKey }: { la
     {(["front", "back"] as const).map(side => <AdPlacement layoutKey={layoutKey} key={side} dimensions={dimensions} artwork={artwork} own={own.filter(s => s.side === side)} slots={slots} />)}
   </div>;
   const area = adArea(own);
-  const ppi = artwork.crop ? containedPpi(artwork.crop, area) : null;
+  const quality = assessArtworkQuality(artwork, artwork.crop, area);
   return (
     <div className="flex flex-col gap-3">
+      <OriginalArtwork src={artwork.viewUrl} />
+      <h2 className="text-sm font-medium">Print placement · {area.side === "front" ? "Front" : "Back"}</h2>
       <div className="mx-auto w-full max-w-[260px]">
         <PostcardPreview layoutKey={layoutKey} dimensions={dimensions} side={area.side} otherSlots={slots.filter((s) => s.side === area.side && !own.some((o) => o.id === s.id))} area={area}>
           {artwork.crop ? (
@@ -27,8 +29,21 @@ export function AdPlacement({ artwork, own, slots, dimensions, layoutKey }: { la
         </PostcardPreview>
       </div>
       <p className="text-sm">Printed ad: {placementDimensions(area)}</p>
-      <QualityNote ppi={ppi} level={ppi === null ? null : resolutionLevel(ppi)} />
+      {quality ? <div className="rounded-xl bg-background-soft p-3 text-sm" role="note" aria-label="Artwork resolution review">
+        <p className="font-medium">{quality.status} · {quality.ppi} effective PPI</p>
+        <p className="mt-1">{quality.status === "PASS" ? "Meets the internal 300 PPI target. Inspect the artwork and printer proof before approving." : quality.status === "REVIEW" ? "Potential softness. Request higher-resolution artwork or explicit printer acceptance before print approval." : "Low resolution. Replacement artwork or documented printer acceptance of an actual proof is required."}</p>
+        <p className="mt-2">For this contained placement at 300 PPI: at least {quality.minimumPixels.width} × {quality.minimumPixels.height} crop pixels. Do not upscale to meet this target.</p>
+        <p className="mt-2 text-xs text-muted">This is a quality check, not content or print approval. An 800-DPI export does not add source detail.</p>
+      </div> : <p role="note" className="text-sm text-warning">Quality cannot be assessed until a valid crop and source dimensions are available.</p>}
       <dl className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <dt className="text-muted">Saved crop</dt>
+          <dd>{artwork.crop ? `${artwork.crop.width} × ${artwork.crop.height} px` : "Not positioned"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Contained image size</dt>
+          <dd>{quality ? `${Number(quality.printed.width.toFixed(4))}″ × ${Number(quality.printed.height.toFixed(4))}″` : "—"}</dd>
+        </div>
         <div>
           <dt className="text-muted">Original</dt>
           <dd>
