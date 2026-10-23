@@ -30,3 +30,18 @@ export function openLocalSquareFixtures(ids: string[]) {
     update public.editions set status='open' where id in (${ids.map(id=>`'${id}'`).join(",")}) and product_model='square_v1';
     commit;`], { env: {...process.env,PGHOST:"127.0.0.1",PGPORT:"54322",PGUSER:"postgres",PGDATABASE:"postgres",PGPASSWORD:"postgres"},stdio:"pipe" });
 }
+
+// Teardown of UUID-scoped synthetic fixtures, only via the hardwired localhost runner.
+// Application/API deletion guards remain enabled in every actual test. DDL and cleanup
+// share one transaction, so even a failed teardown restores the trigger automatically.
+export function deleteLocalCampaignFixtures(ids: string[]) {
+  if (!/^http:\/\/(127\.0\.0\.1|localhost):54321$/.test(process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")) throw new Error("Local stack required");
+  if (!ids.length) return;
+  if (ids.some(id => !/^[a-f0-9-]{36}$/.test(id))) throw new Error("Invalid fixture IDs");
+  execFileSync("python3", ["scripts/local-test-db.py", "-c", `begin;
+    delete from private.campaign_layout_history where edition_id in (${ids.map(id=>`'${id}'`).join(",")});
+    alter table public.editions disable trigger campaign_delete_guard;
+    delete from public.editions where id in (${ids.map(id=>`'${id}'`).join(",")});
+    alter table public.editions enable trigger campaign_delete_guard;
+    commit;`], { stdio: "pipe" });
+}

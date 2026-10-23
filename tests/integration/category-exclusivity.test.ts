@@ -1,3 +1,4 @@
+import { deleteLocalCampaignFixtures } from "./local-layout-fixture";
 import { randomBytes, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
@@ -78,7 +79,7 @@ afterEach(async () => {
   for (const b of members) if (b.cart_id) cartIds.add(b.cart_id);
   ok(await db.from("bookings").delete().in("edition_id", ids));
   if (cartIds.size) ok(await db.from("reservation_carts").delete().in("id", [...cartIds]));
-  ok(await db.from("editions").delete().in("id", ids));
+  deleteLocalCampaignFixtures(ids);
   ok(await db.from("zones").delete().in("id", [...new Set(campaigns.map(c => c.zone))]));
   ok(await db.from("admin_events").delete().eq("admin_user_id", users[0]));
   campaigns.length = 0;

@@ -1,3 +1,4 @@
+import { deleteLocalCampaignFixtures } from "./local-layout-fixture";
 import { afterAll, beforeAll, expect, test, vi } from "vitest";
 vi.mock("server-only",()=>({}));
 import { randomUUID, randomBytes } from "node:crypto";
@@ -27,7 +28,7 @@ beforeAll(async()=>{
 });
 afterAll(async()=>{
  if(storage.length)ok(await db.storage.from("artwork").remove(storage));
- if(campaigns.length){ok(await db.from("bookings").delete().in("edition_id",campaigns));ok(await db.from("editions").delete().in("id",campaigns));}
+ if(campaigns.length){ok(await db.from("bookings").delete().in("edition_id",campaigns));deleteLocalCampaignFixtures(campaigns);}
  ok(await db.from("zones").delete().eq("id",zone));
  if(user){ok(await db.from("admin_events").delete().eq("admin_user_id",user));await admin.auth.signOut();expect((await db.auth.admin.deleteUser(user)).error).toBeNull();}
 });

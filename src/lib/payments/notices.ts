@@ -1,3 +1,4 @@
+import { formatPrice } from "@/lib/format";
 import "server-only";
 import { mkdir, writeFile } from "node:fs/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -27,7 +28,7 @@ export async function preparePaymentNotice(db:Db,row:NoticeRow,context:Collectio
   const title=(context.mode==="test" ? "Test payment " : "Payment ")+(row.kind==="payment_receipt" ? "received" : "needs attention");
   let link="";
   if(row.kind==="payment_needed") link=new URL(`/pay/${await issueRecovery(db,c.id)}`,base).toString();
-  const text=`${title}\n${e?.zones?.name ?? "Your zone"}\n$399 for this zone only. Other zones are unchanged.\n${link ? `Complete payment by ${c.recovery_expires_at}: ${link}` : "No further payment is due for this reservation."}`;
+  const text=`${title}\n${e?.zones?.name ?? "Your zone"}\n${formatPrice(c.amount_cents)} for this zone only. Other zones are unchanged.\n${link ? `Complete payment by ${c.recovery_expires_at}: ${link}` : "No further payment is due for this reservation."}`;
   return {to:contact.email,subject:title,text,html:`<h1>${escape(title)}</h1><pre>${escape(text)}</pre>${link ? `<a href="${escape(link)}">Resolve payment</a>` : ""}`,idempotencyKey:`payment-notice-${row.id}`};
 }
 

@@ -44,6 +44,7 @@ export type AdminBooking = {
 };
 
 export type AdminEdition = {
+  archivedAt?: string | null;
   productModel?: string;
   id: string;
   zoneId?: string;
@@ -82,7 +83,7 @@ export type SlotState = { state: "available" | "held" | "reserved" | "blocked" |
 // Same rule as private.edition_is_bookable(): open, not paused, opened, before the deadline.
 export function isBookable(edition: AdminEdition, now: number) {
   return (
-    edition.status === "open" &&
+    edition.status === "open" && !edition.archivedAt &&
     !edition.pausedAt &&
     (!edition.reservationsOpenAt || Date.parse(edition.reservationsOpenAt) <= now) &&
     Date.parse(edition.artworkDeadline) > now

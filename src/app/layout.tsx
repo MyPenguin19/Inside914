@@ -21,7 +21,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "Inside914",
-  description: "Shared direct-mail advertising across Westchester County. Choose your areas and advertising spaces at $399 per area, with $0 due today.",
+  description: "Shared direct-mail advertising across Westchester County. Choose your areas and advertising spaces at the price shown for each area, with $0 due today.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,6 +1,5 @@
 import { findPostcardLayout } from "@/lib/print/layouts";
 import { z } from "zod";
-import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
 import { findTemplate } from "./layouts";
 
 // Campaign form parsing (shared by create and edit). Times are entered in Westchester time
@@ -39,7 +38,7 @@ export function isoToNyLocal(iso: string | null) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
-const dollars = z
+export const dollars = z
   .string()
   .trim()
   .regex(/^\d{1,6}(\.\d{1,2})?$/, "Enter an amount like 500 or 499.99")
@@ -79,8 +78,8 @@ export const CampaignForm = z
     double_price_cents: optionalDollars,
   })
   .superRefine((v, ctx) => {
-    if (findPostcardLayout(v.layout_template) && (v.unit_price_cents !== SQUARE_PRODUCT.priceCents || v.double_price_cents !== null)) {
-      ctx.addIssue({ code: "custom", path: ["unit_price_cents"], message: "Ads are fixed at $399 per area; other sizes are unavailable." });
+    if (findPostcardLayout(v.layout_template) && v.double_price_cents !== null) {
+      ctx.addIssue({ code: "custom", path: ["unit_price_cents"], message: "Only one advertising position per area is available." });
     }
     const t = (s: string | null) => (s ? Date.parse(s) : NaN);
     if (v.reservations_open_at && t(v.reservations_open_at) >= t(v.reservation_deadline)) {
@@ -123,7 +122,12 @@ export function parseCampaignForm(form: FormData) {
 export function adminErrorMessage(error: { code?: string; message?: string } | null): string {
   const m = error?.message ?? "";
   const known: Record<string, string> = {
-    square_price_is_fixed: "New campaigns require ten ads at $399 each.",
+    invalid_square_price: "Enter a positive price for one advertising position.",
+    confirmation_required: "Type the confirmation phrase exactly.",
+    campaign_not_deletable: "Only an unused draft without reservation, payment, artwork or mailing history can be deleted.",
+    finish_campaign_before_archive: "Complete or cancel this campaign through its normal workflow before archiving.",
+    layout_upgrade_blocked: "The campaign no longer meets the upgrade requirements. Run the preview again.",
+    layout_preview_stale: "Campaign data changed. Review a fresh upgrade preview before confirming.",
     not_admin: "Your admin session has ended. Please sign in again.",
     not_found: "That record no longer exists.",
     invalid_input: "Some details are missing or invalid.",
@@ -134,7 +138,7 @@ export function adminErrorMessage(error: { code?: string; message?: string } | n
     zone_not_found: "That area doesn't exist.",
     dates_out_of_order: "The dates are out of order: opening → reservation deadline → artwork due → mailing window.",
     campaign_exists_for_month: "This area already has a campaign for that month.",
-    locked_by_reservations: "Customers have already booked this campaign, so only its name and target quantity can change.",
+    locked_by_reservations: "Customers have already booked this campaign, so only its name, target quantity and price for new reservations can change.",
     campaign_finished: "This campaign is finished and can't be changed.",
     deadline_passed: "The reservation deadline has passed. Move it later (while no one has booked) before opening.",
     no_layout: "Choose a layout before opening.",

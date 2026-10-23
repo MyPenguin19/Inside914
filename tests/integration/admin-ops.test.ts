@@ -1,3 +1,4 @@
+import { deleteLocalCampaignFixtures } from "./local-layout-fixture";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
@@ -72,7 +73,7 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
   afterAll(async () => {
     for (const id of editions) {
       await service.from("bookings").delete().eq("edition_id", id);
-      await service.from("editions").delete().eq("id", id);
+      deleteLocalCampaignFixtures([id]);
     }
     for (const id of zones) await service.from("zones").delete().eq("id", id);
     await service.from("bookings").delete().eq("edition_id", OPEN_EDITION);

@@ -1,3 +1,4 @@
+import { deleteLocalCampaignFixtures } from "../tests/integration/local-layout-fixture";
 import sharp from "sharp";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
@@ -27,7 +28,7 @@ test.afterAll(async () => {
   if(previousHouse) ok(await db.from("house_artwork").upsert(previousHouse));
   else ok(await db.from("house_artwork").delete().eq("updated_by",user));
   if(housePaths.length) ok(await db.storage.from("house-artwork").remove(housePaths));
-  ok(await db.from("editions").delete().eq("zone_id", zone));
+  deleteLocalCampaignFixtures(ok(await db.from("editions").select("id").eq("zone_id",zone))!.map(e=>e.id));
   ok(await db.from("zones").delete().eq("id", zone));
   if (user) {
     ok(await db.from("admin_events").delete().eq("admin_user_id", user));
@@ -62,15 +63,15 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   housePaths.push(savedHouse.storage_path);
   await expect(page.getByAltText("Current permanent house advertisement")).toBeVisible();
   await page.goto(`/admin/campaigns/new?area=square-e2e-${zone}`);
-  const price = page.getByLabel("Ad per area ($)", { exact: false });
+  const price = page.getByLabel("Price per advertising position ($)", { exact: false });
   await expect(price).toHaveValue("399");
-  await expect(price).toHaveAttribute("readonly", "");
+  await expect(price).toBeEditable();
   await expect(page.getByLabel("Double price", { exact: false })).toHaveCount(0);
-  await expect(page.locator("#layout_template option")).toHaveCount(1);
+  await expect(page.getByLabel("Postcard layout").locator("option")).toHaveCount(1);
   await page.getByLabel("Campaign name").fill("Square E2E draft");
   await page.getByLabel("Mailing month").fill("2098-01");
   await page.getByLabel("Target mailing quantity", { exact: false }).fill("5000");
-  await page.locator("#reservation_deadline").fill("2097-12-15T23:59");
+  await page.getByLabel("Reservation deadline").fill("2097-12-15T23:59");
   await page.getByLabel("Artwork submission deadline").fill("2097-12-20T23:59");
   await page.getByLabel("Mailing window: first day").fill("2098-01-11");
   await page.getByLabel("Mailing window: last day").fill("2098-01-15");
@@ -81,7 +82,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await page.getByRole("button", { name: "Create draft campaign" }).click();
   await expect(page).toHaveURL(/\/admin\/campaigns\/[a-f0-9-]{36}$/);
   await page.getByText("Campaign dates and details", {exact:true}).click();
-  await expect(page.getByText("$399 ad per area · 10 paid positions", { exact: true })).toBeVisible();
+  await expect(page.getByText("$399 per position · 10 paid positions", { exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Front of the postcard" }).locator("button")).toHaveCount(6);
   await expect(page.getByRole("group", { name: "Back of the postcard" }).locator("button")).toHaveCount(4);
   for (const width of [320, 375, 390, 768, 1440]) {

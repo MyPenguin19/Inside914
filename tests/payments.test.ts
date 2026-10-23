@@ -91,3 +91,10 @@ test("connected-account events cannot update another account's ledger",async()=>
  expect(await handlePaymentEvent(db(),api as unknown as PaymentStripe,event)).toBe("ignored");
  expect(api.paymentIntents.retrieve).not.toHaveBeenCalled();expect(rpc).not.toHaveBeenCalled();
 });
+
+test("collection and webhook matching use the accepted ledger amount, not a global price",async()=>{
+ row.amount_cents=44900; intent.amount=44900;
+ const api=stripe(); await collectCharge(db(),api as unknown as PaymentStripe,row.id);
+ expect(api.paymentIntents.create).toHaveBeenCalledWith(expect.objectContaining({amount:44900}),expect.anything());
+ expect(()=>verifyIntent(row,{...intent,amount:39900})).toThrow();
+});

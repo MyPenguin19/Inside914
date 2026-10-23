@@ -11,7 +11,7 @@ export function getCollectionStripe(): PaymentStripe {
 }
 export function verifyIntent(c: ZoneChargeRow, intent: Stripe.PaymentIntent) {
   const customer = typeof intent.customer === "string" ? intent.customer : intent.customer?.id;
-  if (intent.livemode !== (c.stripe_mode === "live") || intent.amount !== 39900 || intent.currency !== "usd" || customer !== c.customer_id ||
+  if (intent.livemode !== (c.stripe_mode === "live") || intent.amount !== c.amount_cents || intent.currency !== "usd" || customer !== c.customer_id ||
     intent.metadata.zone_charge_id !== c.id || intent.metadata.booking_id !== c.booking_id || intent.metadata.edition_id !== c.edition_id ||
     (c.payment_intent_id && c.payment_intent_id !== intent.id)) throw new Error("PaymentIntent does not match authorized zone reservation");
 }
@@ -40,7 +40,7 @@ export async function collectCharge(db: Db, stripe: PaymentStripe, chargeId: str
     const method=await stripe.paymentMethods.retrieve(c.payment_method_id);
     const owner=typeof method.customer === "string" ? method.customer : method.customer?.id;
     if (customer.deleted || customer.livemode !== (c.stripe_mode === "live") || method.livemode !== (c.stripe_mode === "live") || owner !== c.customer_id) throw new Error("Saved payment method mode/ownership mismatch");
-    intent=await stripe.paymentIntents.create({amount:39900,currency:"usd",customer:c.customer_id,payment_method:c.payment_method_id,
+    intent=await stripe.paymentIntents.create({amount:c.amount_cents,currency:"usd",customer:c.customer_id,payment_method:c.payment_method_id,
       automatic_payment_methods:{enabled:true,allow_redirects:"never"},
       metadata:{zone_charge_id:c.id,booking_id:c.booking_id,edition_id:c.edition_id,consent_id:c.consent_id}},
       {idempotencyKey:`zone-create-${c.id}`});

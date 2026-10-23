@@ -63,3 +63,11 @@ test("the map cannot select a closed or full campaign", () => {
  }
  expect(hold).not.toHaveBeenCalled();
 });
+
+test("different campaign prices produce a correct multi-area authorization",()=>{
+ render(<CategoryZoneSelector editions={props.editions.map((e,i)=>({...e,unitPriceCents:[39900,44900,29900,39900][i]}))}/>);
+ for(const name of [/Central/,/Southern/,/Northern/])fireEvent.click(screen.getByRole("checkbox",{name}));
+ expect(screen.getByText("Total if all selected campaigns fill: $1,147")).toBeTruthy();
+ expect(screen.getByText("Due today: $0")).toBeTruthy();
+ expect(hold).not.toHaveBeenCalled();
+});

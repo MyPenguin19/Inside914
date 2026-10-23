@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const readiness = await supabase.rpc("admin_mail_readiness", { p_id: id });
     const ready = !!house && !readiness.error && readiness.data === true;
     const png = await renderPostcard(side.data, ads, house, occupied, findPostcardLayout(edition.layout_template)!);
-    return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Content-Disposition": `attachment; filename="inside914-${id}-${side.data}${ready ? "" : "-PREVIEW"}.png"`, "X-Postcard-Readiness": ready ? "ready" : "preview", "X-House-Artwork-Ready": house ? "true" : "false", "Cache-Control": "private, no-store" } });
+    return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Content-Disposition": `attachment; filename="inside914-${id}-${side.data}${ready ? "" : "-PREVIEW"}.png"`, "X-Campaign-Id": id, "X-Layout-Key": edition.layout_template!, "X-Postcard-Readiness": ready ? "ready" : "preview", "X-House-Artwork-Ready": house ? "true" : "false", "Cache-Control": "private, no-store" } });
   } catch (error) {
     return new Response(error instanceof Error ? error.message : "Could not create the postcard.", { status: 400, headers: { "Cache-Control": "no-store" } });
   }

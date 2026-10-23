@@ -1,3 +1,4 @@
+import { deleteLocalCampaignFixtures } from "./local-layout-fixture";
 import { afterAll, beforeAll, expect, test, vi, describe } from "vitest";
 vi.mock("server-only", () => ({}));
 import { randomUUID, randomBytes } from "node:crypto";
@@ -28,7 +29,7 @@ beforeAll(async () => {
   }}));
 });
 afterAll(async () => {
-  if (campaign) ok(await db.from("editions").delete().eq("id",campaign));
+  if (campaign) deleteLocalCampaignFixtures([campaign]);
   ok(await db.from("zones").delete().eq("id",zone));
   if (user) { ok(await db.from("admin_events").delete().eq("admin_user_id",user)); await admin.auth.signOut(); expect((await db.auth.admin.deleteUser(user)).error).toBeNull(); }
 });
@@ -66,7 +67,7 @@ test("explicit admin opening publishes exactly ten; pausing and closing remove a
 test("approval does not bypass deadline, pricing, inventory, or scheduled opening rules", async () => {
   ok(await db.from("editions").update({artwork_deadline:"2000-01-01",artwork_due_at:"2000-01-02"}).eq("id",campaign));
   expect((await admin.rpc("admin_set_campaign_status",{p_id:campaign,p_action:"open"})).error?.message).toBe("deadline_passed");
-  expect((await db.from("editions").update({unit_price_cents:100}).eq("id",campaign)).error).not.toBeNull();
+  expect((await db.from("editions").update({unit_price_cents:0}).eq("id",campaign)).error).not.toBeNull();
   expect((await db.from("slots").delete().eq("edition_id",campaign)).error?.message).toBe("square_inventory_is_fixed");
   ok(await db.from("editions").update({artwork_deadline:"2097-12-16",artwork_due_at:"2097-12-21",reservations_open_at:"2097-12-01"}).eq("id",campaign));
   ok(await admin.rpc("admin_set_campaign_status",{p_id:campaign,p_action:"open"}));

@@ -1,3 +1,5 @@
+import { layoutVersion } from "@/lib/print/layouts";
+import { isConfirmed } from "@/lib/admin/metrics";
 import Link from "next/link";
 import { Suspense } from "react";
 import { EmptyState, LoadError, PageHeader, PanelSkeleton } from "@/components/admin/ui";
@@ -7,9 +9,9 @@ import { StatusBadge } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
 import { campaignStats } from "@/lib/admin/metrics";
-import { formatDay, formatDeadline, formatIssueMonth, formatPrice } from "@/lib/format";
+import { formatDay, formatIssueMonth, formatPrice } from "@/lib/format";
 
-const STATUSES = ["all", "open", "draft", "closed", "approved_to_print", "printed", "cancelled"] as const;
+const STATUSES = ["active", "draft", "archived"] as const;
 
 export default function CampaignsPage({ searchParams }: PageProps<"/admin/campaigns">) {
   return (
@@ -28,14 +30,14 @@ export default function CampaignsPage({ searchParams }: PageProps<"/admin/campai
 async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/campaigns">["searchParams"] }) {
   const { supabase, now } = await requireAdmin();
   const { status: raw } = await searchParams;
-  const status = STATUSES.includes(raw as (typeof STATUSES)[number]) ? (raw as string) : "all";
+  const status = STATUSES.includes(raw as (typeof STATUSES)[number]) ? (raw as string) : "active";
 
   let rows;
   try {
-    const editions = (await listEditions(supabase)).filter((e) => status === "all" || e.status === status);
+    const editions = (await listEditions(supabase, true)).filter((e) => status === "archived" ? !!e.archivedAt : !e.archivedAt && (status === "active" || e.status === "draft"));
     const ids = editions.map((e) => e.id);
     const [slots, bookings] = await Promise.all([listSlots(supabase, ids), listEditionBookings(supabase, ids)]);
-    rows = editions.map((e) => ({ edition: e, stats: campaignStats(e, slots, bookings, now) }));
+    rows = editions.map((e) => ({ edition: e, stats: campaignStats(e, slots, bookings, now), approved: bookings.filter(b=>b.editionId===e.id && isConfirmed(b) && b.artworkReview==="approved").length, hasHistory: bookings.some(b=>b.editionId===e.id) }));
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin campaigns failed");
     return <LoadError what="campaigns" />;
@@ -47,11 +49,11 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
         {STATUSES.map((s) => (
           <Link
             key={s}
-            href={s === "all" ? "/admin/campaigns" : `/admin/campaigns?status=${s}`}
+            href={s === "active" ? "/admin/campaigns" : `/admin/campaigns?status=${s}`}
             aria-current={status === s ? "page" : undefined}
             className={`rounded-full border px-3 py-1.5 ${status === s ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground"}`}
           >
-            {s === "all" ? "All" : s.replaceAll("_", " ")}
+            {s[0].toUpperCase()+s.slice(1)}
           </Link>
         ))}
       </nav>
@@ -60,21 +62,24 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
       ) : (
         <DataTable
           caption="Campaigns"
-          columns={["Campaign", "Edition", "Mail date", "Reserve by", "Status", "Reserved", "Advertisers", "Reserved value"]}
-          rows={rows.map(({ edition: e, stats }) => [
+          columns={["Campaign / area", "Layout", "Price per position", "Status", "Reserved", "Artwork approved", "Mailing", "Actions"]}
+          rows={rows.map(({ edition: e, stats, approved, hasHistory }) => [
             <Link key="n" href={`/admin/campaigns/${e.id}`} className="font-medium underline-offset-4 hover:underline">
-              {e.name ?? e.zoneName}
+              {e.name ?? e.zoneName}<span className="block text-xs text-muted">{e.zoneName} · {formatIssueMonth(e.issueMonth)}</span>
             </Link>,
-            `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}`,
-            e.mailDate ? formatDay(e.mailDate) : "Not set",
-            formatDeadline(e.artworkDeadline),
+            layoutVersion(e.layoutTemplate),
+            formatPrice(e.unitPriceCents ?? 0),
             <StatusBadge key="s" tone={e.status === "open" && !e.pausedAt ? "success" : e.pausedAt ? "warning" : "neutral"}>
-              {e.status.replaceAll("_", " ")}
+              {e.archivedAt ? "Archived" : e.status.replaceAll("_", " ")}
               {e.pausedAt ? " · paused" : ""}
             </StatusBadge>,
             `${stats.reservedUnits} of ${stats.totalUnits}`,
-            String(stats.advertisers),
-            formatPrice(stats.reservedValueCents),
+            `${approved} of ${stats.reservations}`,
+            ["printed","mailed","completed"].includes(e.status) ? e.status : e.mailDate ? `Planned ${formatDay(e.mailDate)}` : "Not scheduled",
+            <div key="actions" className="flex flex-wrap gap-3">
+              {!e.archivedAt && !["cancelled","completed"].includes(e.status) && <Link href={`/admin/campaigns/${e.id}/edit`} className="underline">Edit</Link>}
+              <Link href={`/admin/campaigns/${e.id}#manage-campaign`} className="underline">{e.archivedAt ? "View" : ["cancelled","completed"].includes(e.status) ? "Archive" : e.status==="draft" && !hasHistory ? "Manage / Delete" : "Manage"}</Link>
+            </div>,
           ])}
         />
       )}

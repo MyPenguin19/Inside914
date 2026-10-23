@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
-      "revision/shared-postcard-mvp": false
+      "revision/shared-postcard-mvp": false,
+      "feature/campaign-management-pricing": false
     }
   },
   "crons": [{ "path": "/api/internal/email-outbox", "schedule": "0 14 * * *" }]

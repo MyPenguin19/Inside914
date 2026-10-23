@@ -1,8 +1,9 @@
 "use client";
+import { formatPrice } from "@/lib/format";
 import { useEffect, useRef, useState } from "react";
 import { loadStripe, type Stripe, type StripeElements } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
-export function RecoveryForm({clientSecret,publishableKey,requiresAction,mode="test"}:{mode?:"test"|"live";clientSecret:string;publishableKey:string;requiresAction:boolean}) {
+export function RecoveryForm({clientSecret,publishableKey,requiresAction,amountCents,mode="test"}:{amountCents:number;mode?:"test"|"live";clientSecret:string;publishableKey:string;requiresAction:boolean}) {
   const node=useRef<HTMLDivElement>(null);const api=useRef<{stripe:Stripe;elements:StripeElements}|null>(null);
   const [ready,setReady]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   useEffect(()=>{
@@ -20,7 +21,7 @@ export function RecoveryForm({clientSecret,publishableKey,requiresAction,mode="t
     const result=requiresAction ? await stripe.handleNextAction({clientSecret}) : await stripe.confirmPayment({elements,confirmParams:{return_url:window.location.origin+"/pay"},redirect:"if_required"});
     setMessage(result.error?.message ?? "Payment submitted. Confirmation is pending; please refresh to check status.");
   }catch{setMessage("Payment could not be completed. Please try again.");}finally{setBusy(false);}}} className="mt-4 flex flex-col gap-4">
-    <div ref={node}/><Button type="submit" disabled={!ready||busy}>{requiresAction ? (mode === "live" ? "Authenticate $399 payment" : "Authenticate $399 test payment") : (mode === "live" ? "Pay $399" : "Pay $399 in test mode")}</Button>
+    <div ref={node}/><Button type="submit" disabled={!ready||busy}>{requiresAction ? (mode === "live" ? `Authenticate ${formatPrice(amountCents)} payment` : `Authenticate ${formatPrice(amountCents)} test payment`) : (mode === "live" ? `Pay ${formatPrice(amountCents)}` : `Pay ${formatPrice(amountCents)} in test mode`)}</Button>
     {message && <p role="status" className="text-sm">{message}</p>}
   </form>;
 }
