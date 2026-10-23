@@ -2,8 +2,6 @@ import { Suspense } from "react";
 import { CategoryCheckout } from "@/components/booking/category-checkout";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { Notice } from "@/components/ui/primitives";
-import { CAMPAIGN_DETAILS_PROVISIONAL } from "@/lib/catalog/areas";
 
 export const metadata = { title: "Advertising areas · Inside914" };
 
@@ -16,17 +14,9 @@ export default function AreasPage() {
         <div className="mt-6">
           <h1 className="font-display text-4xl font-medium tracking-tight">Choose your areas.</h1>
           <p className="mt-2 max-w-2xl text-muted">
-            Choose one or more Westchester areas. Each area has its own shared postcard campaign and its own available advertising spaces. $399 per selected area · 10 spaces per campaign · $0 today
+            Pick where you want your ad. $399 per area. $0 today.
           </p>
         </div>
-        {CAMPAIGN_DETAILS_PROVISIONAL && (
-          <div className="mt-6">
-            <Notice tone="warning" role="note">
-              <strong>Campaign details.</strong> Mailing dates and household reach are confirmed before production. Final print layout is subject to printer approval.
-            </Notice>
-          </div>
-        )}
-
         <Suspense fallback={<AreasSkeleton />}>
           <div className="mt-6"><CategoryCheckout /></div>
         </Suspense>

@@ -37,6 +37,27 @@ test.afterAll(async()=>{
   }
   if(user){ok(await db.from("admin_events").delete().eq("admin_user_id",user));await admin?.auth.signOut();expect((await db.auth.admin.deleteUser(user)).error).toBeNull();}
 });
+test("map selection matches cards and works with keyboard and touch-sized layouts", async ({ page }) => {
+  await page.goto("/areas");
+  const northern = page.getByRole("button", { name: /Northern Westchester on map/ });
+  await northern.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("checkbox", { name: /Northern Westchester/ })).toBeChecked();
+  await expect(northern).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("checkbox", { name: /Northern Westchester/ })).not.toBeChecked();
+  await page.getByRole("button", { name: /Central Westchester on map/ }).click();
+  await page.getByRole("button", { name: /Eastern Westchester on map/ }).click();
+  await expect(page.getByText("Total if both campaigns fill: $798", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({ path: "test-results/area-map-selected-desktop.png", fullPage: true, animations: "disabled" });
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.screenshot({ path: "test-results/area-map-selected-mobile.png", fullPage: true, animations: "disabled" });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  await page.getByRole("button", { name: /Northern Westchester on map/ }).click();
+  await expect(page.getByRole("checkbox", { name: /Northern Westchester/ })).toBeChecked();
+});
+
 test("three areas keep selected squares and separate artwork with one saved card and $0 today", async ({ page, browser }) => {
   test.setTimeout(120000);
   const stripeRequests: string[] = [];

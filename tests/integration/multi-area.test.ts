@@ -18,6 +18,7 @@ vi.mock("@/lib/email/outbox", () => ({
   processOutboxForBooking: vi.fn(async () => {}),
 }));
 const {
+  copyCartArtwork,
   createCart,
   ownedCart,
   startCartPayment,
@@ -115,6 +116,20 @@ async function ready() {
   return { ...c, cart: updated, leader };
 }
 describe("multi-area groups, isolated local campaigns", () => {
+  test("copying an image clears stale shared provenance and crop and refreshes its timestamp", async () => {
+    const c = await ready();
+    const [source, target] = c.cart.members;
+    const previous = "2020-01-01T00:00:00Z";
+    const old = await db.from("booking_artwork").select("storage_path").eq("booking_id", target.id).single();
+    expect((await db.from("booking_artwork").update({ shared_source_id: randomUUID(), updated_at: previous }).eq("booking_id", target.id)).error).toBeNull();
+    await copyCartArtwork(db, c.token, source.id, target.id);
+    const { data } = await db.from("booking_artwork").select("*").eq("booking_id", target.id).single();
+    expect(data).toMatchObject({ shared_source_id: null, crop_x: null, crop_width: null, review_status: "pending" });
+    expect(Date.parse(data!.updated_at)).toBeGreaterThan(Date.parse(previous));
+    expect(data!.storage_path).not.toBe(old.data!.storage_path);
+    expect((await db.storage.from("artwork").download(data!.storage_path)).error).toBeNull();
+  });
+
   beforeAll(async () => {
     db = createClient<Database>(
       process.env.SUPABASE_URL!,

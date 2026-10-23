@@ -1,0 +1,48 @@
+Inside914 public area guide — 2026-10-22
+
+Scope: customer-facing homepage copy and area selector only. No changes to administrator,
+reservation/payment services, prices, holds, database records, or collection settings in this task.
+The map and checkboxes select the same existing edition IDs. Availability is still supplied by
+existing catalog queries; a map cannot open a campaign or reserve a square by itself.
+
+These four groupings are a proposed Inside914 geography, not an official Census regional scheme.
+All 25 cities/towns are assigned exactly once. Municipal populations include constituent villages,
+so separate village populations are not added. Rye town and Rye city are distinct municipalities.
+The named municipalities describe an area; they do not promise delivery to every address.
+Actual postal routes and household counts remain provisional and unchanged.
+
+Top six per group, descending 2020 Census population:
+Central: Greenburgh 95,397; White Plains 59,559; Mount Pleasant 44,436; Ossining 40,061;
+         New Castle 18,311; Mount Kisco 10,959.
+Southern: Yonkers 211,569; New Rochelle 79,726; Mount Vernon 73,893; Eastchester 34,641;
+          Scarsdale 18,253; Pelham 13,078.
+Northern: Cortlandt 42,545; Yorktown 36,569; Peekskill 25,431; Somers 21,541;
+          Bedford 17,309; Lewisboro 12,265. Also included: North Salem 5,243 (seventh).
+Eastern: Rye town 49,613; Mamaroneck 31,758; Harrison 28,218; Rye city 16,592;
+         North Castle 12,408; Pound Ridge 5,082.
+
+The population sum across all 25 municipalities is 1,004,457, matching the 2020 county total.
+These are resident counts used for ranking, not promised mailing quantities or 2026 estimates.
+
+Sources:
+NYS ITS Geospatial Data Services, March 2026 Civil Boundaries, Cities_Towns (layer 6):
+https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Civil_Boundaries/MapServer/6
+Query COUNTY='Westchester', fields NAME,MUNI_TYPE,POP2020,FIPS_CODE.
+County shoreline (layer 3):
+https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Civil_Boundaries/MapServer/3
+Query NAME='Westchester'. Both queries use outSR=3857 and maxAllowableOffset=150 metres.
+2020 Census county-subdivision table:
+https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_cousub_2020_tab20_ny.html
+
+Map assets are stored locally: no map SDK, API key, geolocation request, external runtime map fetch,
+or new dependency. Municipal shapes use the same proposed membership as the population lists and
+are clipped to the county shoreline to avoid coloring water as delivery territory.
+
+Verification:
+- Typecheck, lint, local build: pass.
+- Unit suite: 366 passed; map-focused unit rerun: 9 passed.
+- Full browser suite: 19 passed; after label-layering fix, targeted area/map/booking suite: 7 passed.
+- Responsive widths: 320, 375, 390, 768, 1440; no document-level horizontal overflow.
+- Map mouse/keyboard selection synchronizes with checkboxes; unavailable campaigns stay disabled.
+- Existing per-area square selection, independent artwork, copied artwork, and $0-today flow pass.
+- Local test data and fake payments only. No production changes, Stripe writes, push, or deployment.

@@ -1,0 +1,120 @@
+Inside914 local code audit — 2026-10-22
+
+Scope: repository architecture, route/import reachability, booking/payment/artwork error paths,
+administrator and database safeguards, test isolation, dependency advisories, and local verification.
+This is not a guarantee that every possible defect is absent. No production system was inspected
+or changed, and no real Stripe or Resend request was made.
+
+FIXES
+1. Cron authorization compares encoded byte lengths before timingSafeEqual. A same-character-length
+   non-ASCII header now returns 401 rather than throwing. Unauthorized requests never start work.
+2. Single-booking checkout stops if saving the Stripe Customer ID fails, before creating a SetupIntent.
+3. Copying artwork clears stale shared provenance/crop state, refreshes updated_at for proof freshness,
+   and cleans up the new object if querying the previous artwork fails.
+4. Customer uploads above the renderer's 40-megapixel limit are rejected with a useful error instead
+   of being accepted and subsequently failing export. The shared limit is reused by rendering.
+5. SetupIntent webhooks record completion after idempotent booking processing. Interrupted processing
+   remains retryable. Sequential and concurrent duplicates retain one confirmation and one email.
+6. Integration-test artwork cleanup is scoped to its fixture campaign instead of all local artwork.
+
+CLEANUP
+Removed disabled advertiser authentication/dashboard/recurring implementation, unused legacy booking
+and area cards, unused admin readiness displays, duplicate unused shared-artwork orchestration,
+and an unused browser Supabase wrapper. Old account/dashboard URLs keep redirecting to /areas.
+Removed 43 unit cases for retired code and added five regression cases (401 -> 363).
+Preserved historical SQL, stored-data compatibility, reservation-token access, and current UI design.
+Roughly 2,800 tracked lines were removed, offset by fixes, tests, and new documentation.
+
+VERIFICATION
+Typecheck: pass
+Lint: pass
+Unit: 363 passed
+Integration: 112 passed; 3 Stripe-credential-dependent skipped (not passed)
+Browser: 18 passed, Chromium, including mobile admin/public views, area selection, independent artwork,
+         fake-card checkout, and legacy account/dashboard redirects
+Build: pass (local Next production compilation, not deployment)
+Whitespace/diff check: pass
+Tracked live-key/private-key signature scan: no matches (not a complete secret-scanner certification)
+Production dependency audit: 0 reported vulnerabilities
+Full dependency audit: 35 affected package entries: 1 critical, 26 high, 8 moderate
+Compatible npm audit fix dry run: no changes proposed; package files were not changed
+
+REMAINING FINDINGS
+Development-tool dependency advisories remain, primarily in Vercel CLI and lint dependency trees.
+Do not apply npm's suggested major downgrade blindly. Validate a tooling upgrade/replacement separately.
+CSP is report-only; actual-provider browser validation is needed before enforcement.
+Email ambiguous-success retries can duplicate mail and invalidate a delivered access link. Persisted
+payload/provider reconciliation is needed for stronger guarantees; current delivery is not exactly-once.
+Final printer approval is still required, especially the 0.0125-inch back paid/postal clearance.
+No live-provider behavior or deployed configuration was validated. Collection remains disabled in source.
+
+SAFETY
+LIVE_COLLECTION_RELEASED remains false. Verification explicitly used collection mode disabled,
+localhost Supabase, fake Stripe clients and no external email credentials. No migrations were changed
+or applied. No production campaign/reservation changes, commits, push, deployment, or charges occurred.
+Existing historical data/schema were not removed. Local test-owned fixtures were created/cleaned up.
+
+Full repository explanation: README.md
+
+CHANGED/REMOVED TRACKED FILES (M=modified, D=deleted)
+M	CLAUDE.md
+M	e2e/areas.spec.ts
+D	src/app/account/actions.ts
+D	src/app/account/callback/route.ts
+D	src/app/account/forgot-password/page.tsx
+D	src/app/account/form.tsx
+D	src/app/account/layout.tsx
+D	src/app/account/login/page.tsx
+D	src/app/account/reset-password/page.tsx
+D	src/app/account/signup/page.tsx
+D	src/app/account/verify/page.tsx
+M	src/app/api/internal/email-outbox/route.ts
+D	src/app/dashboard/[id]/artwork/page.tsx
+D	src/app/dashboard/[id]/page.tsx
+D	src/app/dashboard/actions.ts
+D	src/app/dashboard/forms.tsx
+D	src/app/dashboard/layout.tsx
+D	src/app/dashboard/page.tsx
+D	src/app/dashboard/recurring/[id]/page.tsx
+D	src/app/dashboard/recurring/actions.ts
+D	src/app/dashboard/recurring/forms.tsx
+D	src/app/dashboard/recurring/page.tsx
+D	src/components/admin/zone-overview.tsx
+D	src/components/admin/zone-readiness.tsx
+M	src/components/artwork/artwork-studio.tsx
+D	src/components/booking/area-cards.tsx
+D	src/components/booking/live-areas.tsx
+D	src/components/booking/multi-area-selector.tsx
+D	src/components/booking/postcard-booking.tsx
+D	src/components/verified-mail.tsx
+D	src/lib/admin/zone-readiness.ts
+D	src/lib/advertiser/artwork.ts
+D	src/lib/advertiser/auth.ts
+M	src/lib/artwork/rules.ts
+M	src/lib/artwork/service.ts
+M	src/lib/artwork/validate-image.ts
+M	src/lib/booking/cart.ts
+M	src/lib/booking/category-checkout.ts
+M	src/lib/catalog/areas.ts
+M	src/lib/checkout/service.ts
+M	src/lib/checkout/webhook.ts
+M	src/lib/print/export.ts
+D	src/lib/recurring/schedule.ts
+D	src/lib/recurring/service.ts
+D	src/lib/supabase/browser.ts
+M	src/proxy.ts
+D	tests/areas.test.tsx
+M	tests/integration/checkout.test.ts
+M	tests/integration/multi-area.test.ts
+D	tests/postcard-booking.test.tsx
+D	tests/recurring-schedule.test.ts
+M	tests/regions.test.ts
+M	tests/validate-image.test.ts
+D	tests/zone-readiness.test.ts
+
+NEW FILES
+README.md
+src/app/account/[[...path]]/page.tsx
+src/app/dashboard/[[...path]]/page.tsx
+tests/cron-authorization.test.ts
+docs/code-audit-2026-10-22.txt

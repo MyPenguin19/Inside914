@@ -63,6 +63,7 @@ const PROBLEM_TEXT: Record<ArtworkFailure | "interrupted", string> = {
   too_large: `That file is larger than ${formatMegabytes(MAX_UPLOAD_BYTES)}. Please choose a smaller image.`,
   unsupported_type: "Please choose a JPG or PNG image. Other formats (like PDF or HEIC) aren't supported yet.",
   corrupt: "We couldn't open that image. It may be damaged, so try saving or exporting it again.",
+  too_many_pixels: "That image exceeds 40 megapixels. Reduce its pixel dimensions and upload it again.",
   too_small: `That image is too small (under ${MIN_IMAGE_PIXELS} pixels on a side). Please use a larger image.`,
   upload_missing: "The upload didn't finish. Please try again.",
   interrupted: "The upload was interrupted, so nothing was saved. Check your connection and try again.",

@@ -66,7 +66,8 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
   });
 
   afterEach(async () => {
-    const { data } = await admin.from("booking_artwork").select("storage_path");
+    const { data: owned } = await admin.from("bookings").select("id").eq("edition_id", EDITION);
+    const { data } = await admin.from("booking_artwork").select("storage_path").in("booking_id", (owned ?? []).map(b => b.id));
     if (data?.length) await admin.storage.from("artwork").remove(data.map((r) => r.storage_path));
     await admin.from("bookings").delete().eq("edition_id", EDITION);
     await admin.from("stripe_events").delete().like("id", "evt_inttest_%");
@@ -99,6 +100,22 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
   const bookingRow = async (id: string) => (await admin.from("bookings").select("*").eq("id", id).single()).data!;
   const liveClaims = async (id: string) =>
     (await admin.from("booking_slots").select("slot_id").eq("booking_id", id).is("released_at", null)).data ?? [];
+
+  test("a failed customer save stops before creating a SetupIntent", async () => {
+    const { token, stripe } = await prepare(["B1"], { payment: false });
+    const original = admin.from.bind(admin);
+    const spy = vi.spyOn(admin, "from").mockImplementation((...args: Parameters<typeof admin.from>) => {
+      const query = original(...args);
+      if (String(args[0]) === "bookings") {
+        vi.spyOn(query, "update").mockReturnValue({ eq: async () => ({ error: { message: "database unavailable" } }) } as never);
+      }
+      return query;
+    });
+    try {
+      await expect(checkout.startPayment(admin, stripe, token)).rejects.toThrow("Could not save customer");
+      expect(stripe.setupIntents.create).not.toHaveBeenCalled();
+    } finally { spy.mockRestore(); }
+  });
 
   describe("customer details", () => {
     test("valid details are stored normalized; invalid ones are rejected and not stored", async () => {
@@ -185,6 +202,33 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
       other.stripe.intent(other.setupIntentId!).metadata.booking_id = noConsent.bookingId;
       expect(await checkout.completeReservation(admin, other.stripe, other.bookingId)).toBe("setup_mismatch");
       expect((await bookingRow(other.bookingId)).status).toBe("pending");
+    });
+
+    test("failed webhook work remains retryable and is not marked complete early", async () => {
+      const { bookingId, stripe, setupIntentId } = await prepare(["F2"]);
+      stripe.succeed(setupIntentId!);
+      const id = `evt_inttest_${randomUUID().replaceAll("-", "")}`;
+      const event = { id, type: "setup_intent.succeeded", data: { object: { id: setupIntentId, metadata: { booking_id: bookingId } } } } as never;
+      stripe.setupIntents.retrieve.mockImplementationOnce(async () => {
+        expect((await admin.from("stripe_events").select("id").eq("id", id)).data).toEqual([]);
+        throw new Error("interrupted retrieval");
+      });
+      await expect(handleStripeEvent(admin, stripe, event)).rejects.toThrow("interrupted retrieval");
+      expect((await admin.from("stripe_events").select("id").eq("id", id)).data).toEqual([]);
+      expect(await handleStripeEvent(admin, stripe, event, async () => ({ id: "email_retry" }))).toBe("handled");
+      expect((await bookingRow(bookingId)).status).toBe("reserved");
+    });
+
+    test("concurrent webhook deliveries confirm once and send one email", async () => {
+      const { bookingId, stripe, setupIntentId } = await prepare(["F2"]);
+      stripe.succeed(setupIntentId!);
+      const id = `evt_inttest_${randomUUID().replaceAll("-", "")}`;
+      const event = { id, type: "setup_intent.succeeded", data: { object: { id: setupIntentId, metadata: { booking_id: bookingId } } } } as never;
+      const send = vi.fn(async () => ({ id: "email_concurrent" }));
+      await Promise.all([handleStripeEvent(admin, stripe, event, send), handleStripeEvent(admin, stripe, event, send)]);
+      expect((await bookingRow(bookingId)).status).toBe("reserved");
+      expect((await admin.from("stripe_events").select("id").eq("id", id)).data).toHaveLength(1);
+      expect(send).toHaveBeenCalledTimes(1);
     });
 
     test("duplicate webhook deliveries are processed once", async () => {

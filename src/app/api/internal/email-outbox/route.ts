@@ -10,9 +10,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // "Authorization: Bearer $CRON_SECRET". Disabled without CRON_SECRET.
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
-  const given = request.headers.get("authorization") ?? "";
-  const expected = `Bearer ${secret}`;
-  if (!secret || given.length !== expected.length || !timingSafeEqual(Buffer.from(given), Buffer.from(expected))) {
+  const given = Buffer.from(request.headers.get("authorization") ?? "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  if (!secret || given.length !== expected.length || !timingSafeEqual(given, expected)) {
     return new Response("Unauthorized", { status: 401 });
   }
   const admin = createAdminClient();

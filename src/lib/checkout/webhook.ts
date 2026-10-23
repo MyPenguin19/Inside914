@@ -36,37 +36,30 @@ export async function recordSetupStatus(
   if (error) throw new Error(`Could not record setup status: ${error.message}`);
 }
 
-// Handles one VERIFIED Stripe event (signature already checked by the route). Each event id is
-// recorded first; a duplicate delivery is acknowledged without doing anything again.
-// Returns "duplicate" | "handled" | "ignored". Throws to make Stripe retry later.
+// Only mark delivery complete after its idempotent booking work succeeds. A process crash
+// must leave the event retryable; concurrent deliveries are safe because confirmation is atomic.
 export async function handleStripeEvent(admin: Admin, stripe: StripeClient, event: Stripe.Event, send?: SendEmail) {
-  const { error: insertError, data } = await admin
-    .from("stripe_events")
-    .upsert({ id: event.id, type: event.type }, { onConflict: "id", ignoreDuplicates: true })
-    .select("id");
-  if (insertError) throw new Error(`Could not record event: ${insertError.message}`);
-  if (!data?.length) return "duplicate" as const;
+  const { error: lookupError, data: existing } = await admin
+    .from("stripe_events").select("id").eq("id", event.id).maybeSingle();
+  if (lookupError) throw new Error(`Could not check event: ${lookupError.message}`);
+  if (existing) return "duplicate" as const;
 
-  try {
-    const status = SETUP_EVENTS[event.type];
-    if (!status) return "ignored" as const;
-    const intent = event.data.object as Stripe.SetupIntent;
-    const bookingId = intent.metadata?.booking_id;
-    if (!bookingId || !z.uuid().safeParse(bookingId).success) return "ignored" as const;
-
+  const status = SETUP_EVENTS[event.type];
+  const intent = event.data.object as Stripe.SetupIntent;
+  const bookingId = intent.metadata?.booking_id;
+  const supported = status && bookingId && z.uuid().safeParse(bookingId).success;
+  if (supported) {
     await recordSetupStatus(admin, bookingId, intent.id, status, event.created);
     if (status === "succeeded") {
-      // Never trusts the event's word: completeReservation re-reads the SetupIntent from Stripe.
+      // Never trust the event alone: re-read and validate its current SetupIntent.
       const outcome = await completeReservation(admin, stripe, bookingId);
       if (outcome === "confirmed" || outcome === "already_confirmed") {
         await processOutboxForBooking(admin, bookingId, send).catch(() => {});
       }
     }
-    // failed / canceled: the customer can try another card on the payment page; nothing is charged.
-    return "handled" as const;
-  } catch (error) {
-    // Forget the event so Stripe's retry is processed again.
-    await admin.from("stripe_events").delete().eq("id", event.id);
-    throw error;
   }
+  const { error } = await admin.from("stripe_events")
+    .upsert({ id: event.id, type: event.type }, { onConflict: "id", ignoreDuplicates: true });
+  if (error) throw new Error(`Could not record event: ${error.message}`);
+  return supported ? "handled" as const : "ignored" as const;
 }

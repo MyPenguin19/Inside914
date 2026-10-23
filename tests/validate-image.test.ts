@@ -16,6 +16,10 @@ describe("validateImage", () => {
     });
   });
 
+  test("rejects images exceeding the renderer pixel limit", async () => {
+    expect(await validateImage(await makeImage("jpeg", 6400, 6400))).toEqual({ ok: false, reason: "too_many_pixels" });
+  });
+
   test("accepts a valid PNG", async () => {
     expect(await validateImage(await makeImage("png", 640, 640))).toMatchObject({ ok: true, contentType: "image/png" });
   });

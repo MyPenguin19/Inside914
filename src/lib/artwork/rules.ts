@@ -5,6 +5,7 @@ export type ArtworkType = "image/jpeg" | "image/png";
 
 // Must match the `artwork` bucket's file_size_limit (migration artwork_storage_and_hold_extension).
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+export const MAX_IMAGE_PIXELS = 40_000_000; // Match the postcard renderer before accepting uploads.
 export const MIN_IMAGE_PIXELS = 300; // shortest side; anything smaller can't fill a position
 
 export type UploadProblem = "empty" | "too_large" | "unsupported_type";

@@ -1,5 +1,5 @@
 import sharp, { type OverlayOptions } from "sharp";
-import { sniffImageType } from "@/lib/artwork/rules";
+import { MAX_IMAGE_PIXELS, sniffImageType } from "@/lib/artwork/rules";
 import { AMAZINGMAIL_9X6_LAYOUT as layout, type PrintRectangle } from "./amazingmail-layout";
 
 export const EXPORT_DPI = 800;
@@ -13,7 +13,7 @@ export const HOUSE_OUTPUT = { width: 2990, height: 2086 };
 export async function validHouseArtwork(input?: Buffer): Promise<Buffer | undefined> {
   if (!input) return undefined;
   try {
-    const image = sharp(input, { limitInputPixels: 40_000_000, failOn: "warning" });
+    const image = sharp(input, { limitInputPixels: MAX_IMAGE_PIXELS, failOn: "warning" });
     const meta = await image.metadata();
     if (meta.width !== HOUSE_OUTPUT.width || meta.height !== HOUSE_OUTPUT.height ||
         (meta.pages ?? 1) !== 1 || (meta.orientation ?? 1) !== 1) return undefined;
@@ -24,7 +24,7 @@ export async function validHouseArtwork(input?: Buffer): Promise<Buffer | undefi
 
 export async function normalizeHouse(input: Buffer, crop: PrintRectangle) {
   if (!sniffImageType(input.subarray(0,16))) throw new Error("Use a PNG or JPEG image.");
-  const oriented = await sharp(input, { limitInputPixels: 40_000_000 }).rotate().toBuffer();
+  const oriented = await sharp(input, { limitInputPixels: MAX_IMAGE_PIXELS }).rotate().toBuffer();
   const meta = await sharp(oriented).metadata();
   if (!crop || ![crop.x,crop.y,crop.width,crop.height].every(Number.isSafeInteger) ||
       crop.x < 0 || crop.y < 0 || crop.width < 1122 || crop.height < 783 ||
@@ -52,7 +52,7 @@ export async function renderPostcard(side: "front" | "back", ads: PrintImage[], 
     } else {
       const { crop } = ad;
       if (![crop.x, crop.y, crop.width, crop.height].every(Number.isFinite) || crop.width < 1 || crop.height < 1 || Math.abs(crop.width - crop.height) > 1) throw new Error(`${slot.label}: save a valid square crop.`);
-      const oriented = await sharp(ad.input, { limitInputPixels: 40_000_000 }).rotate().toBuffer();
+      const oriented = await sharp(ad.input, { limitInputPixels: MAX_IMAGE_PIXELS }).rotate().toBuffer();
       const meta = await sharp(oriented).metadata();
       if (crop.x < 0 || crop.y < 0 || crop.x + crop.width > meta.width || crop.y + crop.height > meta.height) throw new Error(`${slot.label}: invalid crop.`);
       input = await sharp(oriented).extract({ left: Math.round(crop.x), top: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height) }).resize(2000, 2000).png().toBuffer();

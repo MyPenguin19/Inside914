@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Refresh account sessions and route signed-out visitors to the appropriate login.
+// Refresh administrator sessions and route signed-out visitors to the admin login.
 // Each protected page and action independently verifies its session and authorization.
 export async function proxy(request: NextRequest) {
   if (/^\/(account|dashboard)(\/|$)/.test(request.nextUrl.pathname)) {
@@ -23,10 +23,9 @@ export async function proxy(request: NextRequest) {
       },
     });
     const { data } = await supabase.auth.getClaims(); // validates and, if needed, refreshes the session
-    const isAdmin = request.nextUrl.pathname.startsWith("/admin");
-    const isLogin = isAdmin ? request.nextUrl.pathname === "/admin/login" : request.nextUrl.pathname.startsWith("/account");
+    const isLogin = request.nextUrl.pathname === "/admin/login";
     if (!data?.claims && !isLogin) {
-      const login = new URL(isAdmin ? "/admin/login" : "/account/login", request.url);
+      const login = new URL("/admin/login", request.url);
       const redirect = NextResponse.redirect(login);
       response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
       response = redirect;

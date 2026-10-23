@@ -22,6 +22,7 @@ export type ArtworkFailure =
   | "invalid_input"
   | "empty"
   | "too_large"
+  | "too_many_pixels"
   | "unsupported_type"
   | "corrupt"
   | "too_small"

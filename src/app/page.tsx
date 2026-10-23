@@ -12,10 +12,10 @@ const TRUST = [
 ];
 
 const STEPS = [
-  { title: "Choose your areas", body: "Choose the Westchester areas where you want your business advertised." },
-  { title: "Choose squares and artwork", body: "Choose your square in each area and upload artwork for each campaign. Reuse the same artwork if you want." },
-  { title: "Add your business details", body: "Enter your business and contact information once." },
-  { title: "Reserve securely", body: "Save a card to reserve your spaces. Nothing is charged today. You only pay for an area when its campaign fills and is approved." },
+  { title: "Choose your areas", body: "Pick one or more areas on the map." },
+  { title: "Choose squares and artwork", body: "Pick a square and add your image. Use the same image or a different one in each area." },
+  { title: "Add your business details", body: "Tell us your business name and how to reach you." },
+  { title: "Reserve securely", body: "Save your card. Pay $0 today, then $399 per area when its postcard fills and is approved." },
 ];
 
 const FAQ = [
@@ -60,7 +60,7 @@ export default function Home() {
               Thousands of Local Mailboxes.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-              Reach homeowners across Westchester with professionally printed shared postcards. Choose the areas you want to advertise in, select your space, upload your artwork, and reserve without paying upfront.
+              Put your business in Westchester mailboxes. Pick your areas, choose a square, and add your ad. Pay nothing today.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <ButtonLink href="/areas" size="lg">

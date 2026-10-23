@@ -4,7 +4,7 @@ test("homepage: hero, Verified Mail, how it works, pricing, FAQ and footer", asy
   await page.goto("/");
   await expect(page).toHaveTitle("Inside914");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your Business.Thousands of Local Mailboxes.");
-  await expect(page.getByText(/reserve without paying upfront/)).toBeVisible();
+  await expect(page.getByText(/Pick your areas, choose a square, and add your ad/)).toBeVisible();
   await expect(page.getByRole("img", { name: /Illustration of the shared Inside914 postcard/ })).toBeVisible();
 
   for (const heading of ["Four simple steps.", "Simple, fixed pricing.", "Good to know."]) {

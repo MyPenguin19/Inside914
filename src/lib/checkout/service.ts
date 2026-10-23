@@ -153,7 +153,8 @@ export async function startPayment(admin: Admin, stripe: StripeClient, token: st
       { idempotencyKey: `inside914-customer-${b.id}` },
     );
     customerId = customer.id;
-    await admin.from("bookings").update({ stripe_customer_id: customerId }).eq("id", b.id);
+    const { error } = await admin.from("bookings").update({ stripe_customer_id: customerId }).eq("id", b.id);
+    if (error) throw new Error(`Could not save customer: ${error.message}`);
   }
 
   if (b.stripeSetupIntentId) {

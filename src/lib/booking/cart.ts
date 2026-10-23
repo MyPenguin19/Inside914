@@ -272,11 +272,15 @@ export async function copyCartArtwork(
     .from(ARTWORK_BUCKET)
     .copy(source.storage_path, path);
   if (copied.error) throw new Error("Could not copy artwork.");
-  const { data: old } = await admin
+  const { data: old, error: oldError } = await admin
     .from("booking_artwork")
     .select("storage_path")
     .eq("booking_id", targetId)
     .maybeSingle();
+  if (oldError) {
+    await admin.storage.from(ARTWORK_BUCKET).remove([path]);
+    throw oldError;
+  }
   const saved = await admin.from("booking_artwork").upsert(
     {
       booking_id: targetId,
@@ -292,6 +296,8 @@ export async function copyCartArtwork(
       crop_height: null,
       zoom: null,
       review_status: "pending",
+      shared_source_id: null,
+      updated_at: new Date().toISOString(),
     },
     { onConflict: "booking_id" },
   );

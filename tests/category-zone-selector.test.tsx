@@ -39,3 +39,27 @@ test.each([[1,"$399"],[2,"$798"],[3,"$1,197"],[4,"$1,596"]] as const)("%i areas 
  expect(screen.getByText("Due today: $0")).toBeTruthy();
  expect(screen.queryByLabelText("Choose your business category")).toBeNull();
 });
+
+test("map and area cards share selection, including keyboard controls", () => {
+ render(<CategoryZoneSelector {...props}/>);
+ const map = screen.getByRole("button", {name: /Northern Westchester on map/});
+ fireEvent.click(map);
+ expect((screen.getByRole("checkbox", {name: /Northern Westchester/}) as HTMLInputElement).checked).toBe(true);
+ expect(map.getAttribute("aria-pressed")).toBe("true");
+ fireEvent.keyDown(map, {key: " "});
+ expect((screen.getByRole("checkbox", {name: /Northern Westchester/}) as HTMLInputElement).checked).toBe(false);
+ fireEvent.click(screen.getByRole("checkbox", {name: /Northern Westchester/}));
+ expect(map.getAttribute("aria-pressed")).toBe("true");
+ expect(hold).not.toHaveBeenCalled();
+});
+
+test("the map cannot select a closed or full campaign", () => {
+ render(<CategoryZoneSelector editions={[{...props.editions[0], availableUnits: 0}]}/>);
+ for (const area of ["Central", "Northern"]) {
+  const button = screen.getByRole("button", {name: new RegExp(`${area} Westchester on map`)});
+  expect(button.getAttribute("aria-disabled")).toBe("true");
+  fireEvent.click(button); fireEvent.keyDown(button, {key:"Enter"});
+  expect(button.getAttribute("aria-pressed")).toBe("false");
+ }
+ expect(hold).not.toHaveBeenCalled();
+});
