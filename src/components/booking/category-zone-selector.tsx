@@ -49,7 +49,7 @@ export function CategoryZoneSelector({ editions }: CategoryCatalog) {
             <label className={`flex items-start gap-3 ${area.available ? "cursor-pointer" : "cursor-not-allowed"}`}>
               <input type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-accent" disabled={!area.available} checked={area.selected} onChange={() => toggleArea(region.slug)} />
               <span className="min-w-0"><span className="block text-lg font-semibold">{region.name}</span>
-                <span className="block text-sm text-muted">{area.status}{e ? ` · ${formatPrice(e.unitPriceCents)} per square ad` : ""}</span>
+                <span className="block text-sm text-muted">{area.status}{e ? ` · ${formatPrice(e.unitPriceCents)} per ad` : ""}</span>
                 <span className="mt-2 block text-sm">{guide.municipalities.slice(0, 6).map(town => town.name).join(" · ")}</span>
               </span>
             </label>
@@ -65,14 +65,14 @@ export function CategoryZoneSelector({ editions }: CategoryCatalog) {
         <p className="text-xs leading-relaxed text-muted">Area groupings are proposed, not guaranteed delivery to every address. Town totals include their villages. <a href="https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Civil_Boundaries/MapServer/6" className="underline">Map & population source</a></p>
       </div>
     </div> : <div className="space-y-8">
-      <h2 className="text-2xl font-semibold">Choose one square in each area</h2>
-      <p className="text-muted">Pick a square on the front or back. Next, add your image.</p>
+      <h2 className="text-2xl font-semibold">Choose one position in each area</h2>
+      <p className="text-muted">Pick a position on the front or back. Next, add your image.</p>
       {chosen.map(e => <section key={e.id} aria-label={e.zoneName} className="space-y-3">
         <h3 className="text-xl font-semibold">{e.zoneName}</h3>
-        <div className="grid gap-4 lg:grid-cols-2">{(["front", "back"] as const).map(side => <PostcardSide key={side} side={side} dimensions={{ width: 9, height: 6 }} priceCents={e.unitPriceCents}
+        <div className="grid gap-4 lg:grid-cols-2">{(["front", "back"] as const).map(side => <PostcardSide layoutKey={e.layoutTemplate} key={side} side={side} dimensions={{ width: 9, height: 6 }} priceCents={e.unitPriceCents}
           views={e.slots.filter(s => s.side === side).map(slot => ({ slot, selected: positions[e.id] === slot.id, selectable: slot.available && !pending, note: slot.available ? "Available" : "Unavailable" }))}
           onSelect={slotId => { if (!pending) setPositions(previous => ({ ...previous, [e.id]: slotId })); }} />)}</div>
-        <p className="text-sm text-muted">Selected: {e.slots.find(s => s.id === positions[e.id])?.label ?? "Choose a square"}. Only outlined squares can be booked.</p>
+        <p className="text-sm text-muted">Selected: {e.slots.find(s => s.id === positions[e.id])?.label ?? "Choose a position"}. Only outlined positions can be booked.</p>
       </section>)}
       <Button variant="secondary" disabled={pending} onClick={() => setStep(1)}>Change areas</Button>
     </div>}
@@ -85,7 +85,7 @@ export function CategoryZoneSelector({ editions }: CategoryCatalog) {
           const result = await holdAreas({ selections: chosen.map(e => ({ editionId: e.id, slotId: positions[e.id] })) });
           if (result.ok) router.push("/book/cart");
           else { setMessage(result.message ?? "Please try again."); setPositions({}); router.refresh(); }
-        })}>{pending ? "Holding your squares…" : "Continue to artwork"}</Button>}
+        })}>{pending ? "Holding your positions…" : "Continue to artwork"}</Button>}
       {message && <p role="alert" className="mt-3">{message}</p>}
       <p className="mt-3"><Link href="/book/cart" className="underline">Return to held areas</Link></p>
     </Card>

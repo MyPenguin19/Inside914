@@ -1,4 +1,5 @@
 import { POSTCARD_INCHES, type CatalogSlot, type Side } from "@/lib/booking/selection";
+import { findPostcardLayout, postcardZones } from "@/lib/print/layouts";
 import { formatPrice } from "@/lib/format";
 
 export type SlotView = { slot: CatalogSlot; selected: boolean; selectable: boolean; note: string };
@@ -7,7 +8,7 @@ export type SlotView = { slot: CatalogSlot; selected: boolean; selectable: boole
 // layout is pure data; none are required.
 export type PostcardZone = {
   side: Side;
-  kind: "masthead" | "mailing";
+  kind: "masthead" | "mailing" | "house" | "postal";
   x: number;
   y: number;
   width: number;
@@ -17,6 +18,7 @@ export type PostcardZone = {
 };
 
 type Props = {
+  layoutKey?: string | null;
   dimensions?: { width: number; height: number };
   side: Side;
   views: SlotView[];
@@ -51,7 +53,9 @@ function mergedBox(views: SlotView[]) {
 }
 
 // One face of the postcard, drawn to scale from slot geometry (inches) in the database.
-export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceCents, onSelect, zones = [], caption = true }: Props) {
+export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceCents, onSelect, zones = [], caption = true, layoutKey }: Props) {
+  const layout = findPostcardLayout(layoutKey);
+  if (layout) { dimensions = layout.trim; zones = postcardZones(layoutKey); }
   const title = side === "front" ? "Front" : "Back";
   const merged = mergedBox(views);
   return (
@@ -60,7 +64,7 @@ export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceC
       <div
         role="group"
         aria-label={`${title} of the postcard`}
-        className="relative w-full rounded-[6px] border border-line-strong/70 bg-paper shadow-[0_1px_2px_rgba(28,27,25,0.06),0_24px_48px_-28px_rgba(28,27,25,0.45)]"
+        className="relative w-full overflow-hidden rounded-[6px] border border-line-strong/70 bg-paper shadow-[0_1px_2px_rgba(28,27,25,0.06),0_24px_48px_-28px_rgba(28,27,25,0.45)]"
         style={{ aspectRatio: `${dimensions.width} / ${dimensions.height}` }}
       >
         {zones
@@ -84,7 +88,7 @@ export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceC
             aria-label={`${title} position ${slot.label}: ${note}${
               selectable && priceCents !== null && !selected ? `, ${formatPrice(priceCents)}` : ""
             }`}
-            className="group absolute p-[2.5%] focus-visible:outline-none"
+            className={`group absolute ${layout ? "" : "p-[2.5%]"} focus-visible:outline-none`}
             style={boxStyle(slot, dimensions)}
           >
             <span
@@ -98,7 +102,7 @@ export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceC
                       : "cursor-not-allowed border-transparent bg-[repeating-linear-gradient(135deg,var(--reserved),var(--reserved)_6px,var(--line)_6px,var(--line)_7px)] text-muted"
               }`}
             >
-              <span className="absolute left-2 top-1.5 text-[10px] font-semibold tracking-wide opacity-70">{slot.label}</span>
+              <span className="absolute left-2 top-1.5 text-[10px] font-semibold tracking-wide opacity-70">{layout ? (slot.side === "front" ? Number(slot.label.slice(1)) : 6 + Number(slot.label.slice(1))) : slot.label} · {slot.label}</span>
               <span aria-hidden="true" className="text-xs font-medium sm:text-[13px]">
                 {selected ? "✓ Your ad" : note}
               </span>
@@ -125,6 +129,7 @@ export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceC
 
 // Printed, non-selectable areas. Text is decorative: the slots carry the meaning for assistive tech.
 function Zone({ zone, dimensions }: { zone: PostcardZone; dimensions: { width: number; height: number } }) {
+  if (zone.kind === "house" || zone.kind === "postal") return <div data-reserved-region={zone.kind} className="absolute flex flex-col items-center justify-center border border-line bg-background-soft p-1 text-center text-[clamp(8px,1.8vw,11px)] text-muted" style={boxStyle(zone, dimensions)}><span>{zone.title}</span><span>{zone.detail}</span></div>;
   if (zone.kind === "masthead") {
     return (
       <div aria-hidden="true" className="absolute flex flex-col justify-center px-[5%]" style={boxStyle(zone, dimensions)}>

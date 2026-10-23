@@ -58,11 +58,11 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await page.getByRole("button",{name:previousHouse ? "Replace artwork" : "Save house artwork"}).click();
   await expect(page.getByRole("status")).toContainText("House artwork saved");
   const savedHouse=ok(await db.from("house_artwork").select("storage_path,width_px,height_px").single())!;
-  expect([savedHouse.width_px,savedHouse.height_px]).toEqual([2990,2086]);
+  expect([savedHouse.width_px,savedHouse.height_px]).toEqual([2990,1986]);
   housePaths.push(savedHouse.storage_path);
   await expect(page.getByAltText("Current permanent house advertisement")).toBeVisible();
   await page.goto(`/admin/campaigns/new?area=square-e2e-${zone}`);
-  const price = page.getByLabel("Square ad per area ($)", { exact: false });
+  const price = page.getByLabel("Ad per area ($)", { exact: false });
   await expect(price).toHaveValue("399");
   await expect(price).toHaveAttribute("readonly", "");
   await expect(page.getByLabel("Double price", { exact: false })).toHaveCount(0);
@@ -81,15 +81,15 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await page.getByRole("button", { name: "Create draft campaign" }).click();
   await expect(page).toHaveURL(/\/admin\/campaigns\/[a-f0-9-]{36}$/);
   await page.getByText("Campaign dates and details", {exact:true}).click();
-  await expect(page.getByText("$399 square ad per area · 10 paid positions", { exact: true })).toBeVisible();
+  await expect(page.getByText("$399 ad per area · 10 paid positions", { exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Front of the postcard" }).locator("button")).toHaveCount(6);
   await expect(page.getByRole("group", { name: "Back of the postcard" }).locator("button")).toHaveCount(4);
   for (const width of [320, 375, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth), `inventory at ${width}`).toBeLessThanOrEqual(width);
   }
-  const campaign = ok(await db.from("editions").select("id,status,product_model,unit_price_cents,double_unit_price_cents").eq("zone_id", zone).single());
-  expect(campaign).toMatchObject({ status: "draft", product_model: "square_v1", unit_price_cents: 39900, double_unit_price_cents: null });
+  const campaign = ok(await db.from("editions").select("id,status,product_model,layout_template,unit_price_cents,double_unit_price_cents").eq("zone_id", zone).single());
+  expect(campaign).toMatchObject({ status: "draft", product_model: "square_v1", layout_template:"amazingmail-9x6-v2", unit_price_cents: 39900, double_unit_price_cents: null });
   expect(ok(await db.from("slots").select("id").eq("edition_id", campaign!.id))).toHaveLength(10);
   await expect(page.getByRole("link", {name:"Review payments"})).toBeVisible();
   await expect(page.getByText("0 of 10 spots filled", {exact:true})).toBeVisible();

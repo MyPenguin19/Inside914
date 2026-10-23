@@ -1,4 +1,4 @@
-import { AMAZINGMAIL_9X6_LAYOUT, fileToTrim } from "@/lib/print/amazingmail-layout";
+import { postcardZones } from "@/lib/print/layouts";
 import { CroppedImage } from "@/components/artwork/cropped-image";
 import { boxStyle } from "@/components/postcard/postcard-side";
 import type { AdminSlot } from "@/lib/admin/metrics";
@@ -11,7 +11,7 @@ export type Placement = { slots: AdminSlot[]; business: string; artwork: Artwork
 // One side of the postcard with every reserved ad in its place, using the same slot geometry and
 // cropping as everywhere else (no second layout engine). Anything not content-approved is shown
 // as a warning tile, never as if it were ready.
-export function AssembledSide({ side, slots, placements, square = false, dimensions = POSTCARD_INCHES }: { square?: boolean; dimensions?: { width: number; height: number }; side: "front" | "back"; slots: AdminSlot[]; placements: Placement[] }) {
+export function AssembledSide({ side, slots, placements, square = false, layoutKey, dimensions = POSTCARD_INCHES }: { layoutKey?: string | null; square?: boolean; dimensions?: { width: number; height: number }; side: "front" | "back"; slots: AdminSlot[]; placements: Placement[] }) {
   const own = placements.map(p => ({ ...p, slots: p.slots.filter(s => s.side === side) })).filter(p => p.slots.length > 0);
   const taken = new Set(own.flatMap((p) => p.slots.map((s) => s.id)));
   return (
@@ -26,24 +26,19 @@ export function AssembledSide({ side, slots, placements, square = false, dimensi
         {slots
           .filter((s) => s.side === side && !taken.has(s.id))
           .map((s) => (
-            <div key={s.id} aria-hidden="true" className="absolute p-[1.5%]" style={boxStyle(s, dimensions)}>
+            <div key={s.id} aria-hidden="true" className={`absolute ${square ? "" : "p-[1.5%]"}`} style={boxStyle(s, dimensions)}>
               <div className="flex h-full w-full items-center justify-center rounded-[3px] border border-dashed border-line-strong text-[10px] text-muted">
                 {s.blockedAt ? "Blocked" : `${s.label} unsold`}
               </div>
             </div>
           ))}
-        {square && side === "back" && <>
-          {AMAZINGMAIL_9X6_LAYOUT.houseRegions.map(region => <div key={region.id} className="absolute flex items-center justify-center border border-dashed border-line-strong bg-background-soft p-1 text-center text-[10px] text-muted" style={boxStyle(fileToTrim(region), dimensions)}>
-            {region.id === "inside914" ? "Inside914" : "Inside Diagnostics"} · House artwork pending
-          </div>)}
-          <div className="absolute flex items-center justify-center bg-background-soft p-2 text-center text-[10px] text-muted" style={boxStyle(fileToTrim(AMAZINGMAIL_9X6_LAYOUT.postal), dimensions)}>Postal exclusion · No advertising</div>
-        </>}
+        {postcardZones(layoutKey).filter(region => region.side === side).map(region => <div key={region.kind} className="absolute flex items-center justify-center border border-line bg-background-soft p-1 text-center text-[10px] text-muted" style={boxStyle(region, dimensions)}>{region.title} · {region.detail}</div>)}
         {own.map((p) => {
           const area = adArea(p.slots);
           return (
             <div key={p.slots.map((s) => s.id).join()} className="absolute" style={boxStyle(area, dimensions)}>
               {p.artwork?.crop && p.approved ? (
-                <CroppedImage src={p.artwork.viewUrl} imageWidth={p.artwork.width} imageHeight={p.artwork.height} crop={p.artwork.crop} alt={`${p.business} ad`} />
+                <CroppedImage target={area} src={p.artwork.viewUrl} imageWidth={p.artwork.width} imageHeight={p.artwork.height} crop={p.artwork.crop} alt={`${p.business} ad`} />
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center bg-warning-soft p-1 text-center text-[10px] leading-tight text-warning">
                   <span className="font-semibold">{p.business}</span>

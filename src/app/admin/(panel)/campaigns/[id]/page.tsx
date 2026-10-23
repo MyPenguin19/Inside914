@@ -149,7 +149,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
               ["Mailing window", edition.mailingWindowStart ? `${formatDay(edition.mailingWindowStart)} – ${formatDay(edition.mailingWindowEnd ?? edition.mailingWindowStart)}` : edition.mailDate ? formatDay(edition.mailDate) : "Not set"],
               ["Target mailing quantity", `≈ ${formatHouseholds(edition.households)} homes`],
               ["Layout", findTemplate(edition.layoutTemplate ?? "")?.label ?? (edition.layoutTemplate ? edition.layoutTemplate : "Created before templates (provisional grid)")],
-              ["Prices (new bookings)", edition.productModel === "square_v1" ? "$399 square ad per area · 10 paid positions" : `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
+              ["Prices (new bookings)", edition.productModel === "square_v1" ? "$399 ad per area · 10 paid positions" : `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
               ["Artwork approval", `${stats.artworkAwaitingReview} awaiting review of ${stats.reservations} reservations`],
               ["Payment methods ready", `${stats.paymentMethodsReady} of ${stats.reservations}`],
               ["Advertisers", String(stats.advertisers)],
@@ -170,7 +170,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           <div className="mt-3 grid gap-6 sm:grid-cols-2 lg:max-w-3xl">
             {(["front", "back"] as const).map((side) => (
               <div key={side} className="mx-auto w-full max-w-[340px]">
-                <PostcardMap dimensions={edition.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} side={side} views={views(side)} />
+                <PostcardMap layoutKey={edition.layoutTemplate} dimensions={edition.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} side={side} views={views(side)} />
               </div>
             ))}
           </div>

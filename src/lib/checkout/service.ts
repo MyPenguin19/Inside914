@@ -1,4 +1,5 @@
 import "server-only";
+import { acceptsCrop } from "@/lib/print/layouts";
 import { randomInt } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -37,7 +38,7 @@ export type CheckoutBooking = {
 
 type Row = Database["public"]["Tables"]["bookings"]["Row"] & {
   booking_contacts: Database["public"]["Tables"]["booking_contacts"]["Row"] | null;
-  editions: { product_model: string } | null;
+  editions: { layout_template: string | null; product_model: string } | null;
   booking_artwork: Database["public"]["Tables"]["booking_artwork"]["Row"] | null;
 };
 
@@ -66,11 +67,11 @@ function toCheckoutBooking(row: Row): CheckoutBooking {
         row.booking_artwork.crop_x >= 0 && row.booking_artwork.crop_y >= 0 &&
         row.booking_artwork.crop_x + row.booking_artwork.crop_width <= row.booking_artwork.width_px &&
         row.booking_artwork.crop_y + row.booking_artwork.crop_height <= row.booking_artwork.height_px &&
-        Math.abs(row.booking_artwork.crop_width - row.booking_artwork.crop_height) <= 1)),
+        acceptsCrop(row.editions?.layout_template, { width: row.booking_artwork.crop_width, height: row.booking_artwork.crop_height }))),
   };
 }
 
-const COLUMNS = "*, editions(product_model), booking_contacts(*), booking_artwork(*)";
+const COLUMNS = "*, editions(product_model, layout_template), booking_contacts(*), booking_artwork(*)";
 
 export async function getBookingByHoldToken(admin: Admin, token: string | undefined) {
   if (!token) return null;

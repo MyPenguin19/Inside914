@@ -1,5 +1,7 @@
 "use client";
 
+import { isLayoutV2, placementDimensions } from "@/lib/print/layouts";
+import { containedPpi } from "@/lib/print/image-fit";
 import { bookingSizeLabel, positionLabel } from "@/lib/booking/products";
 
 import Link from "next/link";
@@ -12,7 +14,6 @@ import { PostcardPreview } from "@/components/artwork/postcard-preview";
 import { formatCountdown, useHoldSecondsLeft } from "@/components/booking/hold-countdown";
 import { inspectFile, uploadToSignedUrl } from "@/lib/artwork/browser-file";
 import {
-  effectivePpi,
   formatMegabytes,
   MAX_UPLOAD_BYTES,
   MIN_IMAGE_PIXELS,
@@ -36,6 +37,7 @@ export type ArtworkActions = {
 };
 
 type Props = {
+  layoutKey?: string | null;
   dimensions?: { width: number; height: number };
   reservationMode?: boolean;
   hold: { expiresAt: string; extensionsLeft: number };
@@ -75,6 +77,7 @@ const PROBLEM_TEXT: Record<ArtworkFailure | "interrupted", string> = {
 };
 
 export function ArtworkStudio({
+  layoutKey,
   dimensions,
   reservationMode = false,
   hold,
@@ -90,6 +93,9 @@ export function ArtworkStudio({
   inspect = inspectFile,
 }: Props) {
   const router = useRouter();
+  const canContain = isLayoutV2(layoutKey);
+  const [cropping, setCropping] = useState(!canContain);
+  const [cropApproved, setCropApproved] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<StudioImage | null>(
     initialArtwork
@@ -98,7 +104,7 @@ export function ArtworkStudio({
   );
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(initialArtwork?.zoom ?? 1);
-  const [area, setArea] = useState<CropPixels | null>(initialArtwork?.crop ?? null);
+  const [area, setArea] = useState<CropPixels | null>(initialArtwork?.crop ?? (canContain && initialArtwork ? {x:0,y:0,width:initialArtwork.width,height:initialArtwork.height} : null));
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState<Message | null>(null);
@@ -112,7 +118,7 @@ export function ArtworkStudio({
   const aspect = ad.area.width / ad.area.height;
   const safeX = `${(PRINT_SPEC.safeMarginInches / ad.area.width) * 100}%`;
   const safeY = `${(PRINT_SPEC.safeMarginInches / ad.area.height) * 100}%`;
-  const ppi = area ? effectivePpi(area, ad.area) : null;
+  const ppi = area ? containedPpi(area, ad.area) : null;
   const quality = ppi === null ? null : resolutionLevel(ppi);
 
   function fail(reason: ArtworkFailure | "interrupted") {
@@ -147,8 +153,10 @@ export function ArtworkStudio({
       setImage({ id: result.artwork.id, src: inspected.previewUrl, width: result.artwork.width, height: result.artwork.height });
       setCrop({ x: 0, y: 0 });
       setZoom(1);
-      setArea(null);
-      setMessage({ tone: "info", text: "Image uploaded. Drag it and zoom until it looks right." });
+      setArea(canContain ? {x:0,y:0,width:result.artwork.width,height:result.artwork.height} : null);
+      setCropping(!canContain);
+      setCropApproved(false);
+      setMessage({ tone: "info", text: canContain ? "Full image preserved. Review its placement or choose a crop." : "Image uploaded. Drag it and zoom until it looks right." });
     } catch {
       fail("error");
     } finally {
@@ -189,7 +197,7 @@ export function ArtworkStudio({
   }
 
   async function continueToReview() {
-    if (!image || !area) return;
+    if (!image || !area || (canContain && cropping && !cropApproved)) return;
     setPhase("saving");
     const rounded = {
       x: Math.round(area.x),
@@ -204,7 +212,7 @@ export function ArtworkStudio({
     router.push(nextHref);
   }
 
-  const onAreaChange = useCallback((_: Area, pixels: Area) => setArea(pixels), []);
+  const onAreaChange = useCallback((_: Area, pixels: Area) => { setArea(pixels); setCropApproved(false); }, []);
 
   function onDrop(event: DragEvent) {
     event.preventDefault();
@@ -247,6 +255,13 @@ export function ArtworkStudio({
           </Notice>
         ) : image ? (
           <div className="flex flex-col gap-3">
+            {canContain && <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => { setCropping(false); setZoom(1); setArea({x:0,y:0,width:image.width,height:image.height}); }}>Keep full image</Button>
+              <Button variant="secondary" onClick={() => { setCropping(true); setCropApproved(false); }}>Preview a crop</Button>
+            </div>}
+            {!cropping && area ? <div className="mx-auto w-full max-w-sm overflow-hidden border border-line" style={{aspectRatio:aspect}}>
+              <CroppedImage src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} target={ad.area} alt="Full artwork fitted without stretching" />
+            </div> : <>
             <div
               className="relative w-full overflow-hidden rounded-xl bg-ink"
               style={{ aspectRatio: aspect >= 1 ? `${aspect} / 1` : "1 / 1", maxHeight: 480 }}
@@ -296,6 +311,8 @@ export function ArtworkStudio({
                 +
               </ZoomButton>
             </div>
+            </>}
+            {canContain && cropping && <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={cropApproved} onChange={e => setCropApproved(e.target.checked)} />I approve this crop. My text, logo and contact details are visible.</label>}
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => { setCrop({ x: 0, y: 0 }); setZoom(1); }} disabled={busy}>
                 Reset position
@@ -371,14 +388,15 @@ export function ArtworkStudio({
         </h2>
         {/* Sized so the whole card, the quality note and Continue fit on screen together. */}
         <div className="mx-auto w-full max-w-[260px] sm:max-w-[300px] lg:max-w-[min(100%,calc((100svh-24rem)*6.5/12))]">
-          <PostcardPreview dimensions={dimensions} side={ad.side} otherSlots={otherSlots} area={ad.area} zones={zones}>
+          <PostcardPreview layoutKey={layoutKey} dimensions={dimensions} side={ad.side} otherSlots={otherSlots} area={ad.area} zones={zones}>
             {image && area ? (
-              <CroppedImage src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} alt="Your ad as it will sit on the postcard" />
+              <CroppedImage target={ad.area} src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} alt="Your ad as it will sit on the postcard" />
             ) : (
               <div className="flex h-full items-center justify-center bg-accent-soft p-2 text-center text-xs text-accent">Your ad</div>
             )}
           </PostcardPreview>
         </div>
+        <p className="text-sm">Printed size: {placementDimensions(ad.area)}. Aim for 300 DPI.</p>
         <QualityNote ppi={ppi} level={quality} />
         <p className="text-xs text-muted">
           Keep important words and logos inside the dashed line. This is a{" "}
@@ -392,7 +410,7 @@ export function ArtworkStudio({
             </p>
             <p className="font-display text-2xl font-medium">{formatPrice(ad.priceCents)}</p>
           </div>
-          <Button size="lg" onClick={continueToReview} disabled={!image || !area || busy || expiredNow} className="mt-3 w-full">
+          <Button size="lg" onClick={continueToReview} disabled={!image || !area || busy || expiredNow || (canContain && cropping && !cropApproved)} className="mt-3 w-full">
             {continueLabel}
           </Button>
           {!image && <p className="mt-2 text-center text-xs text-muted">Add an image to continue.</p>}

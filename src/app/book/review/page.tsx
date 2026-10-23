@@ -92,8 +92,8 @@ async function Review() {
         </div>
       </section>
       <aside aria-label="Your ad on the postcard" className="mx-auto w-full max-w-[300px] lg:sticky lg:top-20 lg:max-w-none lg:self-start">
-        {adAreas(booking.positions).map(previewArea => <PostcardPreview key={previewArea.side} side={previewArea.side} otherSlots={otherSlots} area={previewArea}>
-          <CroppedImage
+        {adAreas(booking.positions).map(previewArea => <PostcardPreview layoutKey={booking.layoutTemplate} dimensions={booking.productModel === "square_v1" ? {width:9,height:6} : undefined} key={previewArea.side} side={previewArea.side} otherSlots={otherSlots} area={previewArea}>
+          <CroppedImage target={previewArea}
             src={artwork.viewUrl}
             imageWidth={artwork.width}
             imageHeight={artwork.height}

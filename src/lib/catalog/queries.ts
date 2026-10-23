@@ -5,6 +5,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 
 export type EditionSummary = {
   productModel?: string;
+  layoutTemplate?: string | null;
   id: string;
   zoneSlug: string;
   zoneName: string;
@@ -26,6 +27,7 @@ export type EditionCatalog = EditionSummary & { slots: CatalogSlot[]; pairs: Slo
 
 type EditionRow = {
   product_model: string;
+  layout_template: string | null;
   id: string;
   issue_month: string;
   artwork_deadline: string;
@@ -39,7 +41,7 @@ type EditionRow = {
 };
 
 const EDITION_COLUMNS =
-  "id, issue_month, artwork_deadline, mail_date, status, reservations_paused_at, reservations_open_at, product_model, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
+  "id, issue_month, artwork_deadline, mail_date, status, reservations_paused_at, reservations_open_at, layout_template, product_model, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
 
 // Prices shown are what a hold would cost under the active pricing configuration (lib/pricing).
 // priced=false is ONLY for views that never show these prices (an existing reservation shows its
@@ -50,6 +52,7 @@ function toSummary(row: EditionRow, slots: { available: boolean }[], priced = tr
   return {
     id: row.id,
     productModel: row.product_model,
+    layoutTemplate: row.layout_template,
     zoneSlug: row.zones?.slug ?? "",
     zoneName: row.zones?.name ?? "",
     households: row.zones?.household_count ?? 0,

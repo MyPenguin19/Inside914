@@ -49,6 +49,7 @@ function actionsWith(overrides: Partial<ArtworkActions> = {}): ArtworkActions {
 const goodInspect = vi.fn(async () => ({ ok: true as const, type: "image/png" as const, width: 2000, height: 1800, previewUrl: "blob:local" }));
 
 function setup(opts: {
+  layoutKey?: string;
   actions?: ArtworkActions;
   inspect?: typeof goodInspect;
   upload?: (url: string, file: File, type: string, o: { onProgress?: (f: number) => void }) => Promise<void>;
@@ -62,6 +63,7 @@ function setup(opts: {
   const double = opts.size === "double";
   render(
     <ArtworkStudio
+      layoutKey={opts.layoutKey}
       hold={{ expiresAt: new Date(Date.now() + (opts.minutesLeft ?? 14) * 60_000).toISOString(), extensionsLeft: opts.extensionsLeft ?? 2 }}
       ad={{
         side: "front",
@@ -159,8 +161,8 @@ describe("ArtworkStudio editing", () => {
   });
 
   test("warns when the crop's resolution is low for print", () => {
-    setup({ initialArtwork: READY, size: "double" }); // 975 px across 6.5 in = 149 ppi
-    expect(screen.getByText(/may look blurry or blocky/)).toBeTruthy();
+    setup({ initialArtwork: READY, size: "double" }); // 975 px contained within 6.5 in = 149 ppi
+    expect(screen.getByText(/may look slightly soft/)).toBeTruthy();
   });
 
   test("Continue saves the rounded crop and zoom, then moves to review", async () => {
@@ -202,4 +204,35 @@ describe("CroppedImage", () => {
     expect(img.style.left).toBe("-50%");
     expect(img.style.top).toBe("-50%");
   });
+});
+
+
+test("V2 defaults to full source preservation without requiring a destructive crop", async()=>{
+ const {actions}=setup({initialArtwork:READY,layoutKey:"amazingmail-9x6-v2"});
+ expect(screen.queryByTestId("cropper")).toBeNull();
+ expect(screen.getByAltText("Full artwork fitted without stretching")).toBeTruthy();
+ fireEvent.click(screen.getByRole("button",{name:"Continue to review"}));
+ await waitFor(()=>expect(actions.saveLayout).toHaveBeenCalledWith({artworkId:READY.id,crop:{x:0,y:0,width:2000,height:1800},zoom:1}));
+});
+
+test("V2 cropping needs explicit approval after preview; returning to full image restores every source pixel", async()=>{
+ const {actions}=setup({initialArtwork:READY,layoutKey:"amazingmail-9x6-v2"});
+ fireEvent.click(screen.getByRole("button",{name:"Preview a crop"}));
+ expect(screen.getByTestId("cropper")).toBeTruthy();
+ expect(screen.getByRole("button",{name:"Continue to review"})).toHaveProperty("disabled",true);
+ fireEvent.click(screen.getByRole("checkbox",{name:/I approve this crop/}));
+ expect(screen.getByRole("button",{name:"Continue to review"})).toHaveProperty("disabled",false);
+ fireEvent.click(screen.getByRole("button",{name:"Keep full image"}));
+ fireEvent.click(screen.getByRole("button",{name:"Continue to review"}));
+ await waitFor(()=>expect(actions.saveLayout).toHaveBeenCalledWith({artworkId:READY.id,crop:{x:0,y:0,width:2000,height:1800},zoom:1}));
+});
+
+test("contained browser preview uses a square inner image inside a portrait physical slot",()=>{
+ render(<CroppedImage src="/fixture.png" imageWidth={900} imageHeight={900} crop={{x:0,y:0,width:900,height:900}} target={{width:2.2925,height:2.815}} alt="Contained square" />);
+ const img=screen.getByAltText("Contained square");
+ const box=img.parentElement!;
+ expect(parseFloat(box.style.width)).toBeCloseTo(100);
+ expect(parseFloat(box.style.height)).toBeCloseTo(2.2925/2.815*100);
+ expect(parseFloat(box.style.top)).toBeCloseTo((2.815-2.2925)/2/2.815*100);
+ expect(img.style.width).toBe("100%");expect(img.style.height).toBe("100%");
 });

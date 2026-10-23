@@ -79,7 +79,7 @@ test("each geographic area prepares its own draft without copying dates or inven
       await expect(page.getByLabel("Mailing month")).toHaveValue("");
       await expect(page.getByLabel("Reservation deadline")).toHaveValue("");
       await expect(page.getByLabel("Artwork submission deadline")).toHaveValue("");
-      await expect(page.getByLabel("Square ad per area ($)")).toHaveValue("399");
+      await expect(page.getByLabel("Ad per area ($)")).toHaveValue("399");
       if (area.slug !== "central-westchester") await expect(page.getByLabel("Target mailing quantity (homes)")).toHaveValue("");
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     }
@@ -98,7 +98,7 @@ test("January proposal loads exact dates and prices without creating a campaign"
   await expect(page.getByLabel("Artwork submission deadline")).toHaveValue("2026-12-20T23:59");
   await expect(page.getByLabel("Mailing window: first day")).toHaveValue("2027-01-11");
   await expect(page.getByLabel("Mailing window: last day")).toHaveValue("2027-01-15");
-  await expect(page.getByLabel("Square ad per area ($)")).toHaveValue("399");
+  await expect(page.getByLabel("Ad per area ($)")).toHaveValue("399");
   await expect(page.getByLabel("Double price ($)")).toHaveCount(0);
   await expect(page.getByLabel("Target mailing quantity (homes)")).toHaveValue("5000");
 });

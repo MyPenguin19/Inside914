@@ -42,7 +42,7 @@ function collectionReason(reason: string) {
     approved_final_proof_required: "Approve the final printer proof under Advanced / Printer Records.",
     current_final_proof_required: "Approve a new printer proof that includes the current advertiser and house artwork.",
     house_artwork_required: "Upload the permanent house advertisement in Settings.",
-    print_resolution_required: "Request higher-resolution advertiser artwork (at least 750 × 750 pixels).",
+    print_resolution_required: "Request higher-resolution advertiser artwork (at least 300 effective DPI at its printed size).",
     ten_positions_required: "This campaign needs all 10 paid positions.",
     ten_confirmed_required: "Wait for all 10 reservations.",
     reservation_not_ready: "Approve every advertisement and check that every advertiser saved a card and authorized payment.",

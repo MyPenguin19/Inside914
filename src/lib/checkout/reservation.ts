@@ -13,6 +13,7 @@ type Admin = SupabaseClient<Database>;
 
 export type ReservationView = {
   productModel?: string;
+  layoutTemplate?: string | null;
   bookingId: string;
   status: string;
   isTest: boolean; // development TEST reservation (simulated card, no payment method, no authorization)
@@ -90,6 +91,7 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
   return {
     bookingId: data.id,
     productModel: catalog.productModel,
+    layoutTemplate: catalog.layoutTemplate,
     status: data.status,
     isTest: isTestStripeId(data.stripe_customer_id),
     card: !data.stripe_payment_method_id ? "none" : data.card_removed_at ? "removed" : sharedCard ? "shared" : "pending",

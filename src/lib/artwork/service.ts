@@ -1,4 +1,5 @@
 import "server-only";
+import { acceptsCrop } from "@/lib/print/layouts";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -154,7 +155,7 @@ export async function saveLayout(admin: Admin, token: string | undefined, raw: u
   if (!row || row.status !== "ready" || !row.width_px || !row.height_px) return fail("not_found");
   if (!isCropInside(input.data.crop, { width: row.width_px, height: row.height_px })) return fail("invalid_input");
 
-  if (hold.booking.productModel === "square_v1" && Math.abs(input.data.crop.width-input.data.crop.height)>1) return fail("invalid_input");
+  if (hold.booking.productModel === "square_v1" && !acceptsCrop(hold.booking.layoutTemplate, input.data.crop)) return fail("invalid_input");
   const { crop, zoom } = input.data;
   const { error } = await admin
     .from("booking_artwork")

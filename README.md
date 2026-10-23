@@ -9,7 +9,7 @@ This guide describes the current source, not a verification of deployed producti
 - Four geographic areas: Central, Southern, Northern, and Eastern Westchester.
 - The public selector includes a clickable county map and six largest municipalities per proposed area. Population rankings use the 2020 Census, not mailing reach. See `docs/frontend-area-guide.txt` for grouping definitions and sources.
 - Each new campaign uses `square_v1`: ten paid positions, F1–F6 on the front and B1–B4 on the back, at $399 per position.
-- A customer selects up to four areas, chooses one square per area, and supplies artwork for each. Images can be copied between areas and then cropped independently.
+- A customer selects up to four areas, chooses one position per area, and supplies artwork for each. Images can be copied between areas and then cropped independently.
 - Business/contact information is required. A business category is not mandatory and does not reserve exclusive access to an area.
 - Checkout saves a card using a SetupIntent. The amount due today is $0; three areas authorize a maximum of $1,197 for later collection.
 - Campaigns fill independently. Collection requires an explicit administrator action and all readiness checks; a full campaign never charges automatically.
@@ -20,7 +20,7 @@ This guide describes the current source, not a verification of deployed producti
 
 1. `/areas` reads open, bookable campaigns. Draft, paused, expired, or unavailable campaigns cannot be booked merely by supplying their IDs.
 2. `/book/multi` gathers areas and exact positions. `category-checkout.ts` retains its historical filename but implements area/position selection, not category exclusivity.
-3. `booking/cart.ts` asks database RPCs to create the group of holds atomically. If a square is taken, the operation fails rather than substituting another square. Random hold tokens are hashed before storage.
+3. `booking/cart.ts` asks database RPCs to create the group of holds atomically. If a position is taken, the operation fails rather than substituting another position. Random hold tokens are hashed before storage.
 4. `/book/cart` manages each area's artwork. Signed upload URLs allow private uploads. The server checks actual file bytes, image dimensions, crop bounds, and ownership. Copied files are independent objects.
 5. `/book/cart/details` saves the business and contact details. Prices and inventory are server/database controlled.
 6. `/book/cart/payment` saves a card with Stripe. One Customer/SetupIntent can support the group's separate reservations. No PaymentIntent is created by this checkout flow.
@@ -77,17 +77,19 @@ A historical naming trap: `editions.artwork_deadline` is used for the reservatio
 
 ## Postcard generation
 
-`lib/print/amazingmail-layout.ts` defines geometry in integer millionths of an inch before exposing inches. `lib/print/export.ts` uses Sharp to crop and composite customer artwork and permanent house artwork.
+`lib/print/layout-v2.json` defines the new geometry; `lib/print/layouts.ts` resolves immutable campaign layout keys. Historical V1 geometry stays in `amazingmail-layout.ts`. Browser previews and Sharp exports share contained-image fitting, preserving original uploads.
 
-- Trim: 9 × 6 inches; upload file: 9.125 × 6.125 inches.
-- Export: 7300 × 4900 pixels at 800 DPI.
-- Paid squares: exactly 2.5 × 2.5 inches, six front and four back.
-- Postal exclusion: 3.925 × 3.33 inches at the lower right, kept white.
-- Permanent house panel: 3.7375 × 2.6075 inches; normalized output 2990 × 2086 pixels.
-- Background fills the postcard outside reserved postal space. Missing/legacy house artwork has a safe preview fallback and cannot silently qualify as final production artwork.
-- Customer uploads are capped at 20 MiB and 40 megapixels, matching the renderer's pixel limit.
+- File: 9.125 × 6.125 inches; trim: 9 × 6; live: 8.75 × 5.75.
+- V2 paid inventory: six 2.78″ front squares and four 2.2925″ × 2.815″ back rectangles. Ten positions at $399, under the unchanged `square_v1` business model.
+- House: 3.7375″ × 2.4825″, above the unchanged 3.925″ × 3.33″ postal exclusion with a 0.125″ gap.
+- Output: 7300 × 4900 pixels at 800 DPI. Minimum source resolution for readiness: 300 effective DPI at its actual contained size.
+- Existing V1 campaigns retain their 2.5″ square positions and original house geometry. Their reservations and layout keys are never migrated automatically.
+- Existing normalized house images can be contained in either panel; missing/corrupt house artwork leaves a safe preview fallback. Artwork replacement still invalidates older final proofs.
+- New V2 crops are optional and explicitly previewed/approved. Keeping the full image is the default, including square artwork in a portrait slot.
 
-Reservation geometry approval is not final print approval. Back paid/postal clearance is only 0.0125 inch, and the house panel touches the postal boundary. AmazingMail/printer confirmation of tolerances, proof, color handling, and final artwork remains an operational requirement. High export DPI does not create detail absent from a low-resolution source image.
+Reservation geometry approval is not printer or mailing-service approval. The supplied template URL `/1/` is actually the back; `/2/` is the front. A 9 × 6 finished card does not meet the usual EDDM Retail length/height thresholds; the selected product/service still requires printer confirmation. No indicia is invented.
+
+See [the V2 audit, exact coordinates, preservation strategy and migration/rollback procedure](docs/postcard-layout-v2.txt). The additive migration must be audited and applied before deploying V2 source; production rollout is not performed by local verification.
 
 ## Code map
 

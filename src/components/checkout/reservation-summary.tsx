@@ -1,3 +1,4 @@
+import { placementDimensions } from "@/lib/print/layouts";
 
 import { bookingSizeLabel } from "@/lib/booking/products";
 import { CroppedImage } from "@/components/artwork/cropped-image";
@@ -23,9 +24,9 @@ export function ReservationSummary({
     <section aria-label="Reservation summary" className="rounded-2xl border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold">Your reservation</h2>
       <div className="mt-4 grid grid-cols-[96px_minmax(0,1fr)] gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
-        <div>{(view.areas ?? [view.area]).map(previewArea => <PostcardPreview dimensions={view.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} key={previewArea.side} side={previewArea.side} otherSlots={view.otherSlots} area={previewArea} showSafeArea={false} compact zones={zones}>
+        <div>{(view.areas ?? [view.area]).map(previewArea => <PostcardPreview layoutKey={view.layoutTemplate} dimensions={view.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} key={previewArea.side} side={previewArea.side} otherSlots={view.otherSlots} area={previewArea} showSafeArea={false} compact zones={zones}>
           {view.artwork?.crop ? (
-            <CroppedImage src={view.artwork.viewUrl} imageWidth={view.artwork.width} imageHeight={view.artwork.height} crop={view.artwork.crop} alt="Your ad" />
+            <CroppedImage target={previewArea} src={view.artwork.viewUrl} imageWidth={view.artwork.width} imageHeight={view.artwork.height} crop={view.artwork.crop} alt="Your ad" />
           ) : (
             <div className="h-full bg-accent-soft" />
           )}
@@ -34,7 +35,7 @@ export function ReservationSummary({
           <Row label="Edition" value={`${view.zoneName} · ${formatIssueMonth(view.issueMonth)}`} />
           <Row label="Planned mailing" value={provisional ? (view.households > 0 ? `≈ ${formatHouseholds(view.households)} homes, provisional` : "Household count awaiting confirmation") : `≈ ${formatHouseholds(view.households)} homes`} />
           <Row label="Position" value={`${side} · ${view.positions.map((p) => p.label).join(" + ")}`} />
-          <Row label="Size" value={view.productModel === "square_v1" ? "Square · 2.5″ × 2.5″" : bookingSizeLabel(view.size)} />
+          <Row label="Size" value={view.productModel === "square_v1" ? placementDimensions(view.area) : bookingSizeLabel(view.size)} />
           <Row label="Reservation deadline" value={formatDeadline(view.artworkDeadline)} />
         </dl>
       </div>

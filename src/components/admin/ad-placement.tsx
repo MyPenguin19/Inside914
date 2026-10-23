@@ -1,29 +1,32 @@
+import { containedPpi } from "@/lib/print/image-fit";
+import { placementDimensions } from "@/lib/print/layouts";
 import { CroppedImage } from "@/components/artwork/cropped-image";
 import { PostcardPreview } from "@/components/artwork/postcard-preview";
 import { QualityNote } from "@/components/artwork/artwork-studio";
 import type { AdminSlot } from "@/lib/admin/metrics";
-import { adArea, effectivePpi, resolutionLevel } from "@/lib/artwork/rules";
+import { adArea, resolutionLevel } from "@/lib/artwork/rules";
 import type { ArtworkView } from "@/lib/artwork/service";
 
 // The advertiser's artwork: cropped ad in its place on the postcard, the resolution check, and a
 // link to the original upload. viewUrl is a short-lived signed URL (private bucket).
-export function AdPlacement({ artwork, own, slots, dimensions }: { dimensions?: {width:number; height:number}; artwork: ArtworkView; own: AdminSlot[]; slots: AdminSlot[] }) {
+export function AdPlacement({ artwork, own, slots, dimensions, layoutKey }: { layoutKey?: string | null; dimensions?: {width:number; height:number}; artwork: ArtworkView; own: AdminSlot[]; slots: AdminSlot[] }) {
   if (new Set(own.map(s => s.side)).size > 1) return <div className="grid gap-4">
-    {(["front", "back"] as const).map(side => <AdPlacement key={side} dimensions={dimensions} artwork={artwork} own={own.filter(s => s.side === side)} slots={slots} />)}
+    {(["front", "back"] as const).map(side => <AdPlacement layoutKey={layoutKey} key={side} dimensions={dimensions} artwork={artwork} own={own.filter(s => s.side === side)} slots={slots} />)}
   </div>;
   const area = adArea(own);
-  const ppi = artwork.crop ? effectivePpi(artwork.crop, area) : null;
+  const ppi = artwork.crop ? containedPpi(artwork.crop, area) : null;
   return (
     <div className="flex flex-col gap-3">
       <div className="mx-auto w-full max-w-[260px]">
-        <PostcardPreview dimensions={dimensions} side={area.side} otherSlots={slots.filter((s) => s.side === area.side && !own.some((o) => o.id === s.id))} area={area}>
+        <PostcardPreview layoutKey={layoutKey} dimensions={dimensions} side={area.side} otherSlots={slots.filter((s) => s.side === area.side && !own.some((o) => o.id === s.id))} area={area}>
           {artwork.crop ? (
-            <CroppedImage src={artwork.viewUrl} imageWidth={artwork.width} imageHeight={artwork.height} crop={artwork.crop} alt="The advertiser's ad on the postcard" />
+            <CroppedImage target={area} src={artwork.viewUrl} imageWidth={artwork.width} imageHeight={artwork.height} crop={artwork.crop} alt="The advertiser's ad on the postcard" />
           ) : (
             <div className="flex h-full items-center justify-center bg-warning-soft p-2 text-center text-xs text-warning">Not positioned yet</div>
           )}
         </PostcardPreview>
       </div>
+      <p className="text-sm">Printed ad: {placementDimensions(area)}</p>
       <QualityNote ppi={ppi} level={ppi === null ? null : resolutionLevel(ppi)} />
       <dl className="grid grid-cols-2 gap-2 text-xs">
         <div>

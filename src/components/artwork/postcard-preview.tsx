@@ -1,3 +1,4 @@
+import { findPostcardLayout, postcardZones } from "@/lib/print/layouts";
 import type { ReactNode } from "react";
 import type { SlotGeometry } from "@/lib/artwork/rules";
 import { POSTCARD_INCHES } from "@/lib/booking/selection";
@@ -5,6 +6,7 @@ import { PRINT_SPEC } from "@/lib/print/spec";
 import { boxStyle, type PostcardZone } from "@/components/postcard/postcard-side";
 
 type Props = {
+  layoutKey?: string | null;
   dimensions?: { width: number; height: number };
   side: "front" | "back";
   otherSlots: SlotGeometry[]; // positions belonging to other advertisers on this side
@@ -18,7 +20,9 @@ type Props = {
 const pct = (value: number, of: number) => `${(value / of) * 100}%`;
 
 // The whole front or back of the postcard, to scale, with the customer's ad in its position.
-export function PostcardPreview({ dimensions = POSTCARD_INCHES, side, otherSlots, area, showSafeArea = true, compact = false, zones = [], children }: Props) {
+export function PostcardPreview({ dimensions = POSTCARD_INCHES, side, otherSlots, area, showSafeArea = true, compact = false, zones = [], children, layoutKey }: Props) {
+  const layout = findPostcardLayout(layoutKey);
+  if (layout) { dimensions = layout.trim; zones = postcardZones(layoutKey); }
   const inset = PRINT_SPEC.safeMarginInches;
   return (
     <figure className="flex flex-col gap-2">
@@ -31,8 +35,8 @@ export function PostcardPreview({ dimensions = POSTCARD_INCHES, side, otherSlots
         {zones
           .filter((z) => z.side === side)
           .map((zone) => (
-            <div key={zone.kind} aria-hidden="true" className="absolute p-[2%]" style={boxStyle(zone, dimensions)}>
-              {zone.kind === "masthead" ? (
+            <div key={zone.kind} aria-hidden="true" className={`absolute ${layout ? "" : "p-[2%]"}`} style={boxStyle(zone, dimensions)}>
+              {zone.kind === "house" || zone.kind === "postal" ? <div className="flex h-full w-full items-center justify-center border border-line bg-background-soft p-1 text-center text-[9px] text-muted">{!compact && zone.title}</div> : zone.kind === "masthead" ? (
                 <div className="flex h-full w-full items-end border-b border-foreground/40 pb-[4%]">
                   <span className="h-[22%] w-[34%] rounded-[1px] bg-foreground/30" />
                 </div>
@@ -47,7 +51,7 @@ export function PostcardPreview({ dimensions = POSTCARD_INCHES, side, otherSlots
           <div
             key={i}
             aria-hidden="true"
-            className="absolute p-[2%]"
+            className={`absolute ${layout ? "" : "p-[2%]"}`}
             style={{
               left: pct(slot.x, dimensions.width),
               top: pct(slot.y, dimensions.height),

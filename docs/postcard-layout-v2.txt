@@ -1,0 +1,317 @@
+Inside914 postcard layout V2 — local implementation and release notes
+Prepared 2026-10-23 on feature/postcard-layout-v2
+
+The customer story is area selection -> a specific paid position in each area ->
+original artwork and an approved placement -> business details -> save card with
+$0 due today. Administrators review those same positions and download native
+800-DPI front/back PNGs. This change does not authorize or trigger collection.
+
+Completed application changes
+
+* One canonical V2 definition: src/lib/print/layout-v2.json. The registry in
+  src/lib/print/layouts.ts resolves a campaign's immutable layout_template.
+  Application templates, reserved regions, artwork dimensions and print exports
+  use this model. The migration contains a generated copy of the same JSON; a
+  drift test compares it byte-for-value after JSON parsing. DB slot coordinates
+  are generated from that payload, not from a second handwritten grid.
+* New campaigns use amazingmail-9x6-v2. The existing square_v1 identifier remains
+  the BUSINESS model ($399, ten positions), not the physical geometry version.
+* Customer and administrator inventory maps use stored, validated slot geometry
+  with no decorative padding inside the paid placement. Labels F1-F6/B1-B4 and
+  numbers 1-10 remain stable. House/postal areas are non-interactive regions.
+* Four booking steps, per-area artwork, simultaneous multi-area holds, price,
+  consent terms, saved-card flow and explicit campaign controls are preserved.
+* V2 uploads default to containing the full original. Customers can explicitly
+  preview a crop and approve it before saving. Shared image-fit math is used by
+  CSS previews and Sharp exports. No source image is resized or overwritten by
+  positioning or exporting. Reusing an image in another area makes an independent
+  copy and requires reviewing that area's placement.
+* Front and back placement dimensions and effective resolution are shown. The
+  minimum for mailing/collection readiness remains 300 effective DPI, calculated
+  for the contained image at its actual physical size. Approximate full-panel
+  minimums: front 834x834, back 688x845. Upsampling cannot add source detail.
+* Settings supports V1 and V2 house crop proportions. V2 output is 2990x1986;
+  existing normalized V1 2990x2086 house artwork remains usable without reupload.
+  When proportions differ, the existing artwork is contained on the neutral
+  background. Missing, corrupt or non-normalized house artwork retains the safe
+  preview fallback and cannot make the campaign ready to mail.
+* Front/back downloads are available at any fill level. Incomplete campaigns
+  remain PREVIEW — NOT READY TO MAIL. Exporting cannot open a campaign, approve
+  a proof, mark it mailed or charge a customer.
+* Homepage illustration and terminology now show six front positions and explain
+  the mixed placement offering, rather than advertising a retired 16-space card
+  or claiming all new placements are square. Existing design tokens are reused.
+
+Physical source verification and necessary adjustment
+
+The supplied URL labels were reversed. The actual pixels identify:
+  BACK: https://assets.xpressdocs.com/dserv/tpl/1500/1/566132.jpg
+  FRONT: https://assets.xpressdocs.com/dserv/tpl/1500/2/566132.jpg
+Downloaded originals were visually inspected on 2026-10-23. SHA-256:
+  Back: d56b3f1a22d88b6b950c92f35a91ca9954534a0fcc9811b6afb771d3253c4e24
+  Front: 9b0bb05b786b8327f0d4639cc3f5b01321cbeff096b3823a9aa66e96fa9257ac
+
+All values below are inches from the FILE top-left; origin is the landscape
+orientation indicated by the template's upload TOP marker:
+  File:   (0, 0), 9.125 x 6.125
+  Trim:   (0.0625, 0.0625), 9 x 6
+  Live:   (0.1875, 0.1875), 8.75 x 5.75
+  Bleed:  0.0625 outside trim per edge; safety 0.125 inside trim per edge.
+
+Position   File X   File Y    Width     Height     800-DPI size
+F1         .2725    .2225     2.78      2.78       2224 x 2224
+F2        3.1725    .2225     2.78      2.78       2224 x 2224
+F3        6.0725    .2225     2.78      2.78       2224 x 2224
+F4         .2725   3.1225     2.78      2.78       2224 x 2224
+F5        3.1725   3.1225     2.78      2.78       2224 x 2224
+F6        6.0725   3.1225     2.78      2.78       2224 x 2224
+B1         .1875    .1875     2.2925    2.815      1834 x 2252
+B2        2.6000    .1875     2.2925    2.815      1834 x 2252
+B3         .1875   3.1225     2.2925    2.815      1834 x 2252
+B4        2.6000   3.1225     2.2925    2.815      1834 x 2252
+House     5.2000    .1875     3.7375    2.4825     2990 x 1986
+Postal    5.2000   2.7950     3.925     3.330      3140 x 2664
+
+The front/back paid coordinates exactly match the requested LIVE-relative grid
+(after adding .1875). Both paid grids have .12-inch row/column gutters. The front
+has equal .085 horizontal and .035 vertical live-area margins. Every paid region
+and the house panel lies within live bounds. No paid/house/postal regions overlap.
+Back paid-to-postal horizontal clearance is .3075 inch. House-to-postal vertical
+clearance is .125 inch (100 pixels at 800 DPI).
+
+The postal arrows in the source anchor the 3.925x3.33 exclusion to the complete
+upload canvas, not its live-area edge. Therefore the proposed LIVE coordinates
+(4.825,2.420) cannot be used. Postal LIVE coordinates are (5.0125,2.6075); the
+panel extends beyond live through trim/bleed at the right and bottom. The house
+starts at LIVE (5.0125,0), aligned with the postal left edge, and is limited to
+3.7375 inches wide to preserve the right safety margin. Its height is 2.4825 to
+leave exactly .125 above postal. The postal panel has not been reduced or moved.
+
+Versioning and preservation
+
+* amazingmail-9x6-ten-square-draft remains the historical V1 layout: 2.5-inch
+  squares, original slot UUIDs and coordinates. Its original spec and tests are
+  retained. No migration updates editions, slots, bookings, artwork, prices,
+  payment references, consent records, dates, statuses or campaign history.
+* The existing guard_square_campaign keeps an edition's physical version fixed.
+  There is no automatic in-place upgrade, including unused V1 drafts. Create a
+  new future V2 campaign explicitly; active V1 reservations continue in V1.
+  Do not duplicate current campaigns or move an existing booking between them.
+* A campaign's saved key determines its preview/export. Unknown keys fail closed
+  instead of silently rendering the latest template. New app code supports both
+  V1 and V2. Existing historical print evidence files are not rewritten.
+* House artwork retains the established global behavior: replacement changes
+  future downloads and invalidates earlier final proof approval. It is not a
+  per-campaign snapshot. For exact historic CONTENT reproduction, retain the
+  previously downloaded PNGs/published proof and prior house storage object.
+  Layout versioning guarantees physical placement, not global-artwork freezing.
+
+Database change
+
+New additive migration:
+  supabase/migrations/20261023035620_postcard_layout_v2.sql
+
+It was applied transactionally to 127.0.0.1:54322 only. The local migration ledger
+predates several manually applied migrations; schema verification, not ledger
+version alone, establishes local state. No hosted schema was read or modified.
+
+The migration:
+* Widens four slot-coordinate columns from numeric(5,3) to numeric(8,6). Without
+  this, 2.2925 would round, violating exact geometry. Values and UUIDs are retained.
+* Saves and recreates the two dependent catalog views with their existing SQL,
+  security_invoker=true and read grants. No CASCADE or data-table drop is used.
+* Adds private.postcard_layout_versions (RLS on; no public/client/service grants)
+  with the canonical V2 payload; provides private.square_slots(template_key).
+* Registers the exact V2 key in private.approved_layout_templates with a detailed
+  reservation-geometry approval reference. Existing guard_campaign_layout and
+  application approval checks remain. This is not a final printer-proof approval.
+* Keeps the ten-position/$399 checks and immutable inventory triggers, adding
+  validation for the exact V2 geometry. A house/postal/eleventh position cannot
+  be added to a square_v1 campaign by manipulating the client.
+* Makes crop/resolution validation version-aware. Existing proof freshness,
+  approved-artwork, payment consent, real payment method, full-zone, closed-zone,
+  authorization, successful-charge and mailing readiness conditions remain.
+* Creates no new public RPC signature. Public generated TypeScript DB types do
+  not require changes. Private helpers use empty search_path and explicit grants.
+* Does not change any RLS policy, storage bucket, Stripe integration or webhook.
+
+Future rollout procedure — NOT performed in this task
+
+1. Obtain owner approval for production migration and deployment. Keep
+   LIVE_COLLECTION_RELEASED=false and INSIDE914_COLLECTION_MODE=disabled.
+2. Take/verify a current production backup. Read the actual hosted schema and
+   migration ledger, including mapped historical versions. Compare against the
+   existing schema that this migration expects. Do not use blind supabase db push.
+3. Check that V2 is not already installed; compare its payload if the registry
+   exists. Confirm both catalog views and their dependent objects, definitions,
+   security options, grants and owner before running DDL. Unexpected dependencies
+   must be reviewed rather than dropped with CASCADE.
+4. Apply ONLY the reviewed V2 migration in a transaction on an approved connection
+   before pushing/deploying code (a main push may trigger deployment). Example
+   shape, with a securely configured connection and no credentials in shell text:
+     psql -X -v ON_ERROR_STOP=1 --single-transaction \
+       -f supabase/migrations/20261023035620_postcard_layout_v2.sql
+   Use the project's mapping-aware migration-history procedure to record exactly
+   this applied file after verification, not to mark unverified migrations applied.
+5. Verify numeric precision, canonical JSON equality, approval registry, function
+   privileges/search_path, security-invoker views, RLS and existing row/ID/status
+   snapshots. Compare campaign/reservation/payment/artwork counts and identifiers
+   with the pre-migration audit. No test fixture data belongs in production.
+6. Deploy the reviewed app supporting BOTH versions only after migration success.
+   Smoke-test public selection, authenticated admin, settings, both versioned
+   previews and anytime downloads without submitting a real customer checkout.
+7. Confirm existing V1 campaigns remain V1 and reservations have not moved. Owner
+   must approve creating/opening new V2 campaigns and real house-art replacement.
+   Recheck final proof after any artwork replacement. Do not auto-open anything.
+8. Keep payment collection disabled. Enabling it and making any real Stripe write
+   are separate release decisions, not part of this geometry rollout.
+
+Rollback guidance
+
+An unsuccessful migration is rolled back as one transaction; no partial column,
+view or function change should remain. Before any V2 campaign exists, a previous
+application can still serve V1 on this additive schema, provided V1-compatible
+house artwork is retained. Prefer leaving the additive schema in place.
+Once V2 campaigns/holds/reservations exist, DO NOT deploy an older application
+that only knows V1, delete the V2 registry, shrink numeric precision, or relabel
+those campaigns as V1. Keep V2-compatible readers and issue a forward fix. Any
+status changes require owner approval; no automatic closure/cancellation rollback.
+
+Printer and USPS blockers
+
+The nominal geometry passes. Final printer acceptance still needs confirmation
+of the exact product/template, exclusion anchor, bleed/trim/safety tolerances,
+stock/thickness, postal service, address/barcode/indicia handling, output format,
+RGB-to-CMYK color handling/profile, effective source resolution and the final
+customer/combined-house proof. Files contain a blank white exclusion and no
+invented address, stamp or postal indicia. PNG outputs use 800-DPI metadata and
+native 7300x4900 composition; printer acceptance of these files is separate.
+
+USPS DMM 143 section 2.5a requires an EDDM Retail piece to exceed 10.5 inches in
+length OR 6.125 inches in height OR .25 inch in thickness (and meet other limits,
+including weight). A 9x6 finished card does not satisfy the first two criteria.
+Its .0625 bleed is removed and must not be counted. Thickness/service has not
+been confirmed; this product is not certified EDDM Retail compliant. Ask the
+printer/mail house which supported mailing service applies before launch.
+Official source: https://pe.usps.com/text/dmm300/143.htm
+
+Verification — local, with no Stripe writes
+
+All commands used scripts/verify-local-mvp.mjs, which pins the native local
+Supabase environment and disables payment collection and external email/Stripe
+credentials. It did not load production credentials for automated tests.
+
+  npm run typecheck        PASS
+  npm run lint             PASS
+  npm test                 376 passed (44 files)
+  npm run test:integration  117 passed, 3 skipped (17 files)
+  npm run test:e2e          19 passed
+  npm run build            PASS
+
+The three integration skips require unavailable Stripe test credentials. They
+were not counted as passes. No live Stripe test operation was substituted.
+After the final contain-rendering adjustment, the two print test files passed
+all 21 tests. After adding the final admin-review/export assertions to the
+multi-area journey, that browser file passed all 4 tests. These focused checks
+are included within the suite counts above, not additional unique tests.
+Final typecheck, lint and production build passed. No unresolved test failures.
+
+Coverage includes geometry/no overlap, ten immutable positions, administrator
+authorization, RLS, private layout approval, original-file preservation, mixed
+V1/V2 reservations, independent per-area artwork, full-image contain, explicit
+crop consent, source resolution, disabled collection, postal exclusion, safe
+house fallbacks, and native single-pixel detail at 800 DPI. Customer and admin
+views were checked on desktop and mobile; admin inventory was exercised at
+320, 375, 390, 768 and 1440 pixel viewport widths.
+
+One browser journey follows a new V2 B3 reservation from customer artwork to
+admin review and then the actual PNG endpoint. It verifies the source color,
+neutral contained margin, white postal region and final 7300x4900 dimensions.
+No real checkout submission or Stripe object was created. Local fixtures only.
+
+Representative artifacts
+
+The front/back samples contain local fixture artwork, not customer data. They
+are labelled PREVIEW — NOT READY TO MAIL. Both previews were visually inspected.
+The house sample contains the combined Inside914 + Inside Diagnostics label.
+The postal exclusion remains completely white. Browser screenshots show the
+actual customer position selector, including mixed historical/new campaigns.
+
+Saved outside the repository to avoid accidental commits or test-run deletion:
+/Users/gela/Documents/Codex/2026-10-18/we-x20/outputs/postcard-layout-v2
+
+  front-800dpi.png
+    SHA-256: a9075bf85a0d7c712c2fcd7aad19b39c2ef69c8dc4a7ff6cfae9d61783336b85
+  back-800dpi.png
+    SHA-256: bd1bd5896b15db71453d1a126e840fe0214148d511aace091c501dd163c5058b
+  front-preview.png
+    SHA-256: 8c0baad14fc233926924b46487bb388fac0da896dcd2a7192bbc1fcccc3ac8d0
+  back-preview.png
+    SHA-256: e34554093f3e3dac687b1b37356bac123d6593f07ad2446f5513ec40b5026be5
+  customer-desktop.png
+    SHA-256: 0a851df925cedec39690baf84464bd7e6afbabb7acb707385b95e23ade9b9a3d
+  customer-mobile.png
+    SHA-256: b364990a5a4addec246ac0843bd7ae12cd3f15dd3e6e966ac0997446cb90ed7c
+
+Source and scope
+
+Feature branch: feature/postcard-layout-v2
+Base main: ef1292f8f27bdc3a69c275fc655a2a36c3ad54ba
+Changes remain local and uncommitted for review. No push, deployment, production
+schema/data change, Stripe write or collection release occurred. The collection
+release constant remains false. No environment file, credential, backup, log,
+generated export, screenshot, dependency or historical migration was changed.
+
+All changed source/test/documentation files (repository-relative):
+  README.md
+  docs/postcard-layout-v2.txt
+  e2e/admin-ops.spec.ts
+  e2e/home.spec.ts
+  e2e/multi-area.spec.ts
+  e2e/square-campaign.spec.ts
+  src/app/admin/(panel)/advertisers/[id]/page.tsx
+  src/app/admin/(panel)/artwork/[id]/page.tsx
+  src/app/admin/(panel)/campaigns/[id]/page.tsx
+  src/app/admin/(panel)/campaigns/new/page.tsx
+  src/app/admin/(panel)/production/page.tsx
+  src/app/admin/house-artwork/route.ts
+  src/app/admin/print/[id]/route.ts
+  src/app/book/artwork/page.tsx
+  src/app/book/review/page.tsx
+  src/app/layout.tsx
+  src/app/page.tsx
+  src/components/admin/ad-placement.tsx
+  src/components/admin/assembled-postcard.tsx
+  src/components/admin/campaign-form.tsx
+  src/components/admin/collection-panel.tsx
+  src/components/admin/house-artwork-form.tsx
+  src/components/admin/postcard-map.tsx
+  src/components/admin/printer-records.tsx
+  src/components/artwork/artwork-studio.tsx
+  src/components/artwork/cropped-image.tsx
+  src/components/artwork/postcard-preview.tsx
+  src/components/booking/booking-steps.tsx
+  src/components/booking/category-zone-selector.tsx
+  src/components/checkout/reservation-summary.tsx
+  src/components/marketing/postcard-illustration.tsx
+  src/components/postcard/postcard-side.tsx
+  src/lib/admin/campaign-form.ts
+  src/lib/admin/first-campaign.ts
+  src/lib/admin/layouts.ts
+  src/lib/artwork/service.ts
+  src/lib/booking/category-checkout.ts
+  src/lib/booking/held-booking.ts
+  src/lib/booking/square-product.ts
+  src/lib/catalog/queries.ts
+  src/lib/checkout/reservation.ts
+  src/lib/checkout/service.ts
+  src/lib/print/export.ts
+  src/lib/print/image-fit.ts
+  src/lib/print/layout-v2.json
+  src/lib/print/layouts.ts
+  supabase/migrations/20261023035620_postcard_layout_v2.sql
+  tests/artwork-studio.test.tsx
+  tests/first-campaign.test.ts
+  tests/integration/postcard-v2.test.ts
+  tests/integration/square-layout-approval.test.ts
+  tests/postcard-v2.test.ts

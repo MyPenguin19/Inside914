@@ -57,7 +57,7 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
         </div>
       </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-        <div>{artwork && own.length ? <AdPlacement dimensions={edition?.productModel === "square_v1" ? {width:9,height:6} : undefined} artwork={artwork} own={own} slots={slots} /> : <EmptyState title="No artwork uploaded." />}</div>
+        <div>{artwork && own.length ? <AdPlacement layoutKey={edition?.layoutTemplate} dimensions={edition?.productModel === "square_v1" ? {width:9,height:6} : undefined} artwork={artwork} own={own} slots={slots} /> : <EmptyState title="No artwork uploaded." />}</div>
         <Card>
           <h2 className="text-lg font-semibold">Details</h2>
           <div className="mt-4">

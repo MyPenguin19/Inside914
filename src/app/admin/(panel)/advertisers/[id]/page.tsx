@@ -189,7 +189,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
           <h2 className="text-lg font-semibold">Artwork</h2>
           <Badge label={artworkLabel(b)} />
           {artwork && own.length > 0 ? (
-            <AdPlacement dimensions={edition?.productModel === "square_v1" ? {width:9,height:6} : undefined} artwork={artwork} own={own} slots={slots} />
+            <AdPlacement layoutKey={edition?.layoutTemplate} dimensions={edition?.productModel === "square_v1" ? {width:9,height:6} : undefined} artwork={artwork} own={own} slots={slots} />
           ) : (
             <p className="text-sm text-muted">No artwork uploaded.</p>
           )}

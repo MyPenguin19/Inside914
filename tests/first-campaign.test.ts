@@ -22,7 +22,7 @@ describe("first campaign proposal", () => {
   });
   test("legacy sixteen-position template stays unapproved", () => {
     expect(LAYOUT_TEMPLATES[0].approved).toBe(false);
-    expect(LAYOUT_TEMPLATES.filter(t => t.approved).map(t => t.key)).toEqual(["amazingmail-9x6-ten-square-draft"]);
+    expect(LAYOUT_TEMPLATES.filter(t => t.approved).map(t => t.key)).toEqual(["amazingmail-9x6-ten-square-draft", "amazingmail-9x6-v2"]);
     for (const side of ["front", "back"]) {
       const slots = LAYOUT_TEMPLATES[0].slots.filter((s) => s.side === side);
       expect(slots).toHaveLength(8);

@@ -23,9 +23,9 @@ export async function createCategoryCart(admin: Admin, raw: unknown) {
     if (!c || !c.bookable || c.productModel !== "square_v1" || !findRegion(c.zoneSlug) || zones.has(c.zoneSlug)) throw new Error("Choose one available campaign per area.");
     zones.add(c.zoneSlug);
     const slot = c.slots.find(s => s.id === input.selections[index].slotId && s.available);
-    if (!slot) throw new Error("A selected square is no longer available. Choose another square; nothing was held.");
+    if (!slot) throw new Error("A selected position is no longer available. Choose another position; nothing was held.");
     return { editionId: c.id, slotIds: [slot.id], mode: "standard" };
   });
-  // The database atomically locks every requested square; never substitute a position.
+  // The database atomically locks every requested position; never substitute a position.
   return createCart(admin, items);
 }

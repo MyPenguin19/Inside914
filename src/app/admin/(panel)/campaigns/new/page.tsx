@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { listZones } from "@/lib/admin/data";
 import { FIRST_CAMPAIGN_DEFAULTS, FIRST_ZONE } from "@/lib/admin/first-campaign";
-import { SQUARE_TEMPLATE } from "@/lib/admin/layouts";
+import { V2_TEMPLATE } from "@/lib/admin/layouts";
 import { regionalDraftDefaults } from "@/lib/catalog/regions";
 import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
 
@@ -51,14 +51,14 @@ async function NewCampaign({ searchParams }: { searchParams: Promise<{ draft?: s
         mode="create"
         action={createCampaign}
         zones={zones}
-        templates={[SQUARE_TEMPLATE]}
+        templates={[V2_TEMPLATE]}
         defaults={{
           zone_id: selected.id,
           ...(query.area ? regionalDraftDefaults(selected) : {}),
-          layout_template: SQUARE_TEMPLATE.key,
           unit_price_cents: String(SQUARE_PRODUCT.priceCents / 100),
           double_price_cents: "",
           ...(preset ? FIRST_CAMPAIGN_DEFAULTS : {}),
+          layout_template: V2_TEMPLATE.key,
         }}
       />
     </Card>

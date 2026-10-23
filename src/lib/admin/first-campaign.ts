@@ -1,3 +1,5 @@
+import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
+
 // Owner-proposed values only. Loading this preset never writes database records.
 export const FIRST_ZONE = { name: "Central Westchester", slug: "central-westchester", household_count: 5000 } as const;
 export const FIRST_CAMPAIGN_DEFAULTS = {
@@ -9,7 +11,7 @@ export const FIRST_CAMPAIGN_DEFAULTS = {
   artwork_due_at: "2026-12-20T23:59",
   mailing_window_start: "2027-01-11",
   mailing_window_end: "2027-01-15",
-  layout_template: "amazingmail-9x6-ten-square-draft",
+  layout_template: SQUARE_PRODUCT.layoutKey,
   unit_price_cents: "399",
   double_price_cents: "",
 } as const;

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { renderPostcard, type PrintImage } from "@/lib/print/export";
-import { AMAZINGMAIL_9X6_LAYOUT } from "@/lib/print/amazingmail-layout";
+import { findPostcardLayout } from "@/lib/print/layouts";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { supabase } = await requireAdmin();
   const { id } = await params;
@@ -13,7 +13,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const side = z.enum(["front", "back"]).safeParse(form.get("side"));
   if (!side.success) return new Response("Choose front or back.", { status: 400 });
   const { data: edition } = await supabase.from("editions").select("product_model,layout_template").eq("id", id).single();
-  if (edition?.product_model !== "square_v1" || edition.layout_template !== AMAZINGMAIL_9X6_LAYOUT.key) return new Response("This campaign does not use the square layout.", { status: 400 });
+  if (edition?.product_model !== "square_v1" || !findPostcardLayout(edition.layout_template)) return new Response("This campaign does not use the square layout.", { status: 400 });
   try {
     const { data: bookings, error } = await supabase.from("bookings").select("id,status,booking_slots(slot_id,released_at,slots(label,side)),booking_artwork(*)").eq("edition_id", id).not("status", "in", "(pending,released,cancelled)");
     if (error) throw new Error("Could not load campaign artwork. Please retry.");
@@ -38,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // Downloads never approve a campaign or alter payments. Readiness is a separate DB check.
     const readiness = await supabase.rpc("admin_mail_readiness", { p_id: id });
     const ready = !!house && !readiness.error && readiness.data === true;
-    const png = await renderPostcard(side.data, ads, house, occupied);
+    const png = await renderPostcard(side.data, ads, house, occupied, findPostcardLayout(edition.layout_template)!);
     return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Content-Disposition": `attachment; filename="inside914-${id}-${side.data}${ready ? "" : "-PREVIEW"}.png"`, "X-Postcard-Readiness": ready ? "ready" : "preview", "X-House-Artwork-Ready": house ? "true" : "false", "Cache-Control": "private, no-store" } });
   } catch (error) {
     return new Response(error instanceof Error ? error.message : "Could not create the postcard.", { status: 400, headers: { "Cache-Control": "no-store" } });

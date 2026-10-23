@@ -1,3 +1,4 @@
+import { isLayoutV2 } from "@/lib/print/layouts";
 import { Suspense } from "react";
 import {
   extendCurrentHold,
@@ -44,11 +45,12 @@ async function Studio() {
         <h1 className="text-3xl font-semibold tracking-tight">Add your artwork</h1>
         {booking.cartId && <p className="mt-2 font-medium" data-testid="artwork-area">{booking.zoneName}</p>}
         <p className="mt-2 text-muted">
-          {booking.productModel === "square_v1" ? "Upload an ad for this area, then crop, drag and zoom to a square. Other areas keep their own artwork." : "Upload your ad, then drag and zoom until it fits. You’ll see it on the postcard as you go."}
+          {isLayoutV2(booking.layoutTemplate) ? "Keep the full image, or preview a crop. Each area keeps its own artwork." : booking.productModel === "square_v1" ? "Upload an ad for this area, then crop, drag and zoom to a square. Other areas keep their own artwork." : "Upload your ad, then drag and zoom until it fits. You’ll see it on the postcard as you go."}
         </p>
       </header>
       {booking.size === "both_sides" && <p className="mb-4 text-sm text-muted">This image and crop will be used on both front and back. You can review both sides on the next step.</p>}
       <ArtworkStudio
+        layoutKey={booking.layoutTemplate}
         key={booking.cartId ? `${booking.id}:${artwork?.version ?? "empty"}` : booking.id}
         nextHref={booking.cartId ? "/book/cart" : undefined}
         continueLabel={booking.cartId ? "Save artwork and return to areas" : undefined}

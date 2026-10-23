@@ -180,7 +180,7 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
         <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:max-w-3xl">
           {(["front", "back"] as const).map((side) => (
             <div key={side} className="mx-auto w-full max-w-[340px]">
-              <AssembledSide square={e.productModel === "square_v1"} dimensions={e.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} side={side} slots={slots} placements={placements} />
+              <AssembledSide layoutKey={e.layoutTemplate} square={e.productModel === "square_v1"} dimensions={e.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} side={side} slots={slots} placements={placements} />
             </div>
           ))}
         </div>

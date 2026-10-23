@@ -7,6 +7,7 @@ export type HeldBooking = {
   id: string;
   cartId?: string | null;
   productModel?: string;
+  layoutTemplate?: string | null;
   editionId: string;
   zoneName: string;
   issueMonth: string;
@@ -29,7 +30,7 @@ type Row = {
   status: string;
   hold_expires_at: string | null;
   hold_extensions: number;
-  editions: { product_model: string; issue_month: string; zones: { name: string } | null } | null;
+  editions: { layout_template: string | null; product_model: string; issue_month: string; zones: { name: string } | null } | null;
   booking_slots: {
     slots: { label: string; side: string; x_in: number; y_in: number; width_in: number; height_in: number } | null;
   }[];
@@ -40,7 +41,7 @@ export async function getHeldBooking(admin: SupabaseClient<Database>, token: str
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id, cart_id, edition_id, size, price_cents, pricing_mode, status, hold_expires_at, hold_extensions, editions(product_model, issue_month, zones(name)), booking_slots(slots(label, side, x_in, y_in, width_in, height_in))",
+      "id, cart_id, edition_id, size, price_cents, pricing_mode, status, hold_expires_at, hold_extensions, editions(layout_template, product_model, issue_month, zones(name)), booking_slots(slots(label, side, x_in, y_in, width_in, height_in))",
     )
     .eq("hold_token_hash", hashHoldToken(token))
     .returns<Row[]>()
@@ -53,6 +54,7 @@ export async function getHeldBooking(admin: SupabaseClient<Database>, token: str
     id: data.id,
     cartId: data.cart_id,
     productModel: data.editions?.product_model,
+    layoutTemplate: data.editions?.layout_template,
     editionId: data.edition_id,
     zoneName: data.editions?.zones?.name ?? "",
     issueMonth: data.editions?.issue_month ?? "",

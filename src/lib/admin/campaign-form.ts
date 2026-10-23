@@ -1,3 +1,4 @@
+import { findPostcardLayout } from "@/lib/print/layouts";
 import { z } from "zod";
 import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
 import { findTemplate } from "./layouts";
@@ -78,8 +79,8 @@ export const CampaignForm = z
     double_price_cents: optionalDollars,
   })
   .superRefine((v, ctx) => {
-    if (v.layout_template === SQUARE_PRODUCT.layoutKey && (v.unit_price_cents !== SQUARE_PRODUCT.priceCents || v.double_price_cents !== null)) {
-      ctx.addIssue({ code: "custom", path: ["unit_price_cents"], message: "Square ads are fixed at $399 per area; other sizes are unavailable." });
+    if (findPostcardLayout(v.layout_template) && (v.unit_price_cents !== SQUARE_PRODUCT.priceCents || v.double_price_cents !== null)) {
+      ctx.addIssue({ code: "custom", path: ["unit_price_cents"], message: "Ads are fixed at $399 per area; other sizes are unavailable." });
     }
     const t = (s: string | null) => (s ? Date.parse(s) : NaN);
     if (v.reservations_open_at && t(v.reservations_open_at) >= t(v.reservation_deadline)) {
@@ -122,7 +123,7 @@ export function parseCampaignForm(form: FormData) {
 export function adminErrorMessage(error: { code?: string; message?: string } | null): string {
   const m = error?.message ?? "";
   const known: Record<string, string> = {
-    square_price_is_fixed: "New campaigns require ten square ads at $399 each.",
+    square_price_is_fixed: "New campaigns require ten ads at $399 each.",
     not_admin: "Your admin session has ended. Please sign in again.",
     not_found: "That record no longer exists.",
     invalid_input: "Some details are missing or invalid.",

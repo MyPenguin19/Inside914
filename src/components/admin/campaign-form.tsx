@@ -1,11 +1,11 @@
 "use client";
+import { findPostcardLayout } from "@/lib/print/layouts";
 
 import { useActionState } from "react";
 import type { ActionResult } from "@/app/admin/admin-actions";
 import { Button } from "@/components/ui/button";
 import { SelectField, TextField } from "@/components/ui/field";
 import { Notice } from "@/components/ui/primitives";
-import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
 import type { LayoutTemplate } from "@/lib/admin/layouts";
 
 export type CampaignFormDefaults = Record<string, string>;
@@ -32,7 +32,7 @@ export function CampaignForm({
   const [state, formAction, pending] = useActionState(action, {});
   const v = (k: string) => state.values?.[k] ?? defaults[k] ?? "";
   const e = state.errors ?? {};
-  const square = defaults.layout_template === SQUARE_PRODUCT.layoutKey;
+  const square = !!findPostcardLayout(defaults.layout_template);
   const fixed = mode === "edit"; // area, layout and prices can't change after creation
 
   return (
@@ -88,7 +88,7 @@ export function CampaignForm({
           ))}
         </SelectField>
         <div className="hidden sm:block" />
-        <TextField id="unit_price_cents" label={square ? "Square ad per area ($)" : "Standard price ($)"} readOnly={square} inputMode="decimal" required defaultValue={v("unit_price_cents")} error={e.unit_price_cents} />
+        <TextField id="unit_price_cents" label={square ? "Ad per area ($)" : "Standard price ($)"} readOnly={square} inputMode="decimal" required defaultValue={v("unit_price_cents")} error={e.unit_price_cents} />
         {square ? <input type="hidden" name="double_price_cents" value="" /> : <TextField id="double_price_cents" label="Double price ($)" inputMode="decimal" optional defaultValue={v("double_price_cents")} error={e.double_price_cents} hint="Leave empty if this campaign has no double-size ads." />}
       </fieldset>
       {/* Outside the disabled fieldset: disabled fields aren't submitted. */}
