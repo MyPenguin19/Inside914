@@ -132,6 +132,8 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   // Follow the SAME confirmed V2 back placement through admin review and the export API.
   const backBooking=bookings.find(b=>b.edition_id===ids[1])!;
   const adminContext=await browser.newContext();const review=await adminContext.newPage();
+  const reviewErrors:string[]=[];
+  review.on("pageerror",error=>reviewErrors.push(error.message));
   await review.goto("/admin/login");
   await review.getByLabel("Email").fill(credentials.email);await review.getByLabel("Password").fill(credentials.password);
   await review.getByRole("button",{name:"Sign in",exact:true}).click();await expect(review).toHaveURL(/\/admin$/);
@@ -144,11 +146,12 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await expect(review.getByRole("link",{name:`Phase C fixture ${names[1]}`,exact:true})).toHaveAttribute("href",`/admin/campaigns/${backBooking.edition_id}`);
   const original=review.getByAltText("Original advertiser artwork");
   await expect(original).toHaveJSProperty("naturalWidth",1200);
-  for (const width of [375,1440]) {
+  for (const width of [375,768,1440]) {
     await review.setViewportSize({width,height:1100});
     expect(await review.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await review.screenshot({path:`test-results/artwork-review-${width}.png`,fullPage:true});
   }
+  expect(reviewErrors).toEqual([]);
   const unchanged=ok(await db.from("booking_artwork").select("review_status").eq("booking_id",backBooking.id).single());
   expect(unchanged?.review_status).toBe("pending");
   await review.getByRole("button",{name:"Approve content",exact:true}).click();
