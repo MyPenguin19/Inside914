@@ -4,6 +4,7 @@ import { AMAZINGMAIL_9X6_LAYOUT, type PrintRectangle } from "./amazingmail-layou
 
 import { acceptsCrop, PRINT_DPI, POSTCARD_LAYOUT_V2, POSTCARD_LAYOUTS, type PostcardLayout } from "./layouts";
 import { containImage, PRINT_BACKGROUND } from "./image-fit";
+import { placeholderSvg } from "./placeholder";
 
 export const EXPORT_DPI = PRINT_DPI;
 export const EXPORT_SIZE = { width: Math.round(POSTCARD_LAYOUT_V2.file.width * EXPORT_DPI), height: Math.round(POSTCARD_LAYOUT_V2.file.height * EXPORT_DPI) };
@@ -54,8 +55,7 @@ export async function renderPostcard(side: "front" | "back", ads: PrintImage[], 
     const width = Math.round(slot.width * EXPORT_DPI), height = Math.round(slot.height * EXPORT_DPI);
     let input: Buffer;
     if (!ad) {
-      const title = occupied.includes(slot.label) ? "ARTWORK PENDING" : "AVAILABLE";
-      input = Buffer.from(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f5f5f5"/><g fill="#555" text-anchor="middle" font-family="sans-serif"><text x="50%" y="43%" font-size="90">${title}</text><text x="50%" y="51%" font-size="75">Inside914</text><text x="50%" y="59%" font-size="60">${slot.label} · ${occupied.includes(slot.label) ? "Reserved space" : "Reserve this space"}</text></g></svg>`);
+      input = placeholderSvg(width, height, slot.label, occupied.includes(slot.label));
     } else {
       const crop = Object.fromEntries(Object.entries(ad.crop).map(([key, n]) => [key, Math.round(n)])) as PrintRectangle;
       if (![crop.x, crop.y, crop.width, crop.height].every(Number.isSafeInteger) || !acceptsCrop(layout.key, crop)) throw new Error(`${slot.label}: save a valid ${layout.key === POSTCARD_LAYOUT_V2.key ? "artwork" : "square"} crop.`);
