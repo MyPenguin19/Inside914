@@ -13,6 +13,7 @@ import { ConfirmAction } from "@/components/admin/confirm-action";
 import { getBooking, listArtworkReviews, listEditions, listSlots, signArtwork } from "@/lib/admin/data";
 import { artworkLabel, positionLabel } from "@/lib/admin/labels";
 import { formatIssueMonth, formatTimestamp } from "@/lib/format-admin";
+import { layoutVersion } from "@/lib/print/layouts";
 
 export default function ArtworkDetailPage({ params }: PageProps<"/admin/artwork/[id]">) {
   return (
@@ -63,6 +64,8 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
           <div className="mt-4">
             <DetailList
               rows={[
+                ["Campaign", edition ? <Link href={`/admin/campaigns/${edition.id}`} className="underline underline-offset-4">{edition.name ?? `${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)}`}</Link> : "Unavailable"],
+                ["Layout", layoutVersion(edition?.layoutTemplate)],
                 ["Position", positionLabel(b, labels)],
                 ["Size", bookingSizeLabel(b.size)],
                 ["Uploaded / last positioned", formatTimestamp(b.artwork?.updatedAt ?? null)],

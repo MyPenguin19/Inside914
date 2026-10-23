@@ -138,6 +138,19 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await review.goto(`/admin/artwork/${backBooking.id}`);
   await expect(review.getByText("Printed ad: 2.2925″ × 2.815″")).toBeVisible();
   await expect(review.getByAltText("The advertiser's ad on the postcard")).toBeVisible();
+  await expect(review.getByAltText("Original advertiser artwork")).toBeVisible();
+  await expect(review.getByRole("note",{name:"Artwork resolution review"})).toContainText("PASS");
+  await expect(review.getByText("Saved crop",{exact:true})).toBeVisible();
+  await expect(review.getByRole("link",{name:`Phase C fixture ${names[1]}`,exact:true})).toHaveAttribute("href",`/admin/campaigns/${backBooking.edition_id}`);
+  const original=review.getByAltText("Original advertiser artwork");
+  await expect(original).toHaveJSProperty("naturalWidth",1200);
+  for (const width of [375,1440]) {
+    await review.setViewportSize({width,height:1100});
+    expect(await review.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await review.screenshot({path:`test-results/artwork-review-${width}.png`,fullPage:true});
+  }
+  const unchanged=ok(await db.from("booking_artwork").select("review_status").eq("booking_id",backBooking.id).single());
+  expect(unchanged?.review_status).toBe("pending");
   await review.getByRole("button",{name:"Approve content",exact:true}).click();
   await review.getByRole("button",{name:"Approve",exact:true}).click();
   await expect.poll(async()=>ok(await db.from("booking_artwork").select("review_status").eq("booking_id",backBooking.id).single())?.review_status).toBe("approved");
