@@ -1,3 +1,4 @@
+import { formatPrice } from "@/lib/format";
 import { loadHouseArtwork } from "@/lib/print/house-artwork";
 import { requireAdmin } from "@/lib/admin/auth";
 import { getCollectionContext } from "@/lib/payments/environment";
@@ -11,25 +12,25 @@ import { DataTable } from "@/components/ui/data-table";
 
 export async function CollectionPanel({editionId}:{editionId:string}) {
   const {supabase,now}=await requireAdmin();
-  const [{data:preview,error},{data:charges,error:ledgerError},{data:bookings}]=await Promise.all([
+  const [{data:preview,error},{data:charges,error:ledgerError},{data:bookings,error:bookingsError}]=await Promise.all([
     supabase.rpc("admin_collection_preview",{p_id:editionId}),
-    supabase.from("zone_charges").select("id,booking_id,status,failure_code,recovery_expires_at").eq("edition_id",editionId).order("created_at"),
-    supabase.from("bookings").select("id,reference,booking_contacts(business_name)").eq("edition_id",editionId).not("status","in","(pending,released,cancelled)"),
+    supabase.from("zone_charges").select("id,booking_id,status,amount_cents,failure_code,recovery_expires_at").eq("edition_id",editionId).order("created_at"),
+    supabase.from("bookings").select("id,reference,price_cents,booking_contacts(business_name)").eq("edition_id",editionId).not("status","in","(pending,released,cancelled)"),
   ]);
   let configured=true;try {getCollectionContext();} catch {configured=false;}
   const result=preview as {ready?:boolean;existing?:boolean;reason?:string}|null;
   const houseReady=!!await loadHouseArtwork(supabase);
-  const ready=houseReady && configured && !error && !ledgerError && result?.ready===true;
+  const ready=houseReady && configured && !error && !ledgerError && !bookingsError && result?.ready===true;
   return <Card><h2 className="text-lg font-semibold">Payments for this campaign</h2>
-    <p className="mt-2 text-sm text-muted">Advertisers save a card with $0 due when they reserve. Once all 10 spaces are filled and the final postcard proof is approved, review and charge $399 per advertiser ($3,990 total).</p>
+    <p className="mt-2 text-sm text-muted">Advertisers save a card with $0 due when they reserve. Once all 10 spaces are filled and the final postcard proof is approved, review the agreed amounts below. Total authorized: {formatPrice((bookings ?? []).reduce((total,b)=>total+b.price_cents,0))}.</p>
     {!configured && <p className="mt-2 text-sm">Charging is currently turned off. Advertisers can still reserve spaces and save their cards.</p>}
     {result?.reason && <p className="mt-2 text-sm">Next: {collectionReason(result.reason)}</p>}
     {houseReady && result?.ready && !result.existing && <p className="mt-2 text-sm">All payment checks passed. Review the advertisers below before approving collection.</p>}
-    {(error || ledgerError) && <p role="alert">Could not verify payment readiness. Collection is blocked.</p>}
-    {!!bookings?.length && !charges?.length && <div className="mt-3"><DataTable caption="Payment authorization preview" columns={["Advertiser","Reference","Amount"]} rows={bookings.map(b=>[b.booking_contacts?.business_name ?? "Advertiser",b.reference ?? "—","$399"])}/></div>}
+    {(error || ledgerError || bookingsError) && <p role="alert">Could not verify payment readiness. Collection is blocked.</p>}
+    {!!bookings?.length && !charges?.length && <div className="mt-3"><DataTable caption="Payment authorization preview" columns={["Advertiser","Reference","Amount"]} rows={bookings.map(b=>[b.booking_contacts?.business_name ?? "Advertiser",b.reference ?? "—",formatPrice(b.price_cents)])}/></div>}
     {!!charges?.length && <p className="mt-3">Payments received: {charges.filter(c=>c.status==="succeeded").length} of 10 · Needs attention: {charges.filter(c=>["requires_action","requires_payment_method","canceled"].includes(c.status)).length}</p>}
-    <div className="mt-4">{ready ? <ConfirmAction label="Charge Advertisers & Prepare Mailing" action={activateZone} fields={{id:editionId}} confirmLabel="Confirm payment requests" consequence={<>Request $399 separately for each advertiser in this campaign only. Successful payments are never requested again. Other areas are unchanged.</>}/> : <Button disabled>Charge Advertisers &amp; Prepare Mailing</Button>}</div>
-    {!!charges?.length && <div className="mt-4"><DataTable caption="Campaign payments" columns={["Business","Amount","Status","Recovery"]} rows={charges.map(c=>[bookings?.find(b=>b.id===c.booking_id)?.booking_contacts?.business_name ?? "Advertiser","$399",simplePaymentStatus(c.status),["requires_action","requires_payment_method"].includes(c.status) ? (c.recovery_expires_at && Date.parse(c.recovery_expires_at)>now ? <RecoveryLink key={c.id} id={c.id}/> : "Contact the owner for help") : "—"])}/></div>}
+    <div className="mt-4">{ready ? <ConfirmAction label="Charge Advertisers & Prepare Mailing" action={activateZone} fields={{id:editionId}} confirmLabel="Confirm payment requests" consequence={<>Request the listed agreed amount separately for each advertiser in this campaign only. Successful payments are never requested again. Other areas are unchanged.</>}/> : <Button disabled>Charge Advertisers &amp; Prepare Mailing</Button>}</div>
+    {!!charges?.length && <div className="mt-4"><DataTable caption="Campaign payments" columns={["Business","Amount","Status","Recovery"]} rows={charges.map(c=>[bookings?.find(b=>b.id===c.booking_id)?.booking_contacts?.business_name ?? "Advertiser",formatPrice(c.amount_cents),simplePaymentStatus(c.status),["requires_action","requires_payment_method"].includes(c.status) ? (c.recovery_expires_at && Date.parse(c.recovery_expires_at)>now ? <RecoveryLink key={c.id} id={c.id}/> : "Contact the owner for help") : "—"])}/></div>}
     {!!charges?.length && <details className="mt-3 text-sm"><summary>Advanced details</summary>{charges.map(c=><p key={c.id} className="break-all">{c.id}: {c.status}{c.failure_code ? ` · ${c.failure_code}` : ""}</p>)}</details>}
   </Card>;
 }

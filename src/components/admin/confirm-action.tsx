@@ -12,6 +12,7 @@ export function ConfirmAction({
   action,
   fields,
   reasonLabel,
+  confirmationPhrase,
   confirmLabel = "Confirm",
   tone = "default",
 }: {
@@ -19,6 +20,7 @@ export function ConfirmAction({
   consequence: React.ReactNode;
   action: (prev: ActionResult, form: FormData) => Promise<ActionResult>;
   fields: Record<string, string>;
+  confirmationPhrase?: string;
   reasonLabel?: string; // when set, a reason is required
   confirmLabel?: string;
   tone?: "default" | "danger";
@@ -44,6 +46,7 @@ export function ConfirmAction({
 
   return (
     <form
+      role={confirmationPhrase ? "dialog" : undefined}
       action={async (form) => {
         await formAction(form);
         setOpen(false);
@@ -58,6 +61,7 @@ export function ConfirmAction({
       {Object.entries(fields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
+      {confirmationPhrase && <label className="flex flex-col gap-1 text-sm"><span>Type {confirmationPhrase} to confirm</span><input name="confirmation" autoComplete="off" required pattern={confirmationPhrase} className="rounded-xl border border-line bg-surface px-3 py-2" /></label>}
       {reasonLabel && (
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium">{reasonLabel}</span>

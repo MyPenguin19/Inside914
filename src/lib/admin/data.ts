@@ -87,6 +87,7 @@ function fail(what: string, error: { message: string } | null): never {
 }
 
 type EditionRow = {
+  archived_at: string | null;
   product_model: string;
   id: string;
   zone_id: string;
@@ -109,6 +110,7 @@ type EditionRow = {
 
 const toEdition = (e: EditionRow): AdminEdition => ({
   id: e.id,
+  archivedAt: e.archived_at,
   zoneId: e.zone_id,
   name: e.name,
   targetQuantity: e.target_quantity,
@@ -129,16 +131,16 @@ const toEdition = (e: EditionRow): AdminEdition => ({
   status: e.status,
 });
 
-export async function listEditions(db: Db): Promise<AdminEdition[]> {
+export async function listEditions(db: Db, includeArchived = false): Promise<AdminEdition[]> {
   const { data, error } = await db
     .from("editions")
     .select(
-      "id, zone_id, name, target_quantity, product_model, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)",
+      "id, archived_at, zone_id, name, target_quantity, product_model, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)",
     )
     .order("issue_month", { ascending: false })
     .returns<EditionRow[]>();
   if (error) fail("campaigns", error);
-  return data.map(toEdition);
+  return data.filter(e => includeArchived || !e.archived_at).map(toEdition);
 }
 
 export async function listZones(db: Db) {

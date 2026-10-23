@@ -1,0 +1,23 @@
+import { afterEach, expect, test } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { PostcardSide } from "@/components/postcard/postcard-side";
+import { PostcardMap } from "@/components/admin/postcard-map";
+import { AssembledSide } from "@/components/admin/assembled-postcard";
+import { POSTCARD_LAYOUTS, regionToTrim } from "@/lib/print/layouts";
+afterEach(cleanup);
+test.each(POSTCARD_LAYOUTS)("public, admin and assembled views retain $key geometry and a nonbookable house",layout=>{
+ const slots=layout.paidSlots.map(s=>({...regionToTrim(layout,s),id:s.label,editionId:"same-campaign",available:true}));
+ const views=slots.filter(s=>s.side==="back").map(slot=>({slot,selected:false,selectable:true,note:"Available"}));
+ const publicView=render(<PostcardSide layoutKey={layout.key} side="back" views={views} priceCents={44900} onSelect={()=>{}}/>);
+ const house=screen.getByRole("img",{name:"Reserved area, not bookable"});
+ expect(house.textContent).toBe("Reserved");expect(house.tagName).toBe("DIV");
+ expect(screen.queryByText(/Inside Diagnostics/)).toBeNull();expect(screen.queryByText(/House advertisement/)).toBeNull();
+ const positions=[...publicView.container.querySelectorAll<HTMLButtonElement>("[data-slot-label]")].map(b=>[b.dataset.slotLabel,b.getAttribute("style")]);
+ expect(positions).toHaveLength(4);publicView.unmount();
+ const admin=render(<PostcardMap layoutKey={layout.key} side="back" views={views.map(v=>({...v,selectable:false}))}/>);
+ expect([...admin.container.querySelectorAll<HTMLButtonElement>("[data-slot-label]")].map(b=>[b.dataset.slotLabel,b.getAttribute("style")])).toEqual(positions);
+ admin.unmount();
+ const assembled=render(<AssembledSide side="back" slots={slots} placements={[]} layoutKey={layout.key} house={{src:"/house-fixture.png",width:2990,height:2086}}/>);
+ expect(screen.getByRole("img",{name:"Permanent house artwork"})).toBeTruthy();
+ expect(assembled.container.querySelector("[data-layout-key]")?.getAttribute("style")).toContain("aspect-ratio: 9 / 6");
+});

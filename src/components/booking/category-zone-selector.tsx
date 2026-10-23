@@ -67,7 +67,7 @@ export function CategoryZoneSelector({ editions }: CategoryCatalog) {
     </div> : <div className="space-y-8">
       <h2 className="text-2xl font-semibold">Choose one position in each area</h2>
       <p className="text-muted">Pick a position on the front or back. Next, add your image.</p>
-      {chosen.map(e => <section key={e.id} aria-label={e.zoneName} className="space-y-3">
+      {chosen.map(e => <section key={e.id} data-campaign-id={e.id} data-layout-key={e.layoutTemplate} aria-label={e.zoneName} className="space-y-3">
         <h3 className="text-xl font-semibold">{e.zoneName}</h3>
         <div className="grid gap-4 lg:grid-cols-2">{(["front", "back"] as const).map(side => <PostcardSide layoutKey={e.layoutTemplate} key={side} side={side} dimensions={{ width: 9, height: 6 }} priceCents={e.unitPriceCents}
           views={e.slots.filter(s => s.side === side).map(slot => ({ slot, selected: positions[e.id] === slot.id, selectable: slot.available && !pending, note: slot.available ? "Available" : "Unavailable" }))}
@@ -79,7 +79,7 @@ export function CategoryZoneSelector({ editions }: CategoryCatalog) {
     <Card><h2 aria-live="polite" className="text-xl font-semibold">Selected: {chosen.length} {chosen.length === 1 ? "area" : "areas"}</h2>
       <details className="mt-2 text-sm text-muted"><summary className="cursor-pointer">Mailing details</summary><p className="mt-2">{homes > 0 ? `Potential combined reach: approximately ${homes.toLocaleString()} households, provisional.` : "Household reach awaits confirmation."} Mailing dates and final delivery routes are confirmed before production.</p></details>
       <p className="mt-3 font-semibold">{chosen.length === 1 ? "Total if this campaign fills" : chosen.length === 2 ? "Total if both campaigns fill" : "Total if all selected campaigns fill"}: {formatPrice(total)}</p><p>Due today: $0</p>
-      <p className="my-3 text-sm text-muted">You pay $399 per area only after its postcard fills and is approved.</p>
+      <p className="my-3 text-sm text-muted">You pay each area’s listed price only after its postcard fills and is approved.</p>
       {step === 1 ? <Button disabled={!chosen.length} onClick={() => { setStep(2); setMessage(""); }}>Continue with selected areas</Button> :
         <Button disabled={!chosen.length || chosen.some(e => !positions[e.id]) || pending} onClick={() => start(async () => {
           const result = await holdAreas({ selections: chosen.map(e => ({ editionId: e.id, slotId: positions[e.id] })) });

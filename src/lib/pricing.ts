@@ -3,7 +3,7 @@ import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
 
 // THE place that decides what a space costs. Amounts are integer cents, computed on the server.
 //
-// New square_v1 campaigns always cost $399 in both modes, with no alternate sizes.
+// Campaign prices are authoritative for new holds. Accepted holds keep their stored amount.
 // The temporary $1/$2 rules below apply only to historical legacy campaigns.
 // INSIDE914_PRICING_MODE must be set explicitly (no default, so nothing ever falls back to launch
 // prices silently):
@@ -49,8 +49,8 @@ export function getPricingMode(env: NodeJS.ProcessEnv = process.env): PricingMod
 export function pricesFor(edition: Prices, env: NodeJS.ProcessEnv = process.env): Prices & { mode: PricingMode } {
   const mode = getPricingMode(env);
   if (edition.productModel === SQUARE_PRODUCT.model) {
-    if (edition.unitPriceCents !== SQUARE_PRODUCT.priceCents || edition.doublePriceCents !== null) {
-      throw new PricingConfigError("square campaigns require one $399 product");
+    if (!Number.isInteger(edition.unitPriceCents) || edition.unitPriceCents <= 0 || edition.unitPriceCents > 99_999_999 || edition.doublePriceCents !== null) {
+      throw new PricingConfigError("campaigns require a positive integer-cent price and no alternate sizes");
     }
     return { mode, ...edition };
   }

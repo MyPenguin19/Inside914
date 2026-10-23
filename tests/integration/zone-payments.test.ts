@@ -32,7 +32,9 @@ afterAll(async()=>{
  delete from zone_charges where edition_id in(${ids});
  delete from mailing_evidence where edition_id in(${ids});
  delete from bookings where edition_id in(${ids});
+ alter table editions disable trigger campaign_delete_guard;
  delete from editions where id in(${ids});
+ alter table editions enable trigger campaign_delete_guard;
  delete from reservation_carts where id in(select id from clean_carts);
  delete from zones where id in(${[1,2,3,4].map(n=>`'${fixture['zone'+n]}'`).join(',')});
  delete from admin_events where admin_user_id='${fixture.admin}' or target_id in(${ids}) or target_id in(select id::text from clean_bookings);

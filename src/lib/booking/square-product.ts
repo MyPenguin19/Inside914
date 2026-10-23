@@ -1,6 +1,6 @@
 import { POSTCARD_LAYOUT_V2 } from "@/lib/print/layouts";
 
-// New campaign terms; historical products remain readable under their original model.
+// Defaults only. Each campaign is authoritative for new holds; bookings retain their agreed price.
 export const SQUARE_PRODUCT = {
   model: "square_v1",
   priceCents: 39900,

@@ -1,3 +1,7 @@
+import sharp from "sharp";
+import { CampaignManagement } from "@/components/admin/campaign-management";
+import { AssembledSide, type Placement } from "@/components/admin/assembled-postcard";
+import { layoutVersion } from "@/lib/print/layouts";
 import { loadHouseArtwork } from "@/lib/print/house-artwork";
 import { PrintDownload } from "@/components/admin/print-download";
 import { CollectionPanel } from "@/components/admin/collection-panel";
@@ -18,7 +22,7 @@ import type { SlotView } from "@/components/postcard/postcard-side";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
-import { listConsents, listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
+import { signArtwork, listConsents, listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
 import { artworkLabel, paymentLabel, positionLabel, reservationLabel } from "@/lib/admin/labels";
 import { artworkAwaitingReview, campaignStats, isConfirmed, isLiveHold, slotStates } from "@/lib/admin/metrics";
 import { CampaignStatusControls } from "@/components/admin/campaign-status-controls";
@@ -41,7 +45,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
 
   let data;
   try {
-    const edition = (await listEditions(supabase)).find((e) => e.id === id);
+    const edition = (await listEditions(supabase, true)).find((e) => e.id === id);
     if (!edition) notFound();
     const [slots, bookings] = await Promise.all([listSlots(supabase, [id]), listEditionBookings(supabase, [id])]);
     const consents = await listConsents(supabase, bookings.map(b => b.id));
@@ -50,8 +54,14 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
       supabase.from("zone_charges").select("status").eq("edition_id",id),
     ]) : [{data:false,error:null},{data:null,error:null},{data:[],error:null}];
     if(mail.error || collection.error || ledger.error) throw new Error("Could not verify campaign readiness");
-    const houseReady = edition.productModel === "square_v1" && !!await loadHouseArtwork(supabase);
-    data = { houseReady, edition, slots, bookings, consents, mailReady:houseReady && mail.data === true, chargeReady:houseReady && (collection.data as {ready?:boolean}|null)?.ready === true, charges:ledger.data ?? [] };
+    const houseBytes = edition.productModel === "square_v1" ? await loadHouseArtwork(supabase) : undefined;
+    const houseReady = !!houseBytes;
+    const houseMeta = houseBytes ? await sharp(houseBytes).metadata() : null;
+    const house = houseBytes && houseMeta?.width && houseMeta.height ? {src:`data:image/png;base64,${houseBytes.toString("base64")}`,width:houseMeta.width,height:houseMeta.height} : undefined;
+    const confirmed = bookings.filter(isConfirmed);
+    const artworks = await Promise.all(confirmed.map(b => signArtwork(b.id).catch(() => null)));
+    const placements: Placement[] = confirmed.map((b,i)=>({slots:slots.filter(s=>b.claims.some(c=>!c.released && c.slotId===s.id)),business:b.contact?.businessName ?? "Advertiser",artwork:artworks[i],approved:b.artworkReview==="approved"}));
+    data = { house, placements, houseReady, edition, slots, bookings, consents, mailReady:houseReady && mail.data === true, chargeReady:houseReady && (collection.data as {ready?:boolean}|null)?.ready === true, charges:ledger.data ?? [] };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error; // notFound()
     console.error(error instanceof Error ? error.message : "admin campaign failed");
@@ -84,10 +94,10 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
           ← All campaigns
         </Link>
         <div className="mt-2">
-          <PageHeader title={edition.name ?? edition.zoneName} description={`${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)} edition`}>
+          <PageHeader title={edition.name ?? edition.zoneName} description={`${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)} · ${layoutVersion(edition.layoutTemplate)} · ${formatPrice(edition.unitPriceCents ?? 0)} per position`}>
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge tone={edition.status === "open" && !edition.pausedAt ? "success" : edition.pausedAt ? "warning" : "neutral"}>
-                {edition.productModel === "square_v1" ? operationStatus : edition.status.replaceAll("_", " ")}
+                {edition.archivedAt ? "Archived" : edition.productModel === "square_v1" ? operationStatus : edition.status.replaceAll("_", " ")}
               </StatusBadge>
               {!["cancelled", "completed"].includes(edition.status) && (
                 <ButtonLink href={`/admin/campaigns/${edition.id}/edit`} variant="secondary">
@@ -99,6 +109,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
         </div>
       </div>
 
+      <p className="break-all text-xs text-muted" data-campaign-id={id} data-layout-key={edition.layoutTemplate}>Campaign ID: {id} · Layout: {layoutVersion(edition.layoutTemplate)}</p>
+
       <section aria-label="Reservation progress" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label="Spots filled" value={`${stats.reservedUnits} of ${stats.totalUnits}`} note={edition.status === "draft" ? "Campaign not open yet" : `${stats.filledPercent}% filled`} />
         <Stat label="Authorized value" value={formatPrice(stats.reservedValueCents)} note="Not collected at reservation" />
@@ -106,6 +118,9 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
         <Stat label="Payment methods ready" value={`${stats.paymentMethodsReady} of ${stats.reservations}`} />
       </section>
 
+      {edition.productModel === "square_v1" && <section aria-label="Assembled postcard" className="grid gap-6 sm:grid-cols-2">
+        {(["front","back"] as const).map(side=><AssembledSide key={side} side={side} slots={slots} placements={data.placements} layoutKey={edition.layoutTemplate} house={data.house}/>)}
+      </section>}
       {edition.productModel === "square_v1" && <>
         <PrintDownload editionId={id} ready={data.mailReady} houseReady={data.houseReady} filled={stats.reservedUnits} />
         <CollectionPanel editionId={id} />
@@ -136,6 +151,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
 
       {edition.productModel === "square_v1" && <PrinterRecords editionId={id} />}
 
+      <CampaignManagement edition={edition}/>
+
       <details>
         <summary className="cursor-pointer text-lg font-semibold">Campaign dates and details</summary>
         <div className="mt-4">
@@ -149,7 +166,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
               ["Mailing window", edition.mailingWindowStart ? `${formatDay(edition.mailingWindowStart)} – ${formatDay(edition.mailingWindowEnd ?? edition.mailingWindowStart)}` : edition.mailDate ? formatDay(edition.mailDate) : "Not set"],
               ["Target mailing quantity", `≈ ${formatHouseholds(edition.households)} homes`],
               ["Layout", findTemplate(edition.layoutTemplate ?? "")?.label ?? (edition.layoutTemplate ? edition.layoutTemplate : "Created before templates (provisional grid)")],
-              ["Prices (new bookings)", edition.productModel === "square_v1" ? "$399 ad per area · 10 paid positions" : `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
+              ["Prices (new bookings)", edition.productModel === "square_v1" ? `${formatPrice(edition.unitPriceCents ?? 0)} per position · 10 paid positions` : `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
               ["Artwork approval", `${stats.artworkAwaitingReview} awaiting review of ${stats.reservations} reservations`],
               ["Payment methods ready", `${stats.paymentMethodsReady} of ${stats.reservations}`],
               ["Advertisers", String(stats.advertisers)],
@@ -202,7 +219,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
                   {b.contact?.businessName ?? "No details yet"}
                 </Link>,
                 positionLabel(b, labels),
-                edition.productModel === "square_v1" ? "Square" : bookingSizeLabel(b.size),
+                edition.productModel === "square_v1" ? "Position" : bookingSizeLabel(b.size),
                 <Badge key="s" label={reservationLabel(b, now)} />,
                 <Badge key="a" label={artworkAwaitingReview(b) ? { text: "Awaiting review", tone: "warning" } : artworkLabel(b)} />,
                 <Badge key="p" label={paymentLabel(b)} />,

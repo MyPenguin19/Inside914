@@ -15,7 +15,7 @@ const STEPS = [
   { title: "Choose your areas", body: "Pick one or more areas on the map." },
   { title: "Choose positions and artwork", body: "Pick a position and add your image. Use the same image or a different one in each area." },
   { title: "Add your business details", body: "Tell us your business name and how to reach you." },
-  { title: "Reserve securely", body: "Save your card. Pay $0 today, then $399 per area when its postcard fills and is approved." },
+  { title: "Reserve securely", body: "Save your card. Pay $0 today, then the agreed price per area when its postcard fills and is approved." },
 ];
 
 const FAQ = [
@@ -25,7 +25,7 @@ const FAQ = [
   },
   {
     q: "When am I charged?",
-    a: "Nothing is charged when you reserve. Your card is saved securely. Each selected area is independent: you are charged $399 for an area only after that campaign fills and is approved.",
+    a: "Nothing is charged when you reserve. Your card is saved securely. Each selected area is independent: you are charged the agreed price for an area only after that campaign fills and is approved.",
   },
   {
     q: "What if the postcard doesn't fill?",
@@ -70,7 +70,7 @@ export default function Home() {
                 How It Works
               </ButtonLink>
             </div>
-            <p className="mt-4 text-sm text-muted">$399 per area · Choose one or multiple areas · $0 today</p>
+            <p className="mt-4 text-sm text-muted">Prices shown per area · Choose one or multiple areas · $0 today</p>
           </div>
           <PostcardIllustration />
         </section>
@@ -95,13 +95,13 @@ export default function Home() {
             <SectionHeading
               id="pricing-title"
               eyebrow="Pricing"
-              title="Simple, fixed pricing."
-              intro="$399 for one advertising space in one Westchester area. Choose as many available areas as you want. Nothing is charged today."
+              title="Simple, clear pricing."
+              intro="Choose one advertising space at the price listed for each Westchester area. Choose as many available areas as you want. Nothing is charged today."
             />
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               <PriceCard
                 name="Postcard Advertisement"
-                price="$399 per area"
+                price="Price per area"
                 detail="One advertising space on a shared postcard mailed within your selected Westchester area."
                 diagram={<SizeDiagram />}
               />

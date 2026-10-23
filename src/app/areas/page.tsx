@@ -14,7 +14,7 @@ export default function AreasPage() {
         <div className="mt-6">
           <h1 className="font-display text-4xl font-medium tracking-tight">Choose your areas.</h1>
           <p className="mt-2 max-w-2xl text-muted">
-            Pick where you want your ad. $399 per area. $0 today.
+            Pick where you want your ad. Prices are shown for each area. $0 today.
           </p>
         </div>
         <Suspense fallback={<AreasSkeleton />}>

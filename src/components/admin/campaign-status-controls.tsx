@@ -9,6 +9,7 @@ import { formatDay, formatDeadline } from "@/lib/format-admin";
 // Only the actions valid for the campaign's current state are offered; the database checks
 // every rule again (including the opening requirements) and records each change.
 export function CampaignStatusControls({ edition: e, stats, now }: { edition: AdminEdition; stats: CampaignStats; now: number }) {
+  if (e.archivedAt) return <p className="text-sm text-muted">Archived campaigns cannot accept new reservations.</p>;
   const f = (action: string) => ({ id: e.id, action });
   const controls: React.ReactNode[] = [];
   const missed = deadlineMissed(e, stats, now);

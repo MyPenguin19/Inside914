@@ -6,7 +6,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
-import { adminErrorMessage, parseCampaignForm, parseExtendDeadlineForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
+import { adminErrorMessage, dollars, parseCampaignForm, parseExtendDeadlineForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
 import { zoneSchema } from "@/lib/admin/zone-form";
 import { findTemplate } from "@/lib/admin/layouts";
 import { followUpCancellations } from "@/lib/checkout/cancellation-followup";
@@ -18,7 +18,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Nothing here can charge a card. The only Stripe call is removing a cancelled customer's saved
 // card (detach), which can't charge anything.
 
-export type ActionResult = { ok?: boolean; message?: string; errors?: CampaignFieldErrors; values?: Record<string, string> };
+export type ActionResult = { upgrade?: import("@/lib/admin/campaign-management").UpgradePreview; ok?: boolean; message?: string; errors?: CampaignFieldErrors; values?: Record<string, string> };
 
 const uuid = z.uuid();
 const reason = (max: number) => z.string().trim().min(1, "Please give a reason.").max(max);
@@ -55,19 +55,20 @@ export async function updateCampaign(_prev: ActionResult, form: FormData): Promi
   const id = uuid.safeParse(form.get("id"));
   if (!id.success) return { message: "That campaign doesn't exist." };
 
-  // Once anyone has booked, only the name and target quantity may change (the database enforces
+  // Once anyone has booked, only the name, target quantity and future price may change (the database enforces
   // this too); the form only sends those then.
-  const { count } = await supabase.from("bookings").select("id", { count: "exact", head: true }).eq("edition_id", id.data).neq("status", "released");
+  const { count, error: countError } = await supabase.from("bookings").select("id", { count: "exact", head: true }).eq("edition_id", id.data).neq("status", "released");
+  if (countError) return { message: "Could not verify existing reservations. Nothing was changed." };
   const locked = form.get("locked") === "true" || (count ?? 0) > 0;
   const parsed = parseCampaignForm(form);
   if (!parsed.ok) {
-    const relevant = locked ? { name: parsed.errors.name, target_quantity: parsed.errors.target_quantity } : parsed.errors;
+    const relevant = locked ? { name: parsed.errors.name, target_quantity: parsed.errors.target_quantity, unit_price_cents: parsed.errors.unit_price_cents } : parsed.errors;
     if (Object.values(relevant).some(Boolean)) return { errors: relevant, values: parsed.raw };
   }
   const v = parsed.ok ? parsed.value : null;
   const p = locked
-    ? { name: String(form.get("name")).trim(), target_quantity: Number(form.get("target_quantity")) }
-    : { ...v, zone_id: undefined, layout_template: undefined, unit_price_cents: undefined, double_price_cents: undefined };
+    ? { name: String(form.get("name")).trim(), target_quantity: Number(form.get("target_quantity")), unit_price_cents: dollars.parse(form.get("unit_price_cents")) }
+    : { ...v, zone_id: undefined, layout_template: undefined, double_price_cents: undefined };
   const { error } = await supabase.rpc("admin_update_campaign", { p_id: id.data, p: JSON.parse(JSON.stringify(p)) });
   if (error) return { message: adminErrorMessage(error), values: parsed.raw };
   redirect(`/admin/campaigns/${id.data}`);
@@ -300,4 +301,40 @@ export async function publishEvidence(_prev: ActionResult, form: FormData): Prom
   const { data, error } = await supabase.rpc("admin_publish_evidence", { p_id: id.data, p_publish: publish });
   if (error) return { message: adminErrorMessage(error) };
   return done(data === "already" ? "Already done: nothing changed." : publish ? "Published." : "Unpublished.");
+}
+
+export async function deleteCampaign(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const { supabase } = await requireAdmin();
+  const id = uuid.safeParse(form.get("id"));
+  if (!id.success) return { message: "That campaign doesn't exist." };
+  const { error } = await supabase.rpc("admin_delete_campaign", { p_id: id.data, p_confirmation: String(form.get("confirmation") ?? "") });
+  if (error) return { message: adminErrorMessage(error) };
+  redirect("/admin/campaigns");
+}
+
+export async function archiveCampaign(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const { supabase } = await requireAdmin();
+  const id = uuid.safeParse(form.get("id"));
+  if (!id.success) return { message: "That campaign doesn't exist." };
+  const { error } = await supabase.rpc("admin_archive_campaign", { p_id: id.data, p_confirmation: String(form.get("confirmation") ?? "") });
+  if (error) return { message: adminErrorMessage(error) };
+  return done("Campaign archived. Its records remain available under Archived.");
+}
+
+export async function previewLayoutUpgrade(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const { supabase } = await requireAdmin();
+  const id = uuid.safeParse(form.get("id"));
+  if (!id.success) return { message: "That campaign doesn't exist." };
+  const { data, error } = await supabase.rpc("admin_layout_upgrade_preview", { p_id: id.data });
+  if (error) return { message: adminErrorMessage(error) };
+  return { ok: true, upgrade: data as import("@/lib/admin/campaign-management").UpgradePreview };
+}
+
+export async function upgradeCampaignLayout(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const { supabase } = await requireAdmin();
+  const id = uuid.safeParse(form.get("id"));
+  if (!id.success) return { message: "That campaign doesn't exist." };
+  const { error } = await supabase.rpc("admin_upgrade_campaign_layout", { p_id: id.data, p_fingerprint: String(form.get("fingerprint") ?? ""), p_confirmation: String(form.get("confirmation") ?? "") });
+  if (error) return { message: adminErrorMessage(error) };
+  return done("Layout upgraded to V2. Review the artwork and upload a new final proof. Reservation status is unchanged.");
 }

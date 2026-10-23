@@ -1,3 +1,4 @@
+import { deleteLocalCampaignFixtures } from "../tests/integration/local-layout-fixture";
 import { randomUUID, randomBytes } from "node:crypto";
 import sharp from "sharp";
 import type { Database } from "../src/lib/supabase/database.types";
@@ -35,7 +36,7 @@ test.afterAll(async()=>{
       const carts=[...new Set(bookings.map(b=>b.cart_id).filter((id): id is string => !!id))];
       if(carts.length)ok(await db.from("reservation_carts").delete().in("id",carts));
     }
-    ok(await db.from("editions").delete().in("id",ids));
+    deleteLocalCampaignFixtures(ids);
   }
   if(user){ok(await db.from("admin_events").delete().eq("admin_user_id",user));await admin?.auth.signOut();expect((await db.auth.admin.deleteUser(user)).error).toBeNull();}
 });

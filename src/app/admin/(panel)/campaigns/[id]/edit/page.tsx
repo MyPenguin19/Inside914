@@ -25,7 +25,7 @@ async function EditCampaign({ params }: { params: PageProps<"/admin/campaigns/[i
   if (!z.uuid().safeParse(id).success) notFound();
   let data;
   try {
-    const edition = (await listEditions(supabase)).find((e) => e.id === id);
+    const edition = (await listEditions(supabase, true)).find((e) => e.id === id);
     if (!edition) notFound();
     const [zones, booked] = await Promise.all([listZones(supabase), hasBookings(supabase, id)]);
     data = { edition, zones, booked };

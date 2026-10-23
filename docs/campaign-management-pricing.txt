@@ -1,0 +1,242 @@
+Inside914 — campaign layouts, pricing and lifecycle management
+Prepared 2026-10-23 on feature/campaign-management-pricing
+
+1. Layout mismatch: findings and limits
+
+The hosted migration registry contains V2, but installing a template does not
+upgrade existing editions or their stored slots. The read-only production audit
+found five editions, all using amazingmail-9x6-ten-square-draft (V1), at $399.
+The generic homepage illustration uses V2; it is not a campaign inventory view.
+The campaign selectors, inventory maps and PNG renderer already resolve the
+edition's saved layout key. Therefore a V2 illustration and a V1 campaign can
+legitimately show different geometry. No campaign-specific screenshot URLs/IDs
+were supplied for this request, so their identity cannot be conclusively matched.
+
+The campaign detail also lacked an assembled-artwork view. AssembledSide could
+fall back to legacy dimensions unless its caller supplied dimensions, and did
+not render permanent house artwork. It now derives dimensions from the same
+layout registry and is mounted on the campaign detail with real placements and
+validated house artwork. Visible campaign ID/version and export response headers
+make customer/admin/export comparisons traceable.
+
+2. Public labels and print consistency
+
+The public house region says only Reserved, centered, neutral and noninteractive.
+Assistive technology identifies it as a reserved, nonbookable region. The postal
+region remains excluded. Administrator previews and exports retain house artwork.
+Both V1 and V2 use their own stored positions; no geometry constants were changed.
+The existing crop/contain transform avoids stretching square originals into V2
+rectangles. Unapproved artwork is clearly marked in the administrative preview.
+PNG downloads remain the actual renderer output, not browser screenshots.
+V2 front/back are 7300 x 4900 pixels at 800 DPI (9.125 x 6.125 inches).
+X-Campaign-Id and X-Layout-Key identify the exported edition and template.
+
+3. Administrator workflow
+
+The campaign list offers Active, Draft and Archived filters. Rows show area/month,
+layout version, current position price, status, reserved/total positions, approved
+artwork, mailing status and edit/manage actions. Active means not archived and
+includes finished campaigns until the owner explicitly archives them.
+Detail pages show the assembled front/back and existing inventory/print controls.
+Delete, archive and upgrade are separate, authenticated, audited actions.
+
+4. Custom pricing and accepted-price safety
+
+Price per advertising position ($) defaults to 399 and accepts positive amounts
+with up to two decimal places. The database stores integer cents. Creation and
+editing use the same validator; the database validates again. Price edits are
+allowed after holds/reservations exist, without unlocking dates or layout.
+Only subsequent holds use the new edition price. Each existing hold/reservation
+keeps bookings.price_cents, and a trigger prevents rewriting that agreed price.
+The hold RPC compares the submitted amount with the locked campaign record.
+Multi-area totals, consent, checkout and reservation email use stored amounts.
+Payment summaries, notices, recovery and eventual collection use the immutable
+booking/consent/ledger amount, never the campaign's latest advertised price.
+The ledger rejects mismatched consent and later changes to its amount/identity.
+No price edit invokes Stripe, collects money or issues a refund.
+
+5. Permanent deletion
+
+Only an unarchived draft with no booking of any status, payment consent, charge,
+mailing evidence or layout-upgrade history is eligible. Because artwork belongs
+to a booking, artwork history also blocks deletion. DELETE CAMPAIGN is required.
+The server rechecks eligibility under a campaign lock, removes only safe empty
+inventory and the edition, and retains a snapshot in admin_events. Direct table
+deletion cannot bypass the guard. Retrying an already completed deletion is safe.
+
+6. Archiving
+
+Only cancelled or completed campaigns can be archived, with ARCHIVE CAMPAIGN.
+Archive is not cancellation: the existing cancellation/payment-method cleanup
+and notification workflow must complete through its normal rules first.
+Archiving does not change terminal status, bookings, artwork, payments, evidence
+or consent. It hides the campaign from default active lists, preserves detail
+access through Archived, and cannot make the campaign bookable again.
+
+7. Production campaigns at the read-only audit
+
+All remain V1 and unchanged by this work:
+  Central:  eedd9692-f410-4f5b-a244-9471792c5dbd — open, 4 reserved
+  Eastern:  dab404f8-1f02-46c5-861a-da8e26d89c0d — open, 4 reserved
+  Northern: 820e1d4f-c04f-426c-9d84-cc6921931878 — open, 0 reserved
+  Southern: e4dbe917-7560-409a-b446-278e5fefe034 — open, 0 reserved
+  Cancelled: 6d6cf8b0-15ea-4cc0-be22-d0f7b1ecf51f — 0 reserved;
+             named Southern but attached to the Central zone in existing data.
+That pre-existing naming/zone discrepancy was reported, not silently corrected.
+
+8. Optional V1-to-V2 upgrade
+
+Existing V1 campaigns need no conversion to remain usable and reproducible.
+Moving a chosen campaign to V2 requires a separate owner-approved operation.
+The admin dry run checks the exact ten canonical positions, campaign state,
+active holds, payments and mailing history and displays the mapping/warnings.
+An open campaign must first be paused explicitly; active holds must expire or
+finish. Collection ledgers, advanced payment states and mailing activity block
+the upgrade. A changed snapshot invalidates the dry run.
+
+UPGRADE TO V2 plus a fresh fingerprint invokes one transaction. It preserves
+all ten slot IDs/labels, booking IDs and ownership, agreed prices, saved payment
+methods, Stripe references, original files and crops. Only approved canonical
+V1-to-V2 geometry changes are allowed through a private transaction capability;
+ordinary geometry edits remain forbidden. Existing artwork approval is reset,
+and prior final-proof records remain historical evidence but cannot approve V2.
+Private campaign_layout_history preserves pre-upgrade inputs, and admin_events
+records the action. Neither API clients nor service_role can rewrite that history.
+Retries are idempotent. The workflow does not reopen the campaign or call Stripe.
+
+9. Migration and rollout boundary
+
+New migration:
+  supabase/migrations/20261023050938_campaign_management_pricing.sql
+
+Migration SHA-256: b408e1dc7cd6dfae1dac745b8ee62bc53e5b2c5a4d6af2c72f3675d69f0dd8d4
+
+Its schema/functions/triggers were applied and verified only on the isolated
+local native Supabase stack. No historical migration was edited. The local stack
+has an older CLI history ledger; this work verifies applied schema directly and
+does not claim the local ledger mirrors production.
+
+The migration adds archived_at, private operation/history tables and admin RPCs;
+updates pricing constraints and hold/readiness functions; and adds deletion and
+immutable-ledger guards. It does not update production campaigns, slots, prices,
+reservations or collection settings. RLS, admin checks, the layout approval
+registry/guard, exact-ten-slot validation, postal exclusion and payment release
+checks remain in force.
+
+Production already has the prior V2 migration under remote version
+20261023044709, mapping to local 20261023035620. That history mapping must be
+respected; do not use a blind supabase db push.
+
+Before merging/deploying this branch: obtain owner approval, create/verify a
+fresh production backup, audit the current schema/history, apply ONLY this new
+migration transactionally with the reviewed mapping-aware process, and verify
+objects/grants plus unchanged campaign/reservation snapshots. Then review/merge
+the PR and deploy the approved SHA. No campaign upgrade is part of that DDL.
+The feature branch's automatic Vercel deployment is disabled in vercel.json so
+its schema-dependent code is not deployed early. Main's existing setting stays.
+
+10. Verification
+
+Final full-suite results:
+  npm run typecheck       PASS
+  npm run lint            PASS
+  npm test                382 passed; no skips
+  npm run test:integration 119 passed; 3 skipped
+  npm run test:e2e        20 passed; no skips
+  npm run build           PASS
+
+The three skipped integration tests require Stripe test credentials, which were
+not supplied and were not replaced with live credentials. All Stripe behavior
+verified here used mocks or local SQL fixtures; no Stripe network writes occurred.
+Browser checks covered 320, 375, 390, 768 and 1440-pixel viewports, custom prices,
+explicit actions, stable upgraded slot IDs, archived filtering, and actual PNG
+metadata for both sides. Unit/database tests cover public Reserved semantics,
+V1/V2 mapping, original crop preservation, rejected tampering, immutable accepted
+prices and payment ledgers, unsafe deletion, archive history, and proof invalidation.
+All verification uses scripts/verify-local-mvp.mjs, which pins local Supabase,
+blanks Stripe/Resend keys and sets collection disabled. SQL fixtures roll back;
+browser fixtures are UUID-scoped and cleaned up. Teardown temporarily suspends
+only the deletion guard in one hardwired localhost transaction, never during
+application/security assertions and never in production.
+
+11. GitHub and deployment
+
+Intended source/tests/migration/report only; no environment files, credentials,
+backups, screenshots, generated exports, logs or local artifacts are committed.
+The feature branch is intended for review before production migration approval.
+No merge to main or deployment is authorized while that prerequisite is pending.
+
+12. Remaining approvals
+
+Owner approval is required for the production migration/rollout and separately
+for each production V1 campaign pause/upgrade/resume or price/status change.
+Converted placements need renewed artwork approval and a new final printer proof.
+Existing files uploaded to AmazingMail/Xpressdocs do not update automatically.
+Printer confirmation, replacement upload and any mailing order remain separate.
+LIVE_COLLECTION_RELEASED remains false; collection mode remains disabled.
+Live collection requires separate approval after all release/payment checks.
+No production data, campaigns, reservations, environment settings or Stripe
+objects were modified by this implementation task.
+
+Changed files (60)
+
+  docs/campaign-management-pricing.txt
+  e2e/admin-ops.spec.ts
+  e2e/campaign-management.spec.ts
+  e2e/home.spec.ts
+  e2e/multi-area.spec.ts
+  e2e/square-campaign.spec.ts
+  src/app/admin/(panel)/campaigns/[id]/edit/page.tsx
+  src/app/admin/(panel)/campaigns/[id]/page.tsx
+  src/app/admin/(panel)/campaigns/page.tsx
+  src/app/admin/admin-actions.ts
+  src/app/admin/print/[id]/route.ts
+  src/app/areas/page.tsx
+  src/app/book/cart/payment/page.tsx
+  src/app/layout.tsx
+  src/app/page.tsx
+  src/app/pay/page.tsx
+  src/components/admin/assembled-postcard.tsx
+  src/components/admin/campaign-form.tsx
+  src/components/admin/campaign-management.tsx
+  src/components/admin/campaign-status-controls.tsx
+  src/components/admin/collection-panel.tsx
+  src/components/admin/confirm-action.tsx
+  src/components/admin/layout-upgrade.tsx
+  src/components/admin/postcard-map.tsx
+  src/components/booking/category-zone-selector.tsx
+  src/components/payments/recovery-form.tsx
+  src/components/postcard/postcard-side.tsx
+  src/lib/admin/campaign-form.ts
+  src/lib/admin/campaign-management.ts
+  src/lib/admin/data.ts
+  src/lib/admin/metrics.ts
+  src/lib/booking/square-product.ts
+  src/lib/payments/charge.ts
+  src/lib/payments/notices.ts
+  src/lib/pricing.ts
+  src/lib/print/layouts.ts
+  src/lib/supabase/database.types.ts
+  supabase/migrations/20261023050938_campaign_management_pricing.sql
+  tests/campaign-form.test.tsx
+  tests/campaign-layout-views.test.tsx
+  tests/category-zone-selector.test.tsx
+  tests/database/campaign-management.sql
+  tests/database/four-zone-readiness.sql
+  tests/database/shared-artwork.sql
+  tests/database/square-product.sql
+  tests/database/zone-payments.sql
+  tests/integration/admin-ops.test.ts
+  tests/integration/campaign-deadlines.test.ts
+  tests/integration/category-exclusivity.test.ts
+  tests/integration/local-layout-fixture.ts
+  tests/integration/multi-area.test.ts
+  tests/integration/mvp-database.test.ts
+  tests/integration/postcard-v2.test.ts
+  tests/integration/square-layout-approval.test.ts
+  tests/integration/zone-payments.test.ts
+  tests/payment-notices.test.ts
+  tests/payment-recovery-form.test.tsx
+  tests/payments.test.ts
+  tests/square-product.test.ts
+  vercel.json

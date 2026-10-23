@@ -1,3 +1,4 @@
+import { deleteLocalCampaignFixtures } from "./local-layout-fixture";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -206,7 +207,7 @@ describe("multi-area groups, isolated local campaigns", () => {
       await db.from("reservation_carts").delete().in("id", carts);
   });
   afterAll(async () => {
-    await db.from("editions").delete().in("id", editions);
+    deleteLocalCampaignFixtures(editions);
     await db.from("zones").delete().in("id", zones);
     localLayoutFixture(layout, true);
   });

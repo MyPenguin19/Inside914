@@ -1,3 +1,4 @@
+import { deleteLocalCampaignFixtures } from "../tests/integration/local-layout-fixture";
 import { REGIONS } from "../src/lib/catalog/regions";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
@@ -27,7 +28,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   const { data } = await service!.from("editions").select("id").like("name", `E2E campaign ${year}%`);
-  for (const e of data ?? []) await service!.from("editions").delete().eq("id", e.id);
+  deleteLocalCampaignFixtures((data ?? []).map(e=>e.id));
   await service!.from("zones").delete().eq("slug", zoneSlug);
   await service!.from("admin_events").delete().eq("admin_user_id", admin.id);
   await service!.auth.admin.deleteUser(admin.id);
@@ -79,7 +80,7 @@ test("each geographic area prepares its own draft without copying dates or inven
       await expect(page.getByLabel("Mailing month")).toHaveValue("");
       await expect(page.getByLabel("Reservation deadline")).toHaveValue("");
       await expect(page.getByLabel("Artwork submission deadline")).toHaveValue("");
-      await expect(page.getByLabel("Ad per area ($)")).toHaveValue("399");
+      await expect(page.getByLabel("Price per advertising position ($)")).toHaveValue("399");
       if (area.slug !== "central-westchester") await expect(page.getByLabel("Target mailing quantity (homes)")).toHaveValue("");
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
     }
@@ -98,7 +99,7 @@ test("January proposal loads exact dates and prices without creating a campaign"
   await expect(page.getByLabel("Artwork submission deadline")).toHaveValue("2026-12-20T23:59");
   await expect(page.getByLabel("Mailing window: first day")).toHaveValue("2027-01-11");
   await expect(page.getByLabel("Mailing window: last day")).toHaveValue("2027-01-15");
-  await expect(page.getByLabel("Ad per area ($)")).toHaveValue("399");
+  await expect(page.getByLabel("Price per advertising position ($)")).toHaveValue("399");
   await expect(page.getByLabel("Double price ($)")).toHaveCount(0);
   await expect(page.getByLabel("Target mailing quantity (homes)")).toHaveValue("5000");
 });
@@ -128,7 +129,7 @@ test("create a draft campaign (with validation), edit it, preserve fixed invento
   // Edit the name.
   await main(page).getByRole("link", { name: "Edit" }).click();
   await expect(page.getByRole("heading", { name: "Edit campaign", level: 1 })).toBeVisible();
-  await main(page).getByLabel("Campaign name").fill(`${name} (edited)`); // the visible page (Next keeps the previous one hidden)
+  await main(page).getByRole("textbox", { name: "Campaign name" }).fill(`${name} (edited)`); // the visible page (Next keeps the previous one hidden)
   await main(page).getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("heading", { name: `${name} (edited)`, level: 1 })).toBeVisible();
 

@@ -36,14 +36,14 @@ select pg_temp.assert((select count(*)=4 from editions where id in(select id fro
 select pg_temp.assert((select count(*)=40 from slots where edition_id in(select id from fixture where k like 'campaign%')),'exactly ten paid slots per campaign');
 select pg_temp.assert((select count(*)=24 from slots where edition_id in(select id from fixture where k like 'campaign%') and side='front' and width_in=2.5 and height_in=2.5),'six front squares per campaign');
 select pg_temp.reject(format('select public.admin_create_square_campaign(%L::jsonb)',pg_temp.payload((select id from fixture where k='zone1'))),'ADM04','duplicate month and zone rejected');
-select pg_temp.reject(format('select public.admin_create_square_campaign(%L::jsonb)',pg_temp.payload((select id from fixture where k='zone1'))||'{"unit_price_cents":100}'),'MVP01','temporary price rejected');
+select pg_temp.reject(format('select public.admin_create_square_campaign(%L::jsonb)',pg_temp.payload((select id from fixture where k='zone1'))||'{"unit_price_cents":0}'),'MVP01','zero price rejected');
 select set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
 select pg_temp.reject(format('select public.admin_create_square_campaign(%L::jsonb)',pg_temp.payload((select id from fixture where k='zone1'))),'ADM01','non-admin rejected');
 select set_config('request.jwt.claim.sub',(select id::text from fixture where k='admin'),true);
 create temporary table saved_layout_approval as select * from private.approved_layout_templates where template_key='amazingmail-9x6-ten-square-draft';
 delete from private.approved_layout_templates where template_key='amazingmail-9x6-ten-square-draft';
 select pg_temp.reject(format('update editions set status=''open'' where id=%L',(select id from fixture where k='campaign1')),'ADM04','printer gate blocks opening');
-select pg_temp.reject(format('update editions set unit_price_cents=100 where id=%L',(select id from fixture where k='campaign1')),'23514','database prevents repricing');
+select pg_temp.reject(format('update editions set unit_price_cents=0 where id=%L',(select id from fixture where k='campaign1')),'23514','database rejects invalid price');
 select pg_temp.reject(format('update editions set product_model=''legacy'' where id=%L',(select id from fixture where k='campaign1')),'MVP01','model cannot downgrade');
 select pg_temp.reject(format('insert into slots(edition_id,side,label,x_in,y_in,width_in,height_in) values(%L,''back'',''HOUSE'',0,0,1,1)',(select id from fixture where k='campaign1')),'MVP02','house or eleventh position cannot be sold');
 select pg_temp.reject(format('delete from slots where edition_id=%L',(select id from fixture where k='campaign1')),'MVP02','inventory cannot shrink');

@@ -1,4 +1,4 @@
-import { postcardZones } from "@/lib/print/layouts";
+import { findPostcardLayout, postcardZones } from "@/lib/print/layouts";
 import { CroppedImage } from "@/components/artwork/cropped-image";
 import { boxStyle } from "@/components/postcard/postcard-side";
 import type { AdminSlot } from "@/lib/admin/metrics";
@@ -10,14 +10,17 @@ export type Placement = { slots: AdminSlot[]; business: string; artwork: Artwork
 
 // One side of the postcard with every reserved ad in its place, using the same slot geometry and
 // cropping as everywhere else (no second layout engine). Anything not content-approved is shown
-// as a warning tile, never as if it were ready.
-export function AssembledSide({ side, slots, placements, square = false, layoutKey, dimensions = POSTCARD_INCHES }: { layoutKey?: string | null; square?: boolean; dimensions?: { width: number; height: number }; side: "front" | "back"; slots: AdminSlot[]; placements: Placement[] }) {
+// with an approval warning, never as if it were ready.
+export function AssembledSide({ side, slots, placements, square = false, layoutKey, dimensions = POSTCARD_INCHES, house }: { house?: { src: string; width: number; height: number }; layoutKey?: string | null; square?: boolean; dimensions?: { width: number; height: number }; side: "front" | "back"; slots: AdminSlot[]; placements: Placement[] }) {
+  const layout = findPostcardLayout(layoutKey);
+  if (layout) { dimensions = layout.trim; square = true; }
   const own = placements.map(p => ({ ...p, slots: p.slots.filter(s => s.side === side) })).filter(p => p.slots.length > 0);
   const taken = new Set(own.flatMap((p) => p.slots.map((s) => s.id)));
   return (
     <figure className="flex flex-col gap-2">
       <figcaption className="text-sm font-medium">{side === "front" ? "Front" : "Back"}</figcaption>
       <div
+        data-layout-key={layoutKey}
         role="img"
         aria-label={`Assembled ${side} of the postcard (not a print proof)`}
         className="relative w-full overflow-hidden rounded-[6px] border border-line-strong/70 bg-paper"
@@ -32,13 +35,13 @@ export function AssembledSide({ side, slots, placements, square = false, layoutK
               </div>
             </div>
           ))}
-        {postcardZones(layoutKey).filter(region => region.side === side).map(region => <div key={region.kind} className="absolute flex items-center justify-center border border-line bg-background-soft p-1 text-center text-[10px] text-muted" style={boxStyle(region, dimensions)}>{region.title} · {region.detail}</div>)}
+        {postcardZones(layoutKey).filter(region => region.side === side).map(region => <div key={region.kind} className="absolute flex items-center justify-center border border-line bg-background-soft p-1 text-center text-[10px] text-muted" style={boxStyle(region, dimensions)}>{region.kind === "house" && house ? <CroppedImage target={region} src={house.src} imageWidth={house.width} imageHeight={house.height} crop={{x:0,y:0,width:house.width,height:house.height}} alt="Permanent house artwork"/> : <span>{region.title} · {region.detail}</span>}</div>)}
         {own.map((p) => {
           const area = adArea(p.slots);
           return (
             <div key={p.slots.map((s) => s.id).join()} className="absolute" style={boxStyle(area, dimensions)}>
-              {p.artwork?.crop && p.approved ? (
-                <CroppedImage target={area} src={p.artwork.viewUrl} imageWidth={p.artwork.width} imageHeight={p.artwork.height} crop={p.artwork.crop} alt={`${p.business} ad`} />
+              {p.artwork?.crop ? (
+                <><CroppedImage target={area} src={p.artwork.viewUrl} imageWidth={p.artwork.width} imageHeight={p.artwork.height} crop={p.artwork.crop} alt={`${p.business} ad`} />{!p.approved && <span className="absolute bottom-0 left-0 right-0 bg-warning-soft p-1 text-center text-[10px] text-warning">Awaiting approval</span>}</>
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center bg-warning-soft p-1 text-center text-[10px] leading-tight text-warning">
                   <span className="font-semibold">{p.business}</span>

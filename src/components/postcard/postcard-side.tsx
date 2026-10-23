@@ -26,6 +26,7 @@ type Props = {
   onSelect: (slotId: string) => void;
   zones?: PostcardZone[];
   caption?: boolean;
+  publicLabels?: boolean;
 };
 
 const pct = (value: number, of: number) => `${(value / of) * 100}%`;
@@ -53,7 +54,7 @@ function mergedBox(views: SlotView[]) {
 }
 
 // One face of the postcard, drawn to scale from slot geometry (inches) in the database.
-export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceCents, onSelect, zones = [], caption = true, layoutKey }: Props) {
+export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceCents, onSelect, zones = [], caption = true, layoutKey, publicLabels = true }: Props) {
   const layout = findPostcardLayout(layoutKey);
   if (layout) { dimensions = layout.trim; zones = postcardZones(layoutKey); }
   const title = side === "front" ? "Front" : "Back";
@@ -70,7 +71,7 @@ export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceC
         {zones
           .filter((z) => z.side === side)
           .map((zone) => (
-            <Zone key={zone.kind + zone.y} zone={zone} dimensions={dimensions} />
+            <Zone key={zone.kind + zone.y} zone={zone} dimensions={dimensions} publicLabels={publicLabels} />
           ))}
         {views.length === 0 && (
           <p className="absolute inset-0 flex items-center justify-center p-4 text-center text-xs text-muted">
@@ -128,7 +129,8 @@ export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceC
 }
 
 // Printed, non-selectable areas. Text is decorative: the slots carry the meaning for assistive tech.
-function Zone({ zone, dimensions }: { zone: PostcardZone; dimensions: { width: number; height: number } }) {
+function Zone({ zone, dimensions, publicLabels }: { publicLabels: boolean; zone: PostcardZone; dimensions: { width: number; height: number } }) {
+  if (publicLabels && zone.kind === "house") return <div role="img" aria-label="Reserved area, not bookable" data-reserved-region="house" className="absolute flex items-center justify-center border border-line bg-background-soft text-center text-xs text-muted" style={boxStyle(zone, dimensions)}>Reserved</div>;
   if (zone.kind === "house" || zone.kind === "postal") return <div data-reserved-region={zone.kind} className="absolute flex flex-col items-center justify-center border border-line bg-background-soft p-1 text-center text-[clamp(8px,1.8vw,11px)] text-muted" style={boxStyle(zone, dimensions)}><span>{zone.title}</span><span>{zone.detail}</span></div>;
   if (zone.kind === "masthead") {
     return (

@@ -15,6 +15,7 @@ export const PRINT_DPI = v2.exportDpi;
 export const POSTCARD_LAYOUT_V2: PostcardLayout = v2 as PostcardLayout;
 export const POSTCARD_LAYOUTS: readonly PostcardLayout[] = [AMAZINGMAIL_9X6_LAYOUT, POSTCARD_LAYOUT_V2];
 export const findPostcardLayout = (key: string | null | undefined) => POSTCARD_LAYOUTS.find(l => l.key === key) ?? null;
+export const layoutVersion = (key: string | null | undefined) => key === POSTCARD_LAYOUT_V2.key ? "V2" : key === AMAZINGMAIL_9X6_LAYOUT.key ? "V1" : "Legacy";
 export const isLayoutV2 = (key: string | null | undefined) => key === POSTCARD_LAYOUT_V2.key;
 
 export function acceptsCrop(key: string | null | undefined, crop: { width: number; height: number }) {

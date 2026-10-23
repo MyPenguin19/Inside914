@@ -7,12 +7,12 @@ test("homepage: hero, Verified Mail, how it works, pricing, FAQ and footer", asy
   await expect(page.getByText(/Pick your areas, choose a position, and add your ad/)).toBeVisible();
   await expect(page.getByRole("img", { name: /Illustration of the shared Inside914 postcard/ })).toBeVisible();
 
-  for (const heading of ["Four simple steps.", "Simple, fixed pricing.", "Good to know."]) {
+  for (const heading of ["Four simple steps.", "Simple, clear pricing.", "Good to know."]) {
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
   }
   const pricing = page.locator("#pricing");
   await expect(pricing).toContainText("Postcard Advertisement");
-  await expect(pricing).toContainText("$399 per area");
+  await expect(pricing).toContainText("Price per area");
   await expect(pricing).toContainText("10 advertising spaces");
   await expect(pricing).not.toContainText("Double");
 

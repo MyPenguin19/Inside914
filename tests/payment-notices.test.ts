@@ -10,13 +10,14 @@ import type { Database } from "@/lib/supabase/database.types";
 const context={mode:"live" as const,accountId:"acct_fixture"};
 const row={id:"notice1",booking_id:"booking1",kind:"payment_needed",attempts:0};
 function db(status="requires_action",mode="live") {
- const data={id:"charge1",edition_id:"zone1",stripe_mode:mode,stripe_account_id:"acct_fixture",status,recovery_expires_at:"2099-01-01"};
+ const data={amount_cents:44900,id:"charge1",edition_id:"zone1",stripe_mode:mode,stripe_account_id:"acct_fixture",status,recovery_expires_at:"2099-01-01"};
  return {from:(table:string)=>{const chain={select:()=>chain,eq:()=>chain,single:async()=>({data:table==="zone_charges"?data:table==="editions"?{zones:{name:"<Zone>"}}:{email:"fixture@example.com"},error:null})};return chain;}} as unknown as SupabaseClient<Database>;
 }
 afterEach(()=>{vi.unstubAllEnvs();vi.clearAllMocks();state.mode="live";state.disabled=false;});
 test("live recovery message uses HTTPS, escaped text and stable outbox key",async()=>{
  const message=await preparePaymentNotice(db(),row,context,"https://inside914.example");
  expect(message?.text).toContain("https://inside914.example/pay/private-fixture-token");
+ expect(message?.text).toContain("$449 for this zone only");
  expect(message?.html).toContain("&lt;Zone&gt;");expect(message?.subject).toBe("Payment needs attention");
  expect(message?.idempotencyKey).toBe("payment-notice-notice1");
 });

@@ -515,6 +515,7 @@ export type Database = {
       }
       editions: {
         Row: {
+          archived_at: string | null
           product_model: string
           category_exclusivity: boolean
           artwork_deadline: string
@@ -537,6 +538,7 @@ export type Database = {
           zone_id: string
         }
         Insert: {
+          archived_at?: string | null
           artwork_deadline: string
           product_model?: string
           category_exclusivity?: boolean
@@ -559,6 +561,7 @@ export type Database = {
           zone_id: string
         }
         Update: {
+          archived_at?: string | null
           artwork_deadline?: string
           product_model?: string
           category_exclusivity?: boolean
@@ -927,6 +930,12 @@ export type Database = {
       }
     }
     Functions: {
+      admin_campaign_management: { Args: {p_id:string}; Returns: Json };
+      admin_delete_campaign: { Args: {p_id:string;p_confirmation:string}; Returns: string };
+      admin_archive_campaign: { Args: {p_id:string;p_confirmation:string}; Returns: string };
+      admin_layout_upgrade_preview: { Args: {p_id:string}; Returns: Json };
+      admin_upgrade_campaign_layout: { Args: {p_id:string;p_fingerprint:string;p_confirmation:string}; Returns: string };
+
       admin_set_house_artwork: { Args: {p_path:string;p_width:number;p_height:number}; Returns: undefined };
       admin_mail_readiness: { Args: {p_id:string}; Returns: boolean };
       admin_mark_square_mailed: { Args: {p_id:string}; Returns: string };
