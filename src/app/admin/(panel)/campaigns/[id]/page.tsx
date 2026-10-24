@@ -1,3 +1,4 @@
+import { CampaignInvitations } from "@/components/admin/campaign-invitations";
 import sharp from "sharp";
 import { CampaignManagement } from "@/components/admin/campaign-management";
 import { AssembledSide, type Placement } from "@/components/admin/assembled-postcard";
@@ -111,6 +112,7 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
 
       <p className="break-all text-xs text-muted" data-campaign-id={id} data-layout-key={edition.layoutTemplate}>Campaign ID: {id} · Layout: {layoutVersion(edition.layoutTemplate)}</p>
 
+      <CampaignInvitations editionId={id} positions={slots.filter(s=>states.get(s.id)?.state==="available").map(s=>({id:s.id,label:s.label}))}/>
       <section aria-label="Reservation progress" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label="Spots filled" value={`${stats.reservedUnits} of ${stats.totalUnits}`} note={edition.status === "draft" ? "Campaign not open yet" : `${stats.filledPercent}% filled`} />
         <Stat label="Authorized value" value={formatPrice(stats.reservedValueCents)} note="Not collected at reservation" />

@@ -13,9 +13,9 @@ import { WestchesterMap } from "./westchester-map";
 import { AREA_GUIDE } from "./westchester-map-data";
 import { holdAreas } from "@/app/book/cart/actions";
 export type CategoryCatalog = { editions: EditionCatalog[] };
-export function CategoryZoneSelector({ editions }: CategoryCatalog) {
-  const [selected, setSelected] = useState<string[]>([]);
-  const [positions, setPositions] = useState<Record<string, string>>({});
+export function CategoryZoneSelector({ editions,invitation,invitationUnavailable=false }: CategoryCatalog & {invitation?:{editionId:string;slotId:string};invitationUnavailable?:boolean}) {
+  const [selected, setSelected] = useState<string[]>(invitation?[invitation.editionId]:[]);
+  const [positions, setPositions] = useState<Record<string, string>>(invitation?{[invitation.editionId]:invitation.slotId}:{});
   const [step, setStep] = useState<1 | 2>(1);
   const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
@@ -36,6 +36,8 @@ export function CategoryZoneSelector({ editions }: CategoryCatalog) {
     setSelected(previous => previous.includes(edition.id) ? previous.filter(id => id !== edition.id) : [...previous, edition.id]);
   };
   return <div className="space-y-6">
+    {invitation&&<p role="status" className="rounded-xl border border-line p-4">Your invited area and position are selected. Review them and continue below. Nothing is reserved until checkout is completed.</p>}
+    {invitationUnavailable&&<p role="status" className="rounded-xl border border-line p-4">This invitation expired or its position is no longer available. Choose another open area and position below.</p>}
     <BookingSteps current={step} />
     {step === 1 ? <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
       <WestchesterMap areas={mapAreas} onToggle={toggleArea} />

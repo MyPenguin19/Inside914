@@ -1,0 +1,62 @@
+PHASE 6.16 — CONTROLLED RELEASE RUNBOOK (NOT EXECUTED)
+Prepared October 24, 2026. A separate owner authorization is required for every production rollout described here. Keep payment collection disabled throughout. No real Stripe writes, charges, refunds, campaign status changes, price changes, sample data, unsolicited email, or print/mail orders belong to this runbook.
+
+0. RESOLVE THE RELEASE GATES FIRST
+Read phase615d-production-checklist.txt and the owner decision matrix. The proposed new checkout terms remain drafts. Choose either approved final wording/version plus a reviewed authorization path, or a separately implemented/tested admin-only rollout with public checkout unavailable. The existing collection gate alone does not make checkout unavailable. Do not deploy unresolved new commercial terms to an open checkout. Inspect already-published mailing documents for suitability before enabling customer visibility; remove/redact private contacts or operational notes only with separate owner approval. Phase 6.15C publishes nothing automatically, but existing published evidence can become visible to its authorized customer.
+Obtain separate approval for production configuration, migrations, merges/deploy, and one owner-controlled inbox test. Identify the exact source commit to release; branch names alone are insufficient. Preserve LIVE_COLLECTION_RELEASED=false and verify INSIDE914_COLLECTION_MODE=disabled without exposing credentials. Keep all existing campaigns, reservations, consent amounts/versions, original artwork and house artwork intact.
+
+1. FREEZE SOURCE AND AUDIT FRESH PRODUCTION STATE (READ ONLY)
+Fetch origin. Verify all three PR bases/heads and check no unexpected changes since this handoff. A targets main; B targets A; C targets B. Recheck the frozen migration SHA-256 values below against the checkout.
+Read production migration history and schema from project hsexthbomretpmqolkqw. Reconcile by reviewed migration NAME and CONTENT, not timestamp alone: docs/production-migration-report.md records the historical mapping. The October 24 audit saw 39 applied application migrations through artwork_editor_safe_replacements, PostgreSQL 17.11, and none of the Phase 6.15 tables. The five files below should be the only new pending SQL. Any drift, unexpected pre-existing objects, missing prerequisite or changed hash => stop and review. Never run blind supabase db push, migration repair, seed, reset or historical replay against production.
+Capture aggregate counts and owner-private deterministic digests for editions, slots, bookings, booking_slots, booking_contacts, booking_artwork, house_artwork, payment_consents and zone_charges. Keep detailed exports private. Confirm current admin authorization, existing private buckets, storage object inventory and prior RLS. Record an observation time; legitimate live reservations may arrive during release, so reconcile concurrent additions by timestamp rather than requiring all global counts to remain frozen.
+
+2. CREATE AND VERIFY BACKUPS BEFORE ANY MIGRATION
+Use the established approved Supabase backup procedure; protect credentials and backup files outside Git. Verify the dump can be read and restored into an isolated supported PostgreSQL environment. Compare restored counts/digests to the captured snapshot. Include application schemas, migration history and required Auth relationships. A database backup does NOT contain Storage object bytes: separately verify original customer artwork, house artwork and published evidence backup inventory/checksums. Record restore location, timestamp and owner custody. Back up the email encryption key in a separate owner-controlled vault once configured; future database restores alone cannot decrypt envelopes. Stop if backup/restore verification fails.
+
+3. STAGE CONFIGURATION SAFELY
+Production only: securely provision the three missing settings and verify existing values per the checklist. Do not copy production secrets into Preview/Development. Generate a fresh cryptographic 32-byte hex email key and back it up; do not rotate an active key. Preserve Stripe credentials and pricing. Prepare the Resend outbound webhook URL/events and save its signing secret securely. Sequence webhook enablement with the deployed route: avoid routing real traffic to a missing endpoint. No customer email or whole-outbox drain as a connectivity test.
+Review the operational fallback SLA. Current daily cron plus prompt managed callbacks is documented, not a guarantee of fast recovery during prolonged provider outage. Do not silently add a paid scheduler or new automation.
+
+4. APPLY ONLY THE REVIEWED ADDITIVE SQL, IN THIS ORDER
+Use the established mapping-aware Supabase migration API or a separately approved transaction-aware procedure. For the API, send each exact file's SQL with its descriptive name below. Allow the platform to record the actual applied version; record source filename, applied version, source SHA-256, operator/time and result. Each file is a transaction. Stop on the first failure; do not continue, rerun blindly or mark a failed migration applied. No manual table edits or fabricated authorization backfill.
+
+Order / descriptive name / source SHA-256:
+1. 20261024120000_durable_email_delivery.sql
+   durable_email_delivery
+   c8d3cec268180ef6f4c69f20c39099b3d710ebc2edad6daa3f2abf4c04f5f7ef
+2. 20261024121000_email_consent_hardening.sql
+   email_consent_hardening
+   81f9da2e0aa8366fce39d58473b3ecdf64b897408781b0cb67d56f1c5d32dcbf
+3. 20261024130000_customer_operations.sql
+   customer_operations
+   52c5ec965265829da61acf18b9980d766f9944d1cd13a8dba2005d6dcba593d3
+4. 20261024131000_recovery_notification_hardening.sql
+   recovery_notification_hardening
+   19d7d80618976df8e0fc5c03ea1465e60ce76c73ed53258961e6e94506594ee7
+5. 20261024140000_customer_evidence_invitations.sql
+   customer_evidence_invitations
+   472ba42c9b7653062197be8abd61e4e19e9eb9d509d7390432cc0be0ff7e60fb
+
+The original three published migrations are unchanged. The two additional files harden A and B respectively. There are no destructive business-data statements or historical consent/price updates. Added counters default to zero; legacy consent text/deadline snapshots remain null. Constraint replacement only widens valid administrative event targets/statuses. Functions are replaced transactionally; no new bucket is required.
+
+5. POST-MIGRATION READ-ONLY VERIFICATION — BEFORE NEW CODE
+Run docs/phase615/phase615d-schema-verification.sql with a read-only authorized connection. Require all 24 body hash checks and empty search paths to match; all 18 public RPC grant checks true; six new tables with RLS, zero anonymous table SELECT access, admin-only policies on metadata/requests/alerts/invitations, and no authenticated ciphertext/recovery-token access. The private notify_reservation_confirmed function returns trigger and cannot be invoked as a normal RPC; other private helpers remain restricted. Verify all three new triggers enabled, four added columns and existing private buckets. Check migration history mappings and schema cache refresh.
+Reconcile snapshot data and concurrent legitimate changes. There must be no migration-induced changes to prices, accepted terms, consent amounts, slot mappings, confirmed bookings or artwork originals. No campaign should be opened, paused, canceled, charged or marked mailed by applying SQL.
+Compatibility: old code can continue writing confirmations and ordinary reservations because all added columns are nullable/defaulted. Old code does not rely on the new tables. New consent insert snapshots and notification triggers run on future operations. Collection remains disabled. The hold_cart replacement affects new shared holds only and uses existing structures; current active holds are not rewritten. Test the old production source against the upgraded isolated schema before rollout if production has changed since this audit. Do not deploy new app code before all five migrations pass verification.
+
+6. MERGE THE APPROVED STACK WITHOUT LOSING DEPENDENCIES
+After prerequisites and separate release approval, merge PR11 to main using the normal reviewed workflow. Retarget/update PR12 onto main as needed, verify its diff contains only B plus intended hardening, merge; do the same for PR13. Preserve history; no force push. Verify final main includes all three branch tips and the tested final tree. If final policy/config code changed after this handoff, rerun affected tests and the full release checks before deployment. Keep automatic Git deployments disabled in vercel.json throughout; never rely on an accidental intermediate-main deployment.
+
+7. CONTROLLED APPLICATION DEPLOYMENT
+Use the established Vercel workflow for the existing inside914 project/team. Confirm the checkout is the approved final main SHA, clean and built with correct Production settings, with no local .env override accidentally packaged. Deploy only under explicit Phase 6.16 authorization; verify Vercel's git SHA equals GitHub main and the production alias points to that deployment. Do not deploy the individual intermediate A/B commits. Do not enable collection or change campaign state.
+
+8. SAFE SMOKE / CONTROLLED EMAIL VERIFICATION
+Read-only browser checks: homepage, areas, selected-position preview without submitting a hold/checkout, admin authentication, Campaigns, Advertisers, Artwork Approval, Payments, Settings, action center and private reservation view using owner-authorized access. Confirm legacy-consent reasons and disabled collection presentation. Check invitations preview behavior using isolated fixtures rather than new real invitations. Check existing customer-safe evidence and short-lived authorized downloads; anonymous/other-booking access must fail. Do not create real Customers, SetupIntents, PaymentIntents or submit a customer checkout.
+Under the separately approved email test only, send one clearly marked message to the owner-controlled test inbox through the reviewed durable path; capture redacted acceptance/delivery/event IDs, verify signature/association/deduplication and check owner notification failure visibility. Never run a broad production queue as a test; pre-existing queued messages could be real customers. Real recovery-link testing requires its own approved test reservation or controlled fixture, not an unsuspecting customer's identity. Verify cron configuration/authentication from metadata; a GET to the worker is not read-only.
+Record remaining unverified provider behavior honestly if the inbox test is not authorized. Do not count a provider HTTP acceptance as inbox receipt.
+
+9. ROLLBACK / INCIDENT BOUNDARY
+If migration fails, stop on its rolled-back transaction and review; previous completed additive migrations remain. If new app fails, roll back the application to the known prior compatible commit using the controlled deployment workflow. Do not drop new tables, discard delivery identities, restore over live bookings, rewrite consent or regenerate encryption keys as a quick rollback. Preserve ambiguous deliveries for investigation and original valid access links. Inspect current provider delivery state before any resend. Keep collection disabled. Backup restoration, customer email, refunds and campaign changes each require explicit incident authorization.
+
+10. HANDOFF / STOP
+Report exact mapping, backup verification, schema results, before/after preservation audit, merged SHA/deployment SHA, smoke results, controlled-email evidence and unresolved owner/printer/legal decisions. Stop before collection enablement, charging/refunding, campaign changes or mailing orders. Real collection remains a later separately approved step after original/renewed consent, final proof, artwork, payment/webhook readiness and printer approval are resolved.

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CategoryCheckout } from "@/components/booking/category-checkout";
-export default function Page() {
+export default function Page({searchParams}:{searchParams:Promise<{invite?:string}>}) {
   return (
     <>
       <SiteHeader />
@@ -11,7 +11,7 @@ export default function Page() {
           Choose your areas
         </h1>
         <Suspense fallback={<p>Loading available campaigns…</p>}>
-          <CategoryCheckout />
+          <CategoryCheckout searchParams={searchParams}/>
         </Suspense>
       </main>
       <SiteFooter />

@@ -1,3 +1,6 @@
+import { customerMailing } from "@/lib/mailing/customer";
+import { CUSTOMER_PAYMENT_LABELS } from "@/lib/mailing/timeline";
+import { MailingProgress } from "@/components/checkout/mailing-progress";
 import Link from "next/link";
 import { ReservationRequests } from "@/components/checkout/reservation-requests";
 import { cookies } from "next/headers";
@@ -13,11 +16,6 @@ import { getEmailEnv } from "@/lib/env/checkout";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Your reservation · Inside914", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
-
-const STATUS_TEXT: Record<string, string> = {
-  reserved: "Reserved: waiting for the campaign to fill. No payment collected yet.",
-  cancelled: "Canceled. You were not charged.",
-};
 
 export default function ReservationPage() {
   return (
@@ -48,6 +46,7 @@ async function Reservation() {
       </Panel>
     );
   }
+  const mailing=await customerMailing(admin,view).catch(()=>null);
   const edition=await admin.from("editions").select("status,artwork_due_at,artwork_deadline").eq("id",view.editionId).single();
   const requests=await admin.from("customer_requests").select("id,kind,status,response").eq("booking_id",view.bookingId).order("created_at",{ascending:false});
   // Request-scoped server time after cookies() has made this page dynamic.
@@ -59,18 +58,12 @@ async function Reservation() {
       <section className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Reservation {view.reference}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{view.businessName}</h1>
-        <p className="mt-3 font-medium">{view.isTest ? "TEST reservation: nothing saved or authorized." : (STATUS_TEXT[view.status] ?? "In progress.")}</p>
+        <p className="mt-3 font-medium">{view.isTest ? "TEST reservation: nothing saved or authorized." : `${view.status==="cancelled"?"Reservation canceled.":"Reservation confirmed."} ${mailing?(CUSTOMER_PAYMENT_LABELS[mailing.paymentStatus]??"Payment status awaiting confirmation."):"Payment status temporarily unavailable."}`}</p>
       </section>
       {view.status!=="cancelled"&&<ReservationRequests artworkLocked={locked}/>}
       {!!requests.data?.length&&<section className="rounded-2xl border border-line p-5"><h2 className="font-semibold">Your requests</h2>{requests.data.map(r=><p className="mt-3" key={r.id}>{r.kind.replaceAll("_"," ")} · {r.status}{r.response?` — ${r.response}`:""}</p>)}</section>}
-      <ReservationSummary view={view} amountLabel="Authorized future charge" />
-      <section className="rounded-2xl border border-dashed border-line p-6 text-sm text-muted">
-        <h2 className="text-base font-semibold text-foreground">Inside914 Verified Mail</h2>
-        <p className="mt-2">
-          Campaign progress and documented mailing evidence will appear here once your edition moves into production.
-          Only published, verified documents will be shown.
-        </p>
-      </section>
+      <ReservationSummary view={view} amountLabel="Agreed amount" showReservationTerms={false} />
+      {mailing?<MailingProgress data={mailing}/>:<p role="status">Campaign progress is temporarily unavailable. Please try again later.</p>}
     </div>
   );
 }

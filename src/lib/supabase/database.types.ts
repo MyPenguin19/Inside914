@@ -18,6 +18,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      advertiser_invitations: {
+        Row:{id:string;edition_id:string;slot_id:string;created_by:string;created_at:string;expires_at:string;recipient_email:string|null;business_name:string|null;delivery_id:string|null}
+        Insert:{id?:string;edition_id:string;slot_id:string;created_by:string;created_at?:string;expires_at:string;recipient_email?:string|null;business_name?:string|null;delivery_id?:string|null}
+        Update:{expires_at?:string;delivery_id?:string|null}
+        Relationships:[]
+      }
       reservation_recoveries:{Row:{id:string;booking_id:string;token_hash:string;expires_at:string;used_at:string|null;created_at:string};Insert:{id?:string;booking_id:string;token_hash:string;expires_at:string;used_at?:string|null};Update:{used_at?:string|null;created_at?:string;expires_at?:string;token_hash?:string;booking_id?:string};Relationships:[]}
       customer_requests:{Row:CustomerRequestRow;Insert:Partial<CustomerRequestRow>&Pick<CustomerRequestRow,"booking_id"|"kind"|"message">;Update:Partial<CustomerRequestRow>;Relationships:[]}
       operational_alerts:{Row:OperationalAlertRow;Insert:Partial<OperationalAlertRow>&Pick<OperationalAlertRow,"logical_key"|"kind"|"title"|"href">;Update:Partial<OperationalAlertRow>;Relationships:[]}
@@ -997,6 +1003,8 @@ export type Database = {
       }
     }
     Functions: {
+      admin_create_invitation:{Args:{p_edition:string;p_slot:string;p_email?:string;p_name?:string};Returns:string}
+      customer_mailing_evidence:{Args:{p_booking:string};Returns:{id:string;kind:string;title:string;event_date:string|null;published_at:string;storage_path:string}[]}
       prepare_reservation_recovery:{Args:{p_booking:string;p_hash:string};Returns:{recovery_id:string;expires_at:string;created:boolean}[]}
       consume_reservation_recovery:{Args:{p_hash:string;p_session_hash:string};Returns:string|null}
       submit_customer_request:{Args:{p_hash:string;p_kind:string;p_message:string};Returns:string}

@@ -1,0 +1,68 @@
+PHASE 6.15D — PRODUCTION CONFIGURATION / OWNER DECISIONS
+Read-only assessment: October 24, 2026. This is a checklist, not authorization to change production.
+
+CONFIGURATION STATUS
+Vercel: existing project inside914, prj_baND2hmY5OIm3T8s9HmmTYTRYutM,
+team mypenguin19s-projects / team_zRNgaDpcjcYMDv7NGwbpzQ9J.
+Production URL: https://inside914.vercel.app. APP_URL must match the approved public origin.
+Production env metadata was inspected without retrieving secret values. Presence does not establish that a secret works. No email was sent. No Stripe call was made.
+
+Variable | Purpose | Observed | Required action / validation
+EMAIL_PAYLOAD_ENCRYPTION_KEY | Server-only AES-256-GCM key for immutable envelopes | MISSING | Owner-approved secure generation: 32 random bytes encoded as 64 hex characters; store in Production only and an owner-controlled vault; validate format without printing; verify encrypted-envelope round trip in an isolated fixture. No provider-side setting.
+RESEND_WEBHOOK_SECRET | Authenticate raw Svix webhook bodies | MISSING | Create the Inside914 endpoint in Resend only after Phase 6.16 authorization; store its signing secret securely in Production. Provider and owner action required.
+ADMIN_NOTIFICATION_EMAIL | Owner operational notifications | MISSING | Owner must choose a monitored inbox and authorize the initial controlled delivery test. Store server-side; no hardcoded address.
+RESEND_API_KEY | Server-only send authorization | PRESENT (Secret) | Owner securely confirms correct Inside914 account/domain permissions; validity untested because no provider write was allowed. No replacement/rotation performed.
+EMAIL_FROM | Transactional sender | PRESENT (Configuration) | Exact mailbox not retrieved; owner verifies an approved address under verified inside914.com. Domain verification alone does not establish that this configured mailbox is correct.
+SUPPORT_EMAIL | Monitored help/contact address | PRESENT (Configuration) | Owner verifies the mailbox, monitoring and response process. No address invented.
+APP_URL | Canonical HTTPS origin for private links | PRESENT (Configuration) | Verify HTTPS, approved origin, no credentials/query/fragment or localhost. Do not infer value from deployment URL.
+CRON_SECRET | Bearer authentication for internal jobs | PRESENT (Secret) | Owner verifies securely against Vercel configuration. Never request a mutating production worker merely to check it: the worker sends emails and processes existing jobs.
+INSIDE914_COLLECTION_MODE | Payment collection runtime gate | PRESENT (Configuration) | Preserve disabled. Its value was not retrieved in this read-only metadata pass; Phase 6.16 must verify it securely before deployment. No setting changed.
+LIVE_COLLECTION_RELEASED | Compile-time payment release gate | VERIFIED false in source | Keep false; not an env variable and not part of this release's enablement.
+STRIPE_ACCOUNT_ID / STRIPE_SECRET_KEY / NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY / STRIPE_WEBHOOK_SECRET | Existing Stripe integration | PRESENT in production metadata | Preserve existing values. No Stripe operation, credential test, rotation or collection enablement in Phase 6.15D.
+INSIDE914_PRICING_MODE | Existing price source | PRESENT | Preserve launch configuration and each saved price/consent. No changes to intentional $1 reservations.
+NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY / SUPABASE_SECRET_KEY | Existing production database | PRESENT | Preserve project hsexthbomretpmqolkqw and server-only secret handling. Never use production credentials in automated tests.
+
+RESEND PROVIDER CONFIGURATION REQUIRED
+Read-only provider audit: inside914.com is verified, sending enabled, region us-east-1; open/click tracking disabled. Keep private-link tracking disabled. Existing webhook list contained no Inside914 outbound endpoint; the unrelated receiving endpoint must remain untouched.
+Create, under separate rollout authorization:
+  URL https://inside914.vercel.app/api/resend/webhook
+  Events email.sent, email.delivered, email.delivery_delayed, email.bounced,
+         email.complained, email.failed, email.suppressed.
+Payload contract: type, created_at, data.email_id; optional data.tags is a string-key/string-value object. The delivery_id tag is associated with a known delivery; otherwise lookup uses the known provider message ID. Never associate using recipient email alone.
+Signature headers svix-id, svix-timestamp, svix-signature; raw request body; five-minute past/future tolerance; bounded 256-KiB body. Authenticated unsupported types are acknowledged without database mutation. Retain event-ID deduplication and message-ID mismatch rejection.
+Initial delivery verification requires a separately approved owner-controlled recipient and one explicit message. Test signature reconciliation, delivery and duplicate event handling; do not email real customers or run the whole production outbox as a smoke test.
+
+KEY CUSTODY
+Use a cryptographic generator in an owner-controlled secure session; generate directly into the vault or restricted file, never into chat, logs or Git. Only server modules import encryption code. The browser must never receive EMAIL_PAYLOAD_ENCRYPTION_KEY or service credentials. Back up the original key separately from database dumps; record custody and restoration procedure. Keep it while envelopes remain encrypted with it. Missing key => investigation, not token replacement or blind resend. This implementation has one active key; rotation needs a separately tested old-key migration/keyring strategy. Do not reuse the local verification fixture key.
+
+SCHEDULING / OPERATIONS
+vercel.json keeps Git deployments disabled for main and all three feature branches.
+Existing schedules: email-outbox 14:00 UTC daily; artwork-cleanup 14:30 UTC daily.
+Project is documented as Hobby. Current Vercel docs allow daily jobs on Hobby with timing variation up to 59 minutes; a daily worker cannot promise recovery within a 15-minute token lifetime.
+Managed Next after() attempts prompt delivery; durable rows survive callback failure. Recovery sends twice at most using the same envelope/key and a ten-second HTTP timeout per attempt. A usable link needs at least 60 seconds remaining before dispatch. Accepted provider delivery may still be delayed; no inbox latency or exactly-once guarantee.
+Owner notifications drain at most six due messages per prompt job; remaining work waits for another event/job. In-app alerts remain authoritative. Decide whether this fallback latency meets the launch SLA; faster unattended scheduling requires a separately approved plan or scheduler. No automation was created here.
+
+SUPABASE PREREQUISITES
+Production is PostgreSQL 17.11. Read-only history showed 39 deployed application migrations through artwork_editor_safe_replacements. The Phase 6.15 tables were absent. Seven campaigns and nine non-pending/non-released bookings were counted; no customer content was copied into fixtures.
+Five reviewed additive files are pending after hardening, in the order in phase616-runbook.txt. Original A/B/C SQL remains unchanged. Verify a fresh database backup and independent Storage originals before applying them; retain encryption-key custody separately. No new Storage bucket is needed; existing artwork, mailing-evidence and house-artwork must remain private.
+
+OWNER DECISION MATRIX — NOT APPROVED LEGAL TERMS
+Decision | Recommended operational starting point | Required decision/review
+Entity/contact | Publish one verified contracting legal entity, postal address and monitored support/privacy contacts | Owner supplies verified facts; counsel approves identity/disclosures.
+Unfilled campaign/deadline | Honor the originally accepted deadline/cancellation promise; do not treat a later date as consent | Owner chooses manual decision/notice SLA; counsel reconciles legacy promises and new policy.
+Extensions | Offer a clear opt-in to new dates and material terms; otherwise honor original cancellation rights | Owner/counsel approve wording and an explicit, auditable renewal mechanism. No renewal feature or bypass is supplied here.
+Cancellation window | Clear self-service request path, prompt human response, no automatic promise of refund | Owner defines pre-production and post-charge rules; counsel approves rights, deadlines and exceptions.
+Refund eligibility | Written matrix for cancellation, rejected art, failed/late printing or mailing and material shortfall | Owner decides remedies/timeframes; counsel reviews fees and non-waivable rights. No refund operation authorized.
+Printing/mailing failure | Notify affected advertisers, retain evidence, offer the approved remedy | Owner/printer agree escalation/reprint/refund handling; counsel reviews contractual liability.
+Artwork rejection | State acceptable content/technical standard, notice and replacement deadline, then approved remedy | Owner selects workflow; counsel reviews licenses, claims and refund consequences.
+Distribution | Describe verified methodology, provisional quantities and evidence accurately; no every-household guarantee | Owner/printer confirms quantities/routes and mailing evidence; counsel reviews marketing claims.
+Retention/deletion | Document schedules by data class, backups and legal holds; retain original art only as justified | Owner chooses implementable schedules; counsel reviews applicable privacy, tax/dispute and deletion obligations. No deletion schedule is silently enabled.
+Disputes/applicable requirements | Monitored contact and evidence-based review; no invented arbitration/waiver | Counsel decides law, venue, lawful limitations and applicable business/consumer/privacy obligations; owner approves process.
+
+PUBLIC COMMERCIAL LAUNCH IS BLOCKED while proposed checkout terms remain unresolved. Keep draft warnings. Safest path: approve final policy/wording, archive an immutable version, review the authorization mechanism, then rerun affected checks before public release. A limited admin-only rollout is an alternative only after separately implementing/verifying checkout unavailability; collection-disabled alone does NOT disable checkout. This is an engineering handoff, not a legal compliance opinion.
+
+PRIMARY TECHNICAL REFERENCES
+https://resend.com/docs/dashboard/emails/idempotency-keys (24-hour provider retention)
+https://resend.com/docs/webhooks/verify-webhooks-requests (Svix/raw-body protocol)
+https://github.com/resend/resend-openapi/blob/main/resend.yaml (outbound event fields/tags)
+https://vercel.com/docs/cron-jobs/usage-and-pricing (Hobby scheduling limits)
