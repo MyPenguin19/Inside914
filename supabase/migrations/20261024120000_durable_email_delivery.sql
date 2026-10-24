@@ -1,3 +1,6 @@
+-- Add a specific audit target without changing any historical audit records.
+alter table public.admin_events drop constraint admin_events_target_type_check;
+alter table public.admin_events add constraint admin_events_target_type_check check(target_type in ('campaign','slot','booking','artwork','evidence','zone','email_delivery'));
 -- Phase 6.15A: durable envelopes, fenced sending leases and reconciled provider outcomes.
 -- No existing reservation, consent, token or artwork is modified.
 alter table public.email_outbox drop constraint email_outbox_status_check;

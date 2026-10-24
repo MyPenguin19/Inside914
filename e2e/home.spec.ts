@@ -19,7 +19,7 @@ test("homepage: hero, Verified Mail, how it works, pricing, FAQ and footer", asy
   // FAQ answers open on click (and keyboard: summary elements are focusable).
   const question = page.getByText("What if the postcard doesn't fill?");
   await question.click();
-  await expect(page.getByText(/that reservation is canceled without charge/)).toBeVisible();
+  await expect(page.getByText(/new reservations close while Inside914 reviews cancellation or revised dates/)).toBeVisible();
 
   const footer = page.getByRole("contentinfo");
   for (const link of ["Advertising terms", "Reservation policy", "Privacy policy"]) {

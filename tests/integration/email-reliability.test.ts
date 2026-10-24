@@ -42,3 +42,17 @@ test("anonymous callers cannot read envelopes or claim a message",async()=>{
  expect((await anon.from("email_deliveries").select("payload_ciphertext")).error).not.toBeNull();
  expect((await anon.rpc("claim_email_delivery",{p_id:id})).error).not.toBeNull();
 });
+
+test("admin safely retries a definitive rejection with the same envelope and an audited action",async()=>{
+ const admin=createClient<Database>(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{auth:{persistSession:false}});
+ const email=`email-admin-${randomUUID()}@example.com`,password=randomUUID();
+ const created=await db.auth.admin.createUser({email,password,email_confirm:true});expect(created.error).toBeNull();const user=created.data.user!.id;
+ try {
+  expect((await db.from("admins").insert({user_id:user})).error).toBeNull();expect((await admin.auth.signInWithPassword({email,password})).error).toBeNull();
+  const id=await queued();await processDelivery(db,id,async()=>{throw new EmailProviderError("provider_http_429",true);});
+  const before=(await db.from("email_deliveries").select("payload_ciphertext").eq("id",id).single()).data!;
+  expect((await admin.rpc("admin_retry_email_delivery",{p_id:id})).error).toBeNull();
+  expect((await db.from("email_deliveries").select("status,payload_ciphertext").eq("id",id).single()).data).toEqual({status:"pending",payload_ciphertext:before.payload_ciphertext});
+  expect((await db.from("admin_events").select("event_type").eq("target_id",id)).data).toEqual([{event_type:"email.retry_requested"}]);
+ }finally{await db.from("admin_events").delete().eq("admin_user_id",user);await admin.auth.signOut();await db.auth.admin.deleteUser(user);}
+});
