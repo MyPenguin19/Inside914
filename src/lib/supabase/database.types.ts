@@ -1,3 +1,5 @@
+export type PaymentControlRow = {booking_id:string;state:string;action:string|null;operation_token:string|null;lease_until:string|null;first_started_at:string|null;revoked_at:string|null;recovery_exposed_at:string|null;provider_status:string|null;updated_at:string};
+export type PrinterOrderEventRow = {id:string;edition_id:string;stage:string;evidence_id:string;notes:string;recorded_at:string;recorded_by:string};
 export type CustomerRequestRow={id:string;booking_id:string;kind:string;message:string;status:string;created_at:string;resolved_at:string|null;resolved_by:string|null;response:string|null};
 export type OperationalAlertRow={id:string;logical_key:string;kind:string;title:string;href:string;created_at:string;resolved_at:string|null;delivery_id:string|null};
 export type EmailDeliveryRow = { id:string; logical_key:string; outbox_id:string|null; payload_ciphertext:string; status:string; is_test:boolean; attempts:number; first_attempt_at:string|null; next_attempt_at:string; lease_id:string|null; lease_until:string|null; retry_safe:boolean; ambiguous:boolean; provider_message_id:string|null; provider_outcome:string|null; provider_event_at:string|null; last_error:string|null; created_at:string; accepted_at:string|null };
@@ -18,6 +20,8 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_payment_controls:{Row:PaymentControlRow;Insert:Partial<PaymentControlRow>&Pick<PaymentControlRow,"booking_id">;Update:Partial<PaymentControlRow>;Relationships:[]}
+      printer_order_events:{Row:PrinterOrderEventRow;Insert:Partial<PrinterOrderEventRow>&Pick<PrinterOrderEventRow,"edition_id"|"stage"|"evidence_id"|"notes"|"recorded_by">;Update:Partial<PrinterOrderEventRow>;Relationships:[]}
       advertiser_invitations: {
         Row:{id:string;edition_id:string;slot_id:string;created_by:string;created_at:string;expires_at:string;recipient_email:string|null;business_name:string|null;delivery_id:string|null}
         Insert:{id?:string;edition_id:string;slot_id:string;created_by:string;created_at?:string;expires_at:string;recipient_email?:string|null;business_name?:string|null;delivery_id?:string|null}
@@ -1003,6 +1007,9 @@ export type Database = {
       }
     }
     Functions: {
+      begin_payment_operation:{Args:{p_charge:string;p_action:string};Returns:Json}
+      finish_payment_operation:{Args:{p_charge:string;p_token:string;p_intent:string|null;p_status:string};Returns:string}
+      admin_record_printer_stage:{Args:{p_edition:string;p_stage:string;p_evidence:string;p_notes:string};Returns:string}
       admin_create_invitation:{Args:{p_edition:string;p_slot:string;p_email?:string;p_name?:string};Returns:string}
       customer_mailing_evidence:{Args:{p_booking:string};Returns:{id:string;kind:string;title:string;event_date:string|null;published_at:string;storage_path:string}[]}
       prepare_reservation_recovery:{Args:{p_booking:string;p_hash:string};Returns:{recovery_id:string;expires_at:string;created:boolean}[]}

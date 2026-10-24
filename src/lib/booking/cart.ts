@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCheckoutReleased } from "@/lib/checkout/release";
 import { createHmac } from "node:crypto";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -35,6 +36,7 @@ export const CartSelection = z
   .max(4);
 
 export async function createCart(admin: Admin, raw: unknown) {
+  assertCheckoutReleased();
   const items = CartSelection.parse(raw);
   const { token, hash } = createHoldToken();
   const { data, error } = await admin.rpc("hold_cart", {
@@ -101,6 +103,7 @@ export async function startCartPayment(
   stripe: StripeClient,
   token: string | undefined,
 ) {
+  assertCheckoutReleased();
   const cart = await ownedCart(admin, token);
   if (!cart) return { ok: false as const, reason: "no_hold" };
   const gate = cartGate(cart.members, true);
@@ -165,6 +168,7 @@ export async function completeCart(
   stripe: StripeClient,
   id: string,
 ): Promise<ConfirmOutcome> {
+  assertCheckoutReleased();
   const members = await cartById(admin, id);
   const leader = members.find((b) => b.stripeSetupIntentId);
   if (!leader) return "not_pending";

@@ -35,7 +35,7 @@ describe("cancellation email", () => {
     for (const body of [pending.text, pending.html]) {
       expect(body).not.toMatch(/has been removed/i);
       expect(body).toMatch(/can no longer be charged/i);
-      expect(body).toMatch(/being removed/i);
+      expect(body).toMatch(/removal has not yet been confirmed/i);
       expect(body).not.toMatch(/fail|error|retry|stripe/i); // no internal details
     }
     const none = reservationCancelledEmail({ ...base, card: "none" });
@@ -135,4 +135,12 @@ describe("removing the saved card after a cancellation", () => {
     expect((stripe as { paymentMethods: { detach: ReturnType<typeof vi.fn> } }).paymentMethods.detach).not.toHaveBeenCalled();
     expect(updates).toHaveLength(1);
   });
+});
+
+test("disabled production release never detaches a saved card, including cron retries",async()=>{
+ vi.stubEnv("VERCEL_ENV","production");
+ try {const {admin,updates}=fakeAdmin(cancelled),stripe=stripeWith(async()=>({}));
+ expect(await removeSavedCard(admin,stripe,"b1")).toBe("skipped");
+ expect((stripe as {paymentMethods:{detach:ReturnType<typeof vi.fn>}}).paymentMethods.detach).not.toHaveBeenCalled();expect(updates).toEqual([]);
+ } finally {vi.unstubAllEnvs();}
 });

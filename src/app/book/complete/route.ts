@@ -1,3 +1,4 @@
+import { checkoutReleased, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -10,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Stripe's return_url after a redirect-based card check (e.g. some bank verifications).
 // Confirms on the server (the same idempotent path as the in-page flow), then redirects.
 export async function GET(request: Request) {
+  if (!checkoutReleased()) return new Response(CHECKOUT_CLOSED_MESSAGE,{status:403});
   const go = (path: string) => NextResponse.redirect(new URL(path, request.url), 303);
   try {
     const admin = createAdminClient();

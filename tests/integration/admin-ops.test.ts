@@ -289,7 +289,7 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
       if (!paid.ok || !ended.ok) throw new Error("hold failed");
       await service.from("bookings").update({ status: "charged", confirmed_at: new Date().toISOString(), reference: "IN914-PAYDTS", stripe_payment_method_id: "pm_paidtest" }).eq("id", paid.bookingId);
       await service.from("bookings").update({ status: "released" }).eq("id", ended.bookingId);
-      expect((await admin.rpc("admin_cancel_booking", { p_booking_id: paid.bookingId, p_reason: "test" })).error?.message).toBe("payment_state_needs_resolution");
+      expect((await admin.rpc("admin_cancel_booking", { p_booking_id: paid.bookingId, p_reason: "test" })).data).toBe("requires_resolution");
       expect((await admin.rpc("admin_cancel_booking", { p_booking_id: ended.bookingId, p_reason: "test" })).error?.message).toBe("already_released");
       expect(await claims(paid.bookingId)).toHaveLength(1); // untouched
       expect((await member.rpc("admin_cancel_booking", { p_booking_id: paid.bookingId, p_reason: "x" })).error?.message).toBe("not_admin");

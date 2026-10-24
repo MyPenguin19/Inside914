@@ -22,7 +22,7 @@ export type CancellationEmailData = {
 
 const CARD_SUMMARY: Record<CancellationEmailData["card"], string> = {
   removed: "You have not been charged, and your saved card has been removed from our payment processor.",
-  pending: "You have not been charged, and this reservation can no longer be charged. Your saved card is being removed from our payment processor.",
+  pending: "You have not been charged, and this reservation can no longer be charged. Saved card removal has not yet been confirmed.",
   none: "You have not been charged.",
   shared: "You have not been charged for this reservation, and it can no longer be charged. Your saved card remains available for your other active reservations.",
 };

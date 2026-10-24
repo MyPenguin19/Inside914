@@ -5,7 +5,8 @@ import { z } from "zod";
 import type { SendEmail } from "@/lib/email/outbox";
 import { processOutboxForBooking } from "@/lib/email/outbox";
 import type { Database } from "@/lib/supabase/database.types";
-import { completeReservation } from "./service";
+import { checkoutReleased } from "./release";
+import { completeReservation, getBookingById } from "./service";
 import type { StripeClient } from "./stripe";
 
 type Admin = SupabaseClient<Database>;
@@ -52,7 +53,8 @@ export async function handleStripeEvent(admin: Admin, stripe: StripeClient, even
     await recordSetupStatus(admin, bookingId, intent.id, status, event.created);
     if (status === "succeeded") {
       // Never trust the event alone: re-read and validate its current SetupIntent.
-      const outcome = await completeReservation(admin, stripe, bookingId);
+      const outcome = checkoutReleased() ? await completeReservation(admin, stripe, bookingId)
+        : (await getBookingById(admin, bookingId))?.status === "reserved" ? "already_confirmed" : "not_pending";
       if (outcome === "confirmed" || outcome === "already_confirmed") {
         await processOutboxForBooking(admin, bookingId, send).catch(() => {});
       }

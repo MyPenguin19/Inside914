@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCheckoutReleased } from "@/lib/checkout/release";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/lib/supabase/database.types";
@@ -39,6 +40,7 @@ const DB_ERRORS: Record<string, HoldFailure> = {
 // prices (see lib/pricing). Takes the secret-key client: both hold RPCs are
 // executable only by service_role. The browser never supplies a price.
 export async function placeHold(admin: SupabaseClient<Database>, raw: unknown): Promise<HoldResult> {
+  assertCheckoutReleased();
   const input = HoldInput.safeParse(raw);
   if (!input.success) return { ok: false, reason: "invalid_input" };
 
