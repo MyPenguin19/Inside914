@@ -779,6 +779,7 @@ export type Database = {
       }
       payment_consents: {
         Row: {
+          reservation_deadline_at_consent: string | null
           consent_text: string | null
           amount_cents: number
           booking_id: string
@@ -791,6 +792,7 @@ export type Database = {
           terms_version: string
         }
         Insert: {
+          reservation_deadline_at_consent?: string | null
           consent_text?: string | null
           amount_cents: number
           booking_id: string
@@ -803,6 +805,7 @@ export type Database = {
           terms_version: string
         }
         Update: {
+          reservation_deadline_at_consent?: string | null
           consent_text?: string | null
           amount_cents?: number
           booking_id?: string
@@ -1002,6 +1005,8 @@ export type Database = {
       note_artwork_cleanup_failure:{Args:{p_id:string};Returns:undefined}
       extend_cart_hold:{Args:{p_hash:string};Returns:string}
 
+      admin_consent_review: {Args:{p_bookings:string[]};Returns:{booking_id:string;reason:string|null}[]}
+      assert_charge_consent: {Args:{p_charge:string};Returns:undefined}
       claim_email_delivery: {Args:{p_id:string};Returns:EmailDeliveryRow[]}
       sync_email_delivery: {Args:{p_id:string};Returns:undefined}
       admin_retry_email_delivery: {Args:{p_id:string};Returns:undefined}

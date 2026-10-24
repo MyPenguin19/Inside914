@@ -29,6 +29,8 @@ export async function collectCharge(db: Db, stripe: PaymentStripe, chargeId: str
   verifyLedgerContext(c,stripe.context);
   if(c.status === "succeeded") return "succeeded";
   if (/devtest/.test(c.customer_id+c.payment_method_id)) throw new Error("Simulated reservations cannot be sent to Stripe");
+  const consent=await db.rpc("assert_charge_consent",{p_charge:c.id});
+  if(consent.error) throw new Error("Consent review required before collection");
   await verifyStripeAccount(stripe);
   let intent: Stripe.PaymentIntent;
   if(c.payment_intent_id) intent=await stripe.paymentIntents.retrieve(c.payment_intent_id);

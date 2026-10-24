@@ -27,7 +27,7 @@ test("creates one per-booking intent, persists it, and confirms off-session with
  expect(api.paymentIntents.create).toHaveBeenCalledWith(expect.objectContaining({amount:39900,customer:"cus_test"}),{idempotencyKey:`zone-create-${row.id}`});
  expect(row.payment_intent_id).toBe("pi_test");
  expect(api.paymentIntents.confirm).toHaveBeenCalledWith("pi_test",{off_session:true},{idempotencyKey:`zone-initial-confirm-${row.id}`});
- expect(rpc).not.toHaveBeenCalled();
+ expect(rpc).toHaveBeenCalledWith("assert_charge_consent",{p_charge:row.id});
  await collectCharge(db(),api as unknown as PaymentStripe,row.id);expect(api.paymentIntents.create).toHaveBeenCalledTimes(1);
 });
 test("ambiguous creation retry uses the same key and never a new attempt",async()=>{
@@ -97,4 +97,10 @@ test("collection and webhook matching use the accepted ledger amount, not a glob
  const api=stripe(); await collectCharge(db(),api as unknown as PaymentStripe,row.id);
  expect(api.paymentIntents.create).toHaveBeenCalledWith(expect.objectContaining({amount:44900}),expect.anything());
  expect(()=>verifyIntent(row,{...intent,amount:39900})).toThrow();
+});
+
+test("unresolved consent blocks every Stripe call",async()=>{
+ rpc.mockResolvedValue({data:null,error:{message:"consent_review_required"}});const api=stripe();
+ await expect(collectCharge(db(),api as unknown as PaymentStripe,row.id)).rejects.toThrow("Consent review required");
+ expect(api.accounts.retrieve).not.toHaveBeenCalled();expect(api.paymentIntents.create).not.toHaveBeenCalled();expect(api.paymentIntents.confirm).not.toHaveBeenCalled();
 });
