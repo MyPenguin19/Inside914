@@ -71,3 +71,15 @@ test("different campaign prices produce a correct multi-area authorization",()=>
  expect(screen.getByText("Due today: $0")).toBeTruthy();
  expect(hold).not.toHaveBeenCalled();
 });
+
+test("closed checkout displays its neutral server refusal in the area picker",async()=>{
+ const message="Reservations are not open yet. You can explore the advertising areas or contact Info@inside914.com.";
+ hold.mockResolvedValue({ok:false,message});render(<CategoryZoneSelector {...props}/>);
+ fireEvent.click(screen.getByRole("checkbox",{name:/Central/}));
+ fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
+ fireEvent.click(screen.getByRole("button",{name:/position F1:/}));
+ fireEvent.click(screen.getByRole("button",{name:"Continue to artwork"}));
+ await waitFor(()=>expect(screen.getByRole("alert").textContent).toBe(message));
+ expect(push).not.toHaveBeenCalled();
+ expect(screen.getByRole("heading",{name:"Choose one position in each area"})).toBeTruthy();
+});

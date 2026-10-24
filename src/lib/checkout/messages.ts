@@ -1,6 +1,9 @@
 // Plain-language explanations for checkout outcomes, shared by pages and client components.
 
+export const CHECKOUT_CLOSED_MESSAGE = "Reservations are not open yet. You can explore the advertising areas or contact Info@inside914.com.";
+
 export const CHECKOUT_MESSAGES: Record<string, string> = {
+  checkout_closed: CHECKOUT_CLOSED_MESSAGE,
   no_hold: "We couldn't find a position on hold for you. Please choose your position again.",
   hold_expired:
     "Your 15-minute hold ran out before checkout finished, so the position was released and your card was not kept. Nothing was charged. Please choose a position again.",
