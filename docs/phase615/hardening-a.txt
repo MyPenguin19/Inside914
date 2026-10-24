@@ -1,6 +1,7 @@
 PHASE 6.15D / STAGE A — October 24, 2026
 
 Confirmed defects corrected:
+- Terminal delivery failures could repeatedly occupy the oldest outbox batch and starve new confirmations. The preparation worker now excludes rows with durable deliveries; the delivery worker alone handles their safe retries.
 - Expired-link support belonged only to a later stacked stage. It now lives with the email infrastructure; messages need at least 60 seconds of remaining validity before dispatch. Provider calls have a 10-second timeout. Delivery already accepted by the provider cannot be recalled; delivery latency is not guaranteed.
 - A later sent/delayed event could regress delivered status. Signed events now preserve delivery success and adverse outcomes, including duplicate and late-worker reconciliation.
 - One infrastructure exception could abort a due-message batch. Rows are independently isolated; durable state remains recoverable.

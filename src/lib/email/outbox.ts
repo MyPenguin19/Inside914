@@ -150,14 +150,18 @@ export async function processOutboxForBooking(admin: Admin, bookingId: string, s
 
 // Send (or retry) everything due, oldest first. Run by the email-outbox cron route.
 export async function processDueOutbox(admin: Admin, limit = 20, send?: SendEmail) {
-  const { data } = await admin
+  const { data, error } = await admin
     .from("email_outbox")
-    .select("id")
+    .select("id,email_deliveries()")
+    .is("email_deliveries",null)
     .in("status", ["pending", "failed", "sending"])
     .lte("next_attempt_at", new Date().toISOString())
     .lt("attempts", MAX_ATTEMPTS)
     .order("next_attempt_at")
     .limit(limit);
+  if(error) throw new Error("email_outbox_due_query_failed");
+  // Prepared envelopes are drained only by processDueDeliveries; terminal failures
+  // must not occupy every oldest-first outbox batch indefinitely.
   const results = [];
   for (const r of data ?? []) {
     try { results.push(await processOutboxRow(admin, r.id, send)); }

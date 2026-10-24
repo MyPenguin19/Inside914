@@ -298,6 +298,18 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
       return { ...ctx, outboxId: data!.id };
     }
 
+    test("terminal delivery failures cannot starve newly queued confirmations",async()=>{
+      const first=await confirmed("B4"),second=await confirmed("B2");
+      const provider=randomUUID();await outbox.processOutboxRow(admin,first.outboxId,async()=>({id:provider}));
+      const delivery=(await admin.from("email_deliveries").select("id").eq("outbox_id",first.outboxId).single()).data!;
+      expect((await admin.rpc("record_email_event",{p_event_id:randomUUID(),p_delivery_id:delivery.id,p_provider_id:provider,p_kind:"email.bounced",p_at:new Date().toISOString()})).error).toBeNull();
+      await admin.from("email_outbox").update({next_attempt_at:new Date(0).toISOString()}).eq("id",first.outboxId);
+      await admin.from("email_outbox").update({next_attempt_at:new Date(1).toISOString()}).eq("id",second.outboxId);
+      const send=vi.fn(async()=>({id:randomUUID()}));
+      expect(await outbox.processDueOutbox(admin,1,send)).toEqual(["sent"]);expect(send).toHaveBeenCalledTimes(1);
+      expect((await admin.from("email_outbox").select("status").eq("id",second.outboxId).single()).data?.status).toBe("sent");
+    });
+
     test("an ambiguous send reuses its link and message and success is never repeated", async () => {
       const { bookingId, outboxId } = await confirmed("B4");
       const failing = vi.fn(async (_message: import("@/lib/email/outbox").EmailMessage) => { void _message; throw new Error("resend_503"); });
