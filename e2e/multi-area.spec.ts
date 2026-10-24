@@ -236,7 +236,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   expect(ok(await db.from("zone_charges").select("id").in("edition_id", ids))).toHaveLength(0);
   const consents = ok(await db.from("payment_consents").select("amount_cents,terms_version,consent_text").in("booking_id", bookings.map(b => b.id)))!;
   expect(consents).toHaveLength(3); expect(consents.every(c => c.amount_cents === 39900)).toBe(true);
-  for (const consent of consents) {expect(consent.terms_version).toBe("square-zones-2026-10-24-review-3");expect(consent.consent_text).toBe(displayedConsent);}
+  for (const consent of consents) {expect(consent.terms_version).toBe("square-zones-2026-10-24-review-4");expect(consent.consent_text).toBe(displayedConsent);}
 });
 
 test("another advertiser can reserve another square in the same area without a category", async ({ page }) => {

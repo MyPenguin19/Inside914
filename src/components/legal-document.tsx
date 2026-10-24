@@ -1,4 +1,4 @@
-import policies from "@/lib/legal/versions/2026-10-24-review-3.json";
+import policies from "@/lib/legal/versions/2026-10-24-review-4.json";
 import { SUPPORT_EMAIL } from "@/lib/support";
 
 // Immutable proposed text is shared by the renderer and the version archive.
