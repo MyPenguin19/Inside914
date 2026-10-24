@@ -298,27 +298,42 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
       return { ...ctx, outboxId: data!.id };
     }
 
-    test("a failed send is retried later, its link revoked, and success is never repeated", async () => {
+    test("terminal delivery failures cannot starve newly queued confirmations",async()=>{
+      const first=await confirmed("B4"),second=await confirmed("B2");
+      const provider=randomUUID();await outbox.processOutboxRow(admin,first.outboxId,async()=>({id:provider}));
+      const delivery=(await admin.from("email_deliveries").select("id").eq("outbox_id",first.outboxId).single()).data!;
+      expect((await admin.rpc("record_email_event",{p_event_id:randomUUID(),p_delivery_id:delivery.id,p_provider_id:provider,p_kind:"email.bounced",p_at:new Date().toISOString()})).error).toBeNull();
+      await admin.from("email_outbox").update({next_attempt_at:new Date(0).toISOString()}).eq("id",first.outboxId);
+      await admin.from("email_outbox").update({next_attempt_at:new Date(1).toISOString()}).eq("id",second.outboxId);
+      const send=vi.fn(async()=>({id:randomUUID()}));
+      expect(await outbox.processDueOutbox(admin,1,send)).toEqual(["sent"]);expect(send).toHaveBeenCalledTimes(1);
+      expect((await admin.from("email_outbox").select("status").eq("id",second.outboxId).single()).data?.status).toBe("sent");
+    });
+
+    test("an ambiguous send reuses its link and message and success is never repeated", async () => {
       const { bookingId, outboxId } = await confirmed("B4");
-      const failing = vi.fn(async () => Promise.reject(new Error("resend_503")));
+      const failing = vi.fn(async (_message: import("@/lib/email/outbox").EmailMessage) => { void _message; throw new Error("resend_503"); });
       expect(await outbox.processOutboxRow(admin, outboxId, failing)).toBe("failed");
       let row = (await admin.from("email_outbox").select("*").eq("id", outboxId).single()).data!;
-      expect(row).toMatchObject({ status: "failed", attempts: 1, last_error: "resend_503" });
+      expect(row).toMatchObject({ status: "failed", attempts: 1, last_error: "provider_outcome_unknown" });
       expect(Date.parse(row.next_attempt_at)).toBeGreaterThan(Date.now());
       const issued = (await admin.from("booking_access_tokens").select("revoked_at").eq("booking_id", bookingId)).data!;
-      expect(issued.every((t) => t.revoked_at)).toBe(true);
+      expect(issued.every((t) => t.revoked_at === null)).toBe(true);
       expect((await admin.from("bookings").select("status").eq("id", bookingId).single()).data!.status).toBe("reserved");
 
       // Not due yet: skipped.
       const working = vi.fn(async () => ({ id: "email_ok" }));
       expect(await outbox.processOutboxRow(admin, outboxId, working)).toBe("skipped");
 
-      await admin.from("email_outbox").update({ next_attempt_at: new Date(Date.now() - 1000).toISOString() }).eq("id", outboxId);
+      await admin.from("email_deliveries").update({ next_attempt_at: new Date(Date.now() - 1000).toISOString() }).eq("outbox_id", outboxId);
       expect(await outbox.processOutboxRow(admin, outboxId, working)).toBe("sent");
       row = (await admin.from("email_outbox").select("*").eq("id", outboxId).single()).data!;
       expect(row).toMatchObject({ status: "sent", attempts: 2, provider_message_id: "email_ok" });
 
       const message = (working.mock.calls[0] as unknown[])[0] as { to: string; text: string };
+      expect(message).toEqual(failing.mock.calls[0][0]);
+      const linkToken=message.text.match(/\/r\/([A-Za-z0-9_-]{43})/)![1];
+      expect(await tokens.resolveAccessToken(admin,linkToken)).toBe(bookingId);
       expect(message.to).toBe("ana@example.com");
       expect(message.text).toMatch(/\/r\/[A-Za-z0-9_-]{43}/);
       expect(message.text).not.toMatch(/\b(cus|seti|pm)_/);

@@ -2,9 +2,8 @@ import { getCollectionContext } from "@/lib/payments/environment";
 import { deliverPaymentNotice } from "@/lib/payments/notices";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { issueAccessToken, revokeAccessToken } from "@/lib/access/tokens";
+import { issueAccessToken } from "@/lib/access/tokens";
 import { getReservationView } from "@/lib/checkout/reservation";
-import { isDevTestModeActive } from "@/lib/dev/test-mode";
 import { getAppUrl, getEmailEnv } from "@/lib/env/checkout";
 import type { Database } from "@/lib/supabase/database.types";
 import { reservationCancelledEmail } from "./reservation-cancelled";
@@ -12,46 +11,17 @@ import { reservationConfirmedEmail } from "./reservation-confirmed";
 
 // Transactional email outbox. Rows are queued inside confirm_booking() (same transaction as the
 // reservation), so an email problem cannot undo it. Atomic claims prevent concurrent sends.
-// Ambiguous provider failures still require reconciliation: retries currently use new keys.
+// Stable encrypted envelopes and bounded provider retries live in email_deliveries.
 
 type Admin = SupabaseClient<Database>;
 
-export type EmailMessage = { to: string; subject: string; html: string; text: string; idempotencyKey: string };
-export type SendEmail = (message: EmailMessage) => Promise<{ id: string }>;
-
-export const TEST_NOT_DELIVERED = "not-delivered:test-reservation";
-
-// Development TEST reservations are never emailed. In dev, the email is written to .dev-emails/
-// for review instead (labeled [TEST]).
-async function writeTestPreview(rowId: string, message: EmailMessage) {
-  if (!isDevTestModeActive()) return;
-  const { mkdir, writeFile } = await import("node:fs/promises");
-  await mkdir(".dev-emails", { recursive: true });
-  await writeFile(`.dev-emails/${rowId}.html`, message.html);
-}
-
+export { sendWithResend } from "./provider";
+export type { EmailMessage, SendEmail } from "./provider";
+import { sendWithResend, type SendEmail } from "./provider";
+import { processDelivery, queueDelivery, TEST_NOT_DELIVERED } from "./delivery";
+export { TEST_NOT_DELIVERED };
 const MAX_ATTEMPTS = 8;
-const backoffMinutes = (attempts: number) => Math.min(2 ** attempts, 360); // 2, 4, 8 ... up to 6 h
-
-// Sends through Resend's HTTP API (no SDK). Throws on any failure.
-export const sendWithResend: SendEmail = async (message) => {
-  const { resendApiKey, from } = getEmailEnv();
-  if (!resendApiKey) throw new Error("email_not_configured");
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    signal: AbortSignal.timeout(30_000),
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": message.idempotencyKey,
-    },
-    body: JSON.stringify({ from, to: [message.to], subject: message.subject, html: message.html, text: message.text }),
-  });
-  if (!response.ok) throw new Error(`resend_${response.status}`);
-  const body = (await response.json()) as { id?: string };
-  if (!body.id || typeof body.id !== "string") throw new Error("resend_missing_message_id");
-  return { id: body.id };
-};
+const backoffMinutes = (attempts: number) => Math.min(2 ** attempts, 360);
 
 type OutboxRow = Database["public"]["Tables"]["email_outbox"]["Row"];
 
@@ -80,28 +50,29 @@ async function deliver(
   email: { subject: string; html: string; text: string },
   send: SendEmail,
 ) {
-  const message = { to, ...email, idempotencyKey: `${row.id}:${row.attempts + 1}` };
-  // Checked on the reservation itself (not the current mode), so a test reservation can never
-  // reach Resend, even if it's processed later somewhere test mode is off.
-  const sent = isTest ? (await writeTestPreview(row.id, message), { id: TEST_NOT_DELIVERED }) : await send(message);
-  await admin
-    .from("email_outbox")
-    .update({ status: "sent", attempts: row.attempts + 1, provider_message_id: sent.id, sent_at: new Date().toISOString(), last_error: null })
-    .eq("id", row.id);
-  return "sent" as const;
+  const id = await queueDelivery(admin, `outbox:${row.id}`, { from:getEmailEnv().from,to,...email }, {outboxId:row.id,isTest});
+  return processDelivery(admin,id,send);
 }
 
 export async function processOutboxRow(admin: Admin, rowId: string, send: SendEmail = sendWithResend) {
+  const existing=await admin.from("email_deliveries").select("id").eq("outbox_id",rowId).maybeSingle();
+  if(existing.error) throw new Error("email_delivery_lookup_failed");
+  if(existing.data) return processDelivery(admin,existing.data.id,send);
   const row = await claim(admin, rowId);
   if (!row) return "skipped" as const;
 
-  let accessTokenId: string | null = null;
   try {
     if (row.kind === "payment_needed" || row.kind === "payment_receipt") {
       const providerId=await deliverPaymentNotice(admin,row,send);
       const {error}=await admin.from("email_outbox").update({status:"sent",attempts:row.attempts+1,provider_message_id:providerId,sent_at:new Date().toISOString(),last_error:null}).eq("id",row.id);
       if(error) throw new Error("Could not record local payment notice preview");
       return "sent" as const;
+    }
+    // Older code retried with new links/keys. No durable envelope means an earlier
+    // ambiguous attempt cannot safely be reconciled or resent automatically.
+    if(row.attempts>0) {
+      await admin.from("email_outbox").update({status:"investigation",last_error:"legacy_attempt_requires_reconciliation"}).eq("id",row.id);
+      return "investigation" as const;
     }
     const view = await getReservationView(admin, row.booking_id);
     const { supportEmail } = getEmailEnv();
@@ -128,10 +99,13 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
 
     if (!view || view.status !== "reserved" || !view.reference || !view.email) throw new Error("reservation_not_ready");
 
-    // A fresh link per attempt; a failed attempt's link is revoked below.
+    // Persist this link in the encrypted envelope before the first provider request.
     const access = await issueAccessToken(admin, row.booking_id);
-    accessTokenId = access.id;
+    const accepted=await admin.from("payment_consents").select("terms_version").eq("booking_id",row.booking_id).order("consented_at",{ascending:false}).limit(1).maybeSingle();
+    if(accepted.error) throw new Error("consent_lookup_failed");
+    const legacy=["2026-10-16-draft-1","square-zones-v1"].includes(accepted.data?.terms_version??"");
     const email = reservationConfirmedEmail({
+      ...(legacy?{deadlinePolicy:"Your originally accepted deadline and billing terms remain unchanged. If the campaign does not fill by its stated deadline, your reservation is canceled without charge under those terms. Contact Inside914 about any proposed extension."}:{}),
       businessName: view.businessName ?? "",
       contactName: view.contactName ?? "",
       reference: view.reference,
@@ -151,10 +125,10 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
 
     return await deliver(admin, row, view.email, view.isTest, email, send);
   } catch (error) {
-    if (accessTokenId) await revokeAccessToken(admin, accessTokenId).catch(() => {});
-    const attempts = row.attempts + 1;
+    const attempts = row.attempts; // Preparation never reached a provider; preserve safe retry.
     // Error codes only: never log customer details or tokens.
-    const code = error instanceof Error ? error.message.slice(0, 80) : "unknown";
+    const code = "email_preparation_failed"; // Never persist arbitrary exception text or private URLs.
+    void error;
     await admin
       .from("email_outbox")
       .update({
@@ -176,15 +150,22 @@ export async function processOutboxForBooking(admin: Admin, bookingId: string, s
 
 // Send (or retry) everything due, oldest first. Run by the email-outbox cron route.
 export async function processDueOutbox(admin: Admin, limit = 20, send?: SendEmail) {
-  const { data } = await admin
+  const { data, error } = await admin
     .from("email_outbox")
-    .select("id")
+    .select("id,email_deliveries()")
+    .is("email_deliveries",null)
     .in("status", ["pending", "failed", "sending"])
     .lte("next_attempt_at", new Date().toISOString())
     .lt("attempts", MAX_ATTEMPTS)
     .order("next_attempt_at")
     .limit(limit);
+  if(error) throw new Error("email_outbox_due_query_failed");
+  // Prepared envelopes are drained only by processDueDeliveries; terminal failures
+  // must not occupy every oldest-first outbox batch indefinitely.
   const results = [];
-  for (const r of data ?? []) results.push(await processOutboxRow(admin, r.id, send));
+  for (const r of data ?? []) {
+    try { results.push(await processOutboxRow(admin, r.id, send)); }
+    catch { results.push("failed" as const); }
+  }
   return results;
 }

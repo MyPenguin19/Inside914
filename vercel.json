@@ -6,7 +6,10 @@
       "revision/shared-postcard-mvp": false,
       "feature/campaign-management-pricing": false,
       "feature/artwork-quality-review": false,
-      "feature/artwork-editor-ux-fix": false
+      "feature/artwork-editor-ux-fix": false,
+      "feature/phase615a-core-reliability": false,
+      "feature/phase615b-customer-operations": false,
+      "feature/phase615c-transparency-invitations": false
     }
   },
   "crons": [

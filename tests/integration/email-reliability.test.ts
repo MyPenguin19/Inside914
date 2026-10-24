@@ -1,0 +1,97 @@
+import { randomUUID } from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
+import { afterEach, expect, test, vi } from "vitest";
+import type { Database } from "@/lib/supabase/database.types";
+vi.mock("server-only",()=>({}));
+const {queueDelivery,processDelivery}=await import("@/lib/email/delivery");
+const {EmailProviderError}=await import("@/lib/email/provider");
+const db=createClient<Database>(process.env.SUPABASE_URL!,process.env.SUPABASE_SECRET_KEY!,{auth:{persistSession:false}});
+const ids:string[]=[];
+afterEach(async()=>{vi.unstubAllEnvs();if(ids.length)await db.from("email_deliveries").delete().in("id",ids.splice(0));});
+async function queued(){const id=await queueDelivery(db,`fixture:${randomUUID()}`,{from:"Inside914 <sender@example.com>",to:"client@example.com",subject:"Fixture",html:"<p>private link</p>",text:"private link"});ids.push(id);return id;}
+const due=async(id:string)=>{const r=await db.from("email_deliveries").update({next_attempt_at:new Date(0).toISOString()}).eq("id",id);expect(r.error).toBeNull();};
+test("concurrent workers have one fenced lease and immutable payload",async()=>{
+ const id=await queued();const send=vi.fn(async()=>{await new Promise(r=>setTimeout(r,80));return {id:randomUUID()};});
+ const outcomes=await Promise.all([processDelivery(db,id,send),processDelivery(db,id,send)]);
+ expect(outcomes.sort()).toEqual(["sent","skipped"]);expect(send).toHaveBeenCalledTimes(1);
+});
+test("an ambiguous accepted send is reconciled by signed event metadata without resending",async()=>{
+ const id=await queued();const send=vi.fn(async()=>{throw new Error("timeout private-url");});
+ expect(await processDelivery(db,id,send)).toBe("failed");
+ const event={p_event_id:randomUUID(),p_delivery_id:id,p_provider_id:randomUUID(),p_kind:"email.delivered",p_at:new Date().toISOString()};
+ expect((await db.rpc("record_email_event",event)).data).toBe("recorded");
+ expect((await db.rpc("record_email_event",event)).data).toBe("duplicate");
+ await due(id);expect(await processDelivery(db,id,send)).toBe("skipped");expect(send).toHaveBeenCalledTimes(1);
+ const row=(await db.from("email_deliveries").select("*").eq("id",id).single()).data!;expect(row.status).toBe("accepted");expect(row.last_error).toBeNull();
+});
+test("unknown acceptance outside provider retention requires investigation and preserves envelope",async()=>{
+ const id=await queued();await processDelivery(db,id,async()=>{throw new Error("timeout");});
+ await db.from("email_deliveries").update({first_attempt_at:new Date(Date.now()-24*3600000).toISOString(),next_attempt_at:new Date(0).toISOString()}).eq("id",id);
+ const send=vi.fn();expect(await processDelivery(db,id,send)).toBe("skipped");expect(send).not.toHaveBeenCalled();
+ expect((await db.from("email_deliveries").select("status").eq("id",id).single()).data?.status).toBe("investigation");
+});
+test("definitive failure is safely retryable; late worker cannot overwrite webhook",async()=>{
+ const id=await queued();await processDelivery(db,id,async()=>{throw new EmailProviderError("provider_http_429",true);});await due(id);
+ const providerId=randomUUID();expect(await processDelivery(db,id,async()=>{
+  const r=await db.rpc("record_email_event",{p_event_id:randomUUID(),p_delivery_id:id,p_provider_id:providerId,p_kind:"email.bounced",p_at:new Date().toISOString()});expect(r.error).toBeNull();return {id:providerId};
+ })).toBe("failed");
+ const row=(await db.from("email_deliveries").select("*").eq("id",id).single()).data!;expect(row.status).toBe("failed");expect(row.provider_outcome).toBe("email.bounced");expect(row.retry_safe).toBe(false);
+});
+test("anonymous callers cannot read envelopes or claim a message",async()=>{
+ const id=await queued();const anon=createClient<Database>(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!);
+ expect((await anon.from("email_deliveries").select("payload_ciphertext")).error).not.toBeNull();
+ expect((await anon.rpc("claim_email_delivery",{p_id:id})).error).not.toBeNull();
+});
+
+test("admin safely retries a definitive rejection with the same envelope and an audited action",async()=>{
+ const admin=createClient<Database>(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{auth:{persistSession:false}});
+ const email=`email-admin-${randomUUID()}@example.com`,password=randomUUID();
+ const created=await db.auth.admin.createUser({email,password,email_confirm:true});expect(created.error).toBeNull();const user=created.data.user!.id;
+ try {
+  expect((await db.from("admins").insert({user_id:user})).error).toBeNull();expect((await admin.auth.signInWithPassword({email,password})).error).toBeNull();
+  const id=await queued();await processDelivery(db,id,async()=>{throw new EmailProviderError("provider_http_429",true);});
+  const before=(await db.from("email_deliveries").select("payload_ciphertext").eq("id",id).single()).data!;
+  expect((await admin.rpc("admin_retry_email_delivery",{p_id:id})).error).toBeNull();
+  expect((await db.from("email_deliveries").select("status,payload_ciphertext").eq("id",id).single()).data).toEqual({status:"pending",payload_ciphertext:before.payload_ciphertext});
+  expect((await db.from("admin_events").select("event_type").eq("target_id",id)).data).toEqual([{event_type:"email.retry_requested"}]);
+ }finally{await db.from("admin_events").delete().eq("admin_user_id",user);await admin.auth.signOut();await db.auth.admin.deleteUser(user);}
+});
+
+
+test("webhook after a worker crash and expired lease reconciles without another request",async()=>{
+ const id=await queued();expect((await db.rpc("claim_email_delivery",{p_id:id})).data).toHaveLength(1);
+ await db.from("email_deliveries").update({lease_until:new Date(0).toISOString()}).eq("id",id);
+ await db.rpc("record_email_event",{p_event_id:randomUUID(),p_delivery_id:id,p_provider_id:randomUUID(),p_kind:"email.delivered",p_at:new Date().toISOString()});
+ const send=vi.fn();expect(await processDelivery(db,id,send)).toBe("skipped");expect(send).not.toHaveBeenCalled();
+});
+test("ambiguous retry retains exactly the same payload and key, even after a definitive later rejection",async()=>{
+ const id=await queued();const send=vi.fn().mockRejectedValueOnce(new EmailProviderError("provider_outcome_unknown",false)).mockRejectedValueOnce(new EmailProviderError("provider_http_429",true)).mockResolvedValueOnce({id:randomUUID()});
+ await processDelivery(db,id,send);await due(id);await processDelivery(db,id,send);
+ expect((await db.from("email_deliveries").select("retry_safe,ambiguous").eq("id",id).single()).data).toEqual({retry_safe:false,ambiguous:true});
+ await due(id);expect(await processDelivery(db,id,send)).toBe("sent");expect(send.mock.calls[0]).toEqual(send.mock.calls[1]);expect(send.mock.calls[1]).toEqual(send.mock.calls[2]);
+});
+test("an outage before a never-attempted message does not spend its provider retention window",async()=>{
+ const id=await queued();await db.from("email_deliveries").update({created_at:new Date(Date.now()-48*3600000).toISOString()}).eq("id",id);
+ const send=vi.fn(async()=>({id:randomUUID()}));expect(await processDelivery(db,id,send)).toBe("sent");expect(send).toHaveBeenCalledTimes(1);
+});
+test("missing encryption key preserves ciphertext for investigation and never dispatches",async()=>{
+ const id=await queued();vi.stubEnv("EMAIL_PAYLOAD_ENCRYPTION_KEY","");const send=vi.fn();
+ expect(await processDelivery(db,id,send)).toBe("investigation");expect(send).not.toHaveBeenCalled();
+ expect((await db.from("email_deliveries").select("last_error").eq("id",id).single()).data?.last_error).toBe("email_envelope_unavailable");
+ await expect(queued()).rejects.toThrow("email_encryption_not_configured");
+});
+test("expired or nearly expired immutable links are never dispatched",async()=>{
+ for(const offset of [-1000,30000]) {
+  const id=await queueDelivery(db,`fixture:${randomUUID()}`,{from:"sender@example.com",to:"client@example.com",subject:"Fixture",html:"private",text:"private",expiresAt:new Date(Date.now()+offset).toISOString()});ids.push(id);
+  const send=vi.fn();expect(await processDelivery(db,id,send)).toBe("failed");expect(send).not.toHaveBeenCalled();
+  expect((await db.from("email_deliveries").select("last_error,retry_safe").eq("id",id).single()).data).toEqual({last_error:"email_link_expired",retry_safe:false});
+ }
+});
+test("delivered cannot regress and an adverse event cannot be cleared by a later positive event",async()=>{
+ const id=await queued();const provider=randomUUID();const at=Date.now();
+ const event=async(kind:string,time:number)=>db.rpc("record_email_event",{p_event_id:randomUUID(),p_delivery_id:id,p_provider_id:provider,p_kind:kind,p_at:new Date(time).toISOString()});
+ expect((await event("email.delivered",at)).data).toBe("recorded");expect((await event("email.sent",at+1)).data).toBe("older");
+ expect((await event("email.bounced",at+2)).data).toBe("recorded");expect((await event("email.delivered",at+3)).data).toBe("older");
+ expect((await db.from("email_deliveries").select("status,provider_outcome").eq("id",id).single()).data).toEqual({status:"failed",provider_outcome:"email.bounced"});
+ expect((await db.rpc("record_email_event",{p_event_id:randomUUID(),p_delivery_id:id,p_provider_id:randomUUID(),p_kind:"email.delivered",p_at:new Date().toISOString()})).data).toBe("mismatch");
+});

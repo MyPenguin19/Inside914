@@ -5,10 +5,10 @@ import { Suspense } from "react";
 import { EmptyState, LoadError, PageHeader, PanelSkeleton } from "@/components/admin/ui";
 import { DataTable } from "@/components/ui/data-table";
 import { ButtonLink } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/primitives";
+import { StatusBadge, Notice } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
-import { campaignStats } from "@/lib/admin/metrics";
+import { campaignStats, deadlineMissed } from "@/lib/admin/metrics";
 import { formatDay, formatIssueMonth, formatPrice } from "@/lib/format";
 
 const STATUSES = ["active", "draft", "archived"] as const;
@@ -45,6 +45,12 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
 
   return (
     <>
+      {rows.filter(r=>deadlineMissed(r.edition,r.stats,now)).map(({edition:e,stats})=><Notice key={e.id} tone="warning" role="note">
+        <strong>Campaign needs action: {e.name??e.zoneName}</strong>
+        <p>{e.zoneName} · Deadline {formatDay(e.artworkDeadline)} · {stats.reservedUnits}/{stats.sellableUnits} filled · {stats.sellableUnits-stats.reservedUnits} missing.</p>
+        <p>Confirmed reservations and their agreed amounts are unchanged. No automatic cancellation or charge.</p>
+        <Link className="underline" href={`/admin/campaigns/${e.id}#status-title`}>Review amounts, extend deadline or cancel campaign</Link>
+      </Notice>)}
       <nav aria-label="Filter by status" className="flex flex-wrap gap-2 text-sm">
         {STATUSES.map((s) => (
           <Link

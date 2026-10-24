@@ -26,9 +26,9 @@ test("does not call the provider when no delivery key is configured", async () =
 });
 test("does not accept an HTTP success without a provider message identifier", async () => {
   configure(); vi.stubGlobal("fetch", vi.fn(async () => Response.json({})));
-  await expect(sendWithResend(message)).rejects.toThrow("resend_missing_message_id");
+  await expect(sendWithResend(message)).rejects.toThrow("provider_outcome_unknown");
 });
 test("reports provider failure as a code without exposing its response body", async () => {
   configure(); vi.stubGlobal("fetch", vi.fn(async () => new Response("sensitive provider detail", { status: 503 })));
-  await expect(sendWithResend(message)).rejects.toThrow(/^resend_503$/);
+  await expect(sendWithResend(message)).rejects.toThrow(/^provider_http_503$/);
 });

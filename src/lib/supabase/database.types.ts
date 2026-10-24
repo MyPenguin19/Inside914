@@ -1,3 +1,4 @@
+export type EmailDeliveryRow = { id:string; logical_key:string; outbox_id:string|null; payload_ciphertext:string; status:string; is_test:boolean; attempts:number; first_attempt_at:string|null; next_attempt_at:string; lease_id:string|null; lease_until:string|null; retry_safe:boolean; ambiguous:boolean; provider_message_id:string|null; provider_outcome:string|null; provider_event_at:string|null; last_error:string|null; created_at:string; accepted_at:string|null };
 export type ZoneChargeRow = { stripe_mode: "test" | "live"; stripe_account_id: string | null; id: string; booking_id: string; edition_id: string; consent_id: string; amount_cents: number; customer_id: string; payment_method_id: string; payment_intent_id: string | null; status: string; created_at: string; updated_at: string; created_by: string; recovery_hash: string | null; recovery_expires_at: string | null; last_event_at: number; failure_code: string | null };
 export type Json =
   | string
@@ -15,6 +16,9 @@ export type Database = {
   }
   public: {
     Tables: {
+      email_deliveries: { Row:EmailDeliveryRow; Insert:Partial<EmailDeliveryRow>&Pick<EmailDeliveryRow,"logical_key"|"payload_ciphertext">; Update:Partial<EmailDeliveryRow>; Relationships:[{foreignKeyName:"email_deliveries_outbox_id_fkey";columns:["outbox_id"];isOneToOne:true;referencedRelation:"email_outbox";referencedColumns:["id"]}] }
+      email_delivery_events: { Row:{id:string;delivery_id:string;provider_message_id:string;kind:string;occurred_at:string;received_at:string}; Insert:{id:string;delivery_id:string;provider_message_id:string;kind:string;occurred_at:string;received_at?:string}; Update:{kind?:string}; Relationships:[] }
+
       artwork_uploads: {
         Row: {
           id: string
@@ -766,6 +770,8 @@ export type Database = {
       }
       payment_consents: {
         Row: {
+          reservation_deadline_at_consent: string | null
+          consent_text: string | null
           amount_cents: number
           booking_id: string
           consented_at: string
@@ -777,6 +783,8 @@ export type Database = {
           terms_version: string
         }
         Insert: {
+          reservation_deadline_at_consent?: string | null
+          consent_text?: string | null
           amount_cents: number
           booking_id: string
           consented_at?: string
@@ -788,6 +796,8 @@ export type Database = {
           terms_version: string
         }
         Update: {
+          reservation_deadline_at_consent?: string | null
+          consent_text?: string | null
           amount_cents?: number
           booking_id?: string
           consented_at?: string
@@ -978,6 +988,13 @@ export type Database = {
       }
     }
     Functions: {
+      admin_consent_review: {Args:{p_bookings:string[]};Returns:{booking_id:string;reason:string|null}[]}
+      assert_charge_consent: {Args:{p_charge:string};Returns:undefined}
+      claim_email_delivery: {Args:{p_id:string};Returns:EmailDeliveryRow[]}
+      sync_email_delivery: {Args:{p_id:string};Returns:undefined}
+      admin_retry_email_delivery: {Args:{p_id:string};Returns:undefined}
+      record_email_event: {Args:{p_event_id:string;p_delivery_id:string;p_provider_id:string;p_kind:string;p_at:string};Returns:string}
+
       save_staged_artwork: { Args: { p_token_hash: string; p_upload_id: string; p_crop: Json; p_zoom: number; p_crop_approved?: boolean }; Returns: undefined }
       admin_activate_house_artwork: { Args: { p_upload_id: string }; Returns: string }
       claim_abandoned_artwork: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Tables"]["artwork_uploads"]["Row"][] }

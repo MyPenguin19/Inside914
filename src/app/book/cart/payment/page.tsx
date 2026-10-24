@@ -1,3 +1,4 @@
+import { cartConsentText } from "@/lib/checkout/terms";
 import { BookingSteps } from "@/components/booking/booking-steps";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
@@ -54,9 +55,6 @@ async function Payment() {
   );
   const total = cart.members.reduce((n, b) => n + b.priceCents, 0);
   const testMode = isDevTestModeActive();
-  const amounts = cart.members
-    .map((b, i) => `${views[i]?.zoneName}: ${formatPrice(b.priceCents)}`)
-    .join("; ");
   return (
     <div className="space-y-6">
       <BookingSteps current={4} />
@@ -88,7 +86,7 @@ async function Payment() {
           publishableKey={testMode ? null : getStripePublishableKey()}
           testMode={testMode}
           termsVersion={CART_TERMS}
-          consentText={`I authorize Inside914 to save my card for future off-session payments for these campaigns: ${amounts}. ${cart.members.every(b=>b.productModel === "square_v1") ? "Each agreed amount is charged once only if that specific zone reaches 10 advertisers and is approved for mailing." : "Each amount is charged once only if that campaign fills and is approved for mailing."} If a campaign does not fill by its deadline, that reservation is canceled without charge. The combined maximum is ${formatPrice(total)}. This is not a recurring subscription. Nothing is charged today.`}
+          consentText={cartConsentText(cart.members.map((b,i)=>({name:views[i]?.zoneName??"Selected area",amount:b.priceCents})))}
           successHref="/book/cart"
           returnHref="/book/cart/complete"
           actions={{

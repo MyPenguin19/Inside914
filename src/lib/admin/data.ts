@@ -277,22 +277,27 @@ export async function listArtworkReviews(db: Db, bookingId: string) {
 
 // Latest consent per booking: the amount the customer agreed to, to check against the stored price.
 export async function listConsents(db: Db, bookingIds: string[]) {
-  if (!bookingIds.length) return new Map<string, { amountCents: number; pricingMode: string }>();
+  if (!bookingIds.length) return new Map<string, { amountCents: number; pricingMode: string; reviewReason?: string | null }>();
   const { data, error } = await db.from("payment_consents").select("booking_id, amount_cents, pricing_mode, consented_at").in("booking_id", bookingIds).order("consented_at");
   if (error) fail("consents", error);
-  return new Map(data.map((c) => [c.booking_id, { amountCents: c.amount_cents, pricingMode: c.pricing_mode }]));
+  const review=await db.rpc("admin_consent_review",{p_bookings:bookingIds});
+  if(review.error) fail("consent review",review.error);
+  const reasons=new Map(review.data.map(r=>[r.booking_id,r.reason]));
+  return new Map(data.map((c) => [c.booking_id, { amountCents: c.amount_cents, pricingMode: c.pricing_mode,reviewReason:reasons.get(c.booking_id) }]));
 }
 
 export async function getConsent(db: Db, bookingId: string) {
   const { data, error } = await db
     .from("payment_consents")
-    .select("amount_cents, currency, terms_version, consented_at, pricing_mode")
+    .select("amount_cents, currency, terms_version, consented_at, pricing_mode, consent_text, reservation_deadline_at_consent")
     .eq("booking_id", bookingId)
     .order("consented_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) fail("consent", error);
-  return data;
+  const review=await db.rpc("admin_consent_review",{p_bookings:[bookingId]});
+  if(review.error) fail("consent review",review.error);
+  return data?{...data,reviewReason:review.data[0]?.reason}:null;
 }
 
 export async function listEvidence(db: Db, editionId: string) {

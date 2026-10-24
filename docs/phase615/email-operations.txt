@@ -1,0 +1,12 @@
+Email reliability design and release prerequisites
+Resend keeps request idempotency keys for 24 hours. https://resend.com/docs/dashboard/emails/idempotency-keys
+Retrieve-by-provider-ID is available; an unknown accepted request cannot be reliably retrieved by idempotency key alone. Signed events tagged with the durable delivery UUID reconcile otherwise ambiguous sends. https://resend.com/docs/api-reference/emails/retrieve-email
+Signature verification follows the documented Svix raw-body HMAC protocol with constant-time comparison and five-minute timestamp tolerance. https://docs.svix.com/receiving/verifying-payloads/how-manual
+
+The encrypted envelope fixes sender, recipient, body and private link before sending. Its logical identity and provider key never change for automatic retries. Ten-minute fenced leases prevent routine parallel sends; a provider timeout remains ambiguous. Automatic retry stops before the 24-hour provider boundary; investigation is mandatory thereafter. Definitive HTTP rejection is safely retryable; bounces/complaints are not automatically retried. Delivery is not claimed exactly once.
+
+Separate production approval is needed for the additive migration, an independently generated EMAIL_PAYLOAD_ENCRYPTION_KEY (64 hex), RESEND_WEBHOOK_SECRET, and a Resend webhook endpoint for sent/delivered/delivery_delayed/bounced/complained/failed/suppressed events. Keep the encryption key secure and backed up; changing it without re-encrypting stored envelopes would prevent retries. Do not print keys. No production provider configuration or send was performed.
+
+Historic attempted outbox rows without a durable payload require provider investigation. Do not fabricate a new link/key for a possibly delivered message. Existing valid links remain valid. The owner can retry only definitively rejected messages from the reservation's existing admin page. Accepted indicates provider acceptance, not inbox placement.
+
+Vercel Hobby runs the existing retry cron daily; there is no promise of minute-level unattended recovery. Immediate checkout processing handles the first confirmation. A daily job may discover an ambiguous send only after the provider window and conservatively require investigation. Faster unattended retry would require separately reviewed scheduling capabilities, not an invalid Hobby cron frequency.

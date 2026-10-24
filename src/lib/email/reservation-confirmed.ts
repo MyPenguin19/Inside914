@@ -1,3 +1,4 @@
+import { DEADLINE_POLICY } from "@/lib/checkout/terms";
 
 import { bookingSizeLabel } from "@/lib/booking/products";
 import { formatDeadline, formatHouseholds, formatIssueMonth, formatPrice } from "@/lib/format";
@@ -20,6 +21,7 @@ export type ReservationEmailData = {
   priceCents: number;
   reservationUrl: string;
   supportEmail: string;
+  deadlinePolicy?: string;
   test?: boolean; // development TEST reservation: preview only, never delivered
   testPricing?: boolean; // temporary $1 / $2 prices (with test or live Stripe keys)
 };
@@ -47,7 +49,7 @@ export function reservationConfirmedEmail(d: ReservationEmailData) {
     "",
     ...rows.map(([k, v]) => `${k}: ${v}`),
     "",
-    "What happens next: once all postcard spaces are reserved and the campaign is approved, we'll attempt the authorized charge and let you know. If the campaign doesn't fill by its deadline, your reservation is canceled without charge.",
+    `What happens next: once all postcard spaces are reserved and the campaign is approved, we'll attempt the authorized charge and let you know. ${d.deadlinePolicy ?? DEADLINE_POLICY}`,
     "",
     `View your reservation and your ad (private link, don't share it): ${d.reservationUrl}`,
     "",
@@ -65,7 +67,7 @@ ${d.test ? `<tr><td style="padding:16px 32px 0"><p style="margin:0;padding:12px;
 <tr><td style="padding:8px 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">
 ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#5f5b53;width:42%">${escapeHtml(k)}</td><td style="padding:6px 0;font-weight:600">${escapeHtml(v)}</td></tr>`).join("")}
 </table></td></tr>
-<tr><td style="padding:8px 32px;color:#5f5b53;font-size:14px;line-height:21px">Once all postcard spaces are reserved and the campaign is approved, we'll attempt the authorized charge and let you know. If the campaign doesn't fill by its deadline, your reservation is canceled without charge.</td></tr>
+<tr><td style="padding:8px 32px;color:#5f5b53;font-size:14px;line-height:21px">Once all postcard spaces are reserved and the campaign is approved, we'll attempt the authorized charge and let you know. ${d.deadlinePolicy ?? DEADLINE_POLICY}</td></tr>
 <tr><td style="padding:16px 32px"><a href="${escapeHtml(d.reservationUrl)}" style="display:inline-block;background:#1c1b19;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-size:14px">View your reservation and ad</a>
 <p style="color:#5f5b53;font-size:12px">This private link is just for you. Please don't share it.</p></td></tr>
 <tr><td style="padding:8px 32px 28px;color:#5f5b53;font-size:12px;border-top:1px solid #e4e0d7">Questions? Email <a href="mailto:${escapeHtml(d.supportEmail)}" style="color:#1f5c4a">${escapeHtml(d.supportEmail)}</a>.<br>Inside914 · Local advertising you can verify.</td></tr>

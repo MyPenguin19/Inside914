@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/email/delivery", () => ({processDueDeliveries:vi.fn(async()=>[])}));
 const processDueOutbox = vi.fn(async () => []);
 vi.mock("@/lib/email/outbox", () => ({ processDueOutbox }));
 const rpc = vi.fn(async () => ({ data: 1, error: null }));

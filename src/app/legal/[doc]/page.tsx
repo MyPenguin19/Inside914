@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { TERMS_VERSION } from "@/lib/checkout/terms";
+import { TERMS_VERSION, DEADLINE_POLICY } from "@/lib/checkout/terms";
 
 // DRAFT policy pages. Placeholders for review by a lawyer (including card-network rules for
 // saved cards and future charges) before Inside914 accepts real payments.
@@ -20,7 +20,7 @@ const DOCS: Record<string, { title: string; sections: [string, string][] }> = {
     title: "Reservation and cancellation policy",
     sections: [
       ["Holds", "Choosing a position holds it for 15 minutes while you finish booking."],
-      ["If the campaign doesn't fill", "If the campaign is not fully reserved by its stated deadline, your reservation is canceled and you are not charged."],
+      ["If the campaign doesn't fill", DEADLINE_POLICY],
       ["Canceling", "Contact us before the campaign is approved for production to cancel. Detailed timing and refund terms will be added here after legal review."],
     ],
   },

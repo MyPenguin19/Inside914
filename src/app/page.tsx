@@ -29,7 +29,7 @@ const FAQ = [
   },
   {
     q: "What if the postcard doesn't fill?",
-    a: "You are not charged for an area unless its campaign fills and is approved. If it isn't fully reserved by its deadline, that reservation is canceled without charge. Other selected areas are handled independently.",
+    a: "You are not charged for an area unless its campaign fills and is approved. If it isn't fully reserved by its deadline, new reservations close while Inside914 reviews cancellation or revised dates. Other selected areas are handled independently.",
   },
   {
     q: "What happens after I reserve?",
