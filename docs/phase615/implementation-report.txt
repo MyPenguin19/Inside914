@@ -1,0 +1,116 @@
+INSIDE914 PHASE 6.15 — IMPLEMENTATION / REVIEW REPORT
+October 24, 2026. Local implementation completed; production release is NOT authorized.
+Baseline main/origin/main: ece490764338748466349663a370b625befa949c.
+
+1. REUSED SYSTEMS
+Existing four-step, account-free reservation flow; transactional single/multi-area holds;
+Supabase admin/RLS boundary; saved-card SetupIntent and consent flow; guarded campaign
+extension/cancellation; shared-card cleanup; private artwork/original retention; V1/V2
+postcard geometry/export; house artwork; payment-readiness/collection gates; private
+mailing evidence upload; Resend transport; existing daily Vercel jobs. No new dependency.
+
+2. A — CORE RELIABILITY
+Stable logical message identity and encrypted immutable payload/private link; 10-minute
+fenced worker leases; finite Resend idempotency retention handling; signed Svix events;
+duplicate/out-of-order protection; provider IDs/outcomes; safe audited retry only for
+known rejection. Unknown acceptance beyond the safe window requires investigation.
+Failed email never reverses reservation confirmation or revokes possibly delivered links.
+The existing advertiser screen shows delivery status/retry. Campaigns prominently expose
+passed deadlines and existing safe extension/cancellation controls. No auto-cancellation
+or auto-extension was introduced. Draft legal copy now matches the manual decision policy;
+legacy consent rows/amounts are unchanged and legacy wording is archived. Future consents
+store the full displayed checkbox text with their new draft version.
+
+3. B — CUSTOMER OPERATIONS
+Private-link recovery with generic responses, HMAC rate limits, encrypted delivery,
+15-minute single-use verification and explicit exchange; existing valid links survive.
+Simple artwork/cancellation requests on the existing private reservation page. Artwork
+requests stop at deadline/production/collection locks. Admin responses use existing
+advertiser pages and do not themselves cancel, approve, refund or change artwork.
+Deduplicated owner alerts cover reservations, artwork, requests, deadlines, full campaign
+preparation, repeated message failures and cleanup failures. Configurable owner email is
+required for actual notifications. Failed owner notifications cannot recursively generate
+more owner emails or prevent customer-email processing.
+New multi-area carts share 30 minutes and one 15-minute extension in the final five minutes,
+with a 45-minute/database deadline cap. Countdown, expiration/restart guidance and limited
+session-only business-name/website preservation keep the flow understandable. Personal
+contact/card data is not retained locally. No expired/occupied position is silently reclaimed.
+
+4. C — TRANSPARENCY / INVITATIONS
+Private reservation page shows factual campaign/artwork/payment/mailing progress and
+expected mailing dates. Only explicitly published, existing, current files for that
+booking's campaign are visible. Downloads reauthorize and issue 60-second private links.
+Metadata-only, missing and superseded documents fail closed. Internal evidence notes are
+not shared. Postal acceptance is not claimed as delivery to every household.
+Admins can create individual invitation links from available positions, optionally preview
+and explicitly send an email. No hold is created. Links expire within seven days or the
+campaign deadline and use ordinary area/position/artwork/contact/card-consent checkout.
+Current price and availability are checked again. Duplicate sends share one durable message.
+
+5. DATABASE / SECURITY
+New migrations, in order:
+A. 20261024120000_durable_email_delivery.sql
+   delivery envelopes/events, lease/reconciliation/retry RPCs, exact future consent text.
+B. 20261024130000_customer_operations.sql
+   private recovery, customer requests, owner alerts, cleanup failure counter, shared holds.
+C. 20261024140000_customer_evidence_invitations.sql
+   current-document publication/read checks and private invitation metadata/admin creation.
+All six new public tables have RLS. Only admins can read designated metadata; envelopes,
+recovery tokens/events and customer authorization RPCs remain service-only. Every new admin
+mutation checks private.require_admin. No service credentials enter browser components.
+All 17 new/replaced local function bodies match the final migration source (hash checked).
+Historical committed migrations were not changed. No production migration was applied.
+The native local stack lacks Docker type generation; database.types.ts additions were
+maintained explicitly and checked against real local RPC queries, TypeScript and build.
+
+6. VERIFICATION — FINAL LOCAL STACK
+npm run typecheck: PASS.
+npm run lint: PASS, no warnings.
+npm test: 418 PASS, 52 files.
+npm run test:integration: 152 PASS, 3 SKIPPED, 21 files total.
+npm run test:e2e: 23 PASS, 0 skipped (Chromium, desktop/mobile through 320/375/390/768/1440).
+npm run build: PASS, optimized Next.js production build; no deployment.
+All commands were invoked through scripts/verify-local-mvp.mjs, which fixes localhost
+Supabase and clears live Stripe/Resend credentials. No actual provider writes occurred.
+The three skipped integration cases require unavailable Stripe TEST credentials: saved
+Visa, declined card and bank-verification card. Mocks/local fake Stripe covered ordinary
+checkout, duplicate callbacks, late/expired confirmation and cleanup. Skips are not passes.
+New checks include concurrent workers and holds; stable links; signed/duplicate events;
+audited retry; expiry/rate limits; private requests/production lock; four-area shared expiry;
+owner alert deduplication; published/unpublished/stale evidence; private download; invitation
+price/availability/idempotency; offline extension recovery; browser refresh; mobile access.
+Existing V1/V2 artwork, house-art editor, print exports, pricing, RLS and payment safeguards
+also pass. No final failing tests remain. A stale homepage copy assertion was updated;
+an earlier dev-server editor interruption did not recur in the final frozen-source suite.
+
+7. REVIEW / RELEASE APPROVALS
+Three stacked feature PRs are required, A -> main, B -> A, C -> B. Review in that order;
+retarget downstream PRs after approved merges. Main is not merged/pushed. Automatic Vercel
+Git deployment is disabled for all three branch names in vercel.json; no deployment ran.
+A branch: feature/phase615a-core-reliability (26d1a8d)
+B branch: feature/phase615b-customer-operations (4847bfc)
+C branch: feature/phase615c-transparency-invitations (see PR head / final handoff)
+Final GitHub URLs and SHAs are supplied with the handoff. files-changed.txt lists exact paths.
+
+Before any production release, separately approve:
+- The three additive migrations and a fresh mapping-aware production audit/verified backup;
+  apply in order before the new application code is deployed. Do not blindly db push.
+- Qualified counsel/owner review of legal-readiness.txt, including deadline extension and
+  legacy reconsent, cancellation/refund remedies, print errors/delays, verified entity/contact,
+  distribution/evidence claims and retention/privacy schedules. Draft warnings stay visible.
+- A securely backed-up EMAIL_PAYLOAD_ENCRYPTION_KEY; Resend webhook signing secret and
+  subscribed delivery/failure events; a verified ADMIN_NOTIFICATION_EMAIL and sender.
+- Any actual invitation/customer email delivery and production application deployment.
+No real inbox delivery or provider webhook registration was performed in this phase.
+Daily Hobby scheduling means unattended owner notifications/retries can take a daily cycle.
+Unknown older sends require provider investigation rather than a speculative resend.
+Current documents still need owner truth/privacy review; printing still needs printer approval.
+
+8. PRESERVATION / STOP POINT
+LIVE_COLLECTION_RELEASED remains the hardcoded false value. Local verification forces
+INSIDE914_COLLECTION_MODE=disabled. Production configuration was not altered or read anew.
+Existing production campaigns/reservations, intentional $1 prices, accepted consents,
+Stripe references, artwork originals/house art and approved coordinates were untouched.
+No production database operations, campaign changes, Stripe API writes, customer sends,
+refunds, charges, printing orders or mailed-status changes were made. No deployment, merge
+into main, collection release or Phase 7 acceptance work was performed.

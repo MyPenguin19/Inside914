@@ -1,0 +1,46 @@
+Phase 6.15C — business transparency and individual invitations (not released)
+
+Reused: existing private reservation cookie, reservation/artwork view, current campaign
+state, per-booking payment ledger, administrator evidence upload/publication controls,
+private mailing-evidence bucket, campaign/slot catalog, normal four-step checkout,
+Resend transport and durable encrypted delivery records. No new provider or dependency.
+
+The private reservation page shows recorded confirmation, content approval, fill state,
+actual payment outcome, and documentary printer/mailing milestones. It never treats a
+preview/export as mailing. Test/simulated payment records cannot claim a live payment.
+Campaign completion requires a mailed/completed campaign record plus published mailing
+confirmation. Postal acceptance is explicitly not a household-delivery guarantee.
+
+Documents: only a confirmed booking's own campaign, explicitly published supported kinds,
+with an existing private storage object and validated metadata, can be listed. Internal
+notes/uploader identities/contact data are excluded. The download route checks the private
+cookie and current publication again, then signs a 60-second URL with no-store/no-referrer.
+A URL already issued remains usable for up to that minute after withdrawal; it cannot be
+instantly revoked. Older files that precede customer/house artwork revisions or a layout
+upgrade are hidden, including historic evidence captured in layout-upgrade snapshots.
+This intentionally fails closed; the owner must upload/review current documentation.
+The existing payment proof/geometry guards remain intact.
+
+Publishing now rejects metadata-only, missing and superseded documents. Publication
+confirmation explicitly warns that every advertiser in the campaign can see the file and
+that private/unrelated information must be removed first. It also distinguishes actual
+printer handoff confirmation from a price quote. Software cannot certify a document's
+truth; owner review remains necessary. No existing record was automatically published.
+
+Invitations: an admin chooses an available position, creates a shareable seven-day link
+(capped by the reservation deadline), optionally provides a business name/email and sees
+the exact message preview. Creation does not reserve inventory or send email. Sending is
+a distinct explicit confirmation and validates the preview's current price, deadline and
+availability. Concurrent/repeated sends reuse one delivery identity/envelope. Expired
+messages are not sent. A maximum of 50 creations/admin/day prevents bulk use.
+
+The public link discloses only existing public campaign information, never the optional
+recipient data. It preselects the area/position inside the ordinary checkout. Expired,
+paused, closed or occupied invitations show a clear message and allow another choice.
+Actual holds still use the normal transactional checks; artwork/contact/card consent are
+not bypassed. No price is overridden and no space is guaranteed.
+
+New additive migration pending approval: 20261024140000_customer_evidence_invitations.sql.
+Owner review must approve recipient consent/practices before actual invitation sending.
+No actual advertiser message, Stripe operation, production migration or deployment was
+performed during this implementation.

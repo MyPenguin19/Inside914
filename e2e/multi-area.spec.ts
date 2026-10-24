@@ -1,5 +1,5 @@
 import { deleteLocalCampaignFixtures } from "../tests/integration/local-layout-fixture";
-import { randomUUID, randomBytes } from "node:crypto";
+import { randomUUID, randomBytes, createHash } from "node:crypto";
 import sharp from "sharp";
 import type { Database } from "../src/lib/supabase/database.types";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -36,6 +36,7 @@ test.afterAll(async()=>{
       const carts=[...new Set(bookings.map(b=>b.cart_id).filter((id): id is string => !!id))];
       if(carts.length)ok(await db.from("reservation_carts").delete().in("id",carts));
     }
+    ok(await db.from("advertiser_invitations").delete().in("edition_id",ids));
     deleteLocalCampaignFixtures(ids);
   }
   if(user){ok(await db.from("admin_events").delete().eq("admin_user_id",user));await admin?.auth.signOut();expect((await db.auth.admin.deleteUser(user)).error).toBeNull();}
@@ -61,6 +62,25 @@ test("map selection matches cards and works with keyboard and touch-sized layout
   await expect(page.getByRole("checkbox", { name: /Northern Westchester/ })).toBeChecked();
 });
 
+test("invitation preview uses normal area and position selection without holding inventory",async({page,browser})=>{
+  await page.goto("/admin/login");await page.getByLabel("Email").fill(credentials.email);await page.getByLabel("Password").fill(credentials.password);await page.getByRole("button",{name:"Sign in",exact:true}).click();await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByRole("region",{name:"Action needed"})).toBeVisible();
+  await page.goto(`/admin/campaigns/${ids[0]}`);await page.getByText("Invite a business",{exact:true}).click();
+  await page.getByLabel("Available position",{exact:false}).selectOption({label:"F1"});await page.getByLabel("Business name",{exact:false}).fill("Interested fixture");
+  await page.getByRole("button",{name:"Create invitation preview"}).click();await expect(page.getByRole("region",{name:"Invitation preview"})).toBeVisible();
+  await expect(page.getByText("Link created. No position was held and no email was sent.")).toBeVisible();
+  const link=await page.getByRole("region",{name:"Invitation preview"}).getByRole("link").getAttribute("href");
+  expect(ok(await db.from("bookings").select("id").in("edition_id",ids))).toEqual([]);
+  const context=await browser.newContext({viewport:{width:375,height:900}}),customer=await context.newPage();
+  await customer.goto(link!);await expect(customer.getByRole("checkbox",{name:/Central Westchester/})).toBeChecked();
+  await customer.getByRole("button",{name:"Continue with selected areas"}).click();await expect(customer.getByText("Selected: F1.",{exact:false})).toBeVisible();
+  expect(await customer.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  const invite=ok(await db.from("advertiser_invitations").select("id").eq("edition_id",ids[0]).single())!;
+  ok(await db.from("advertiser_invitations").update({expires_at:new Date(0).toISOString()}).eq("id",invite.id));
+  await customer.goto(link!);await expect(customer.getByText("This invitation expired or its position is no longer available.",{exact:false})).toBeVisible();
+  await context.close();
+});
+
 test("mixed V1/V2 areas keep selected positions and separate artwork with one saved card and $0 today", async ({ page, browser }) => {
   test.setTimeout(120000);
   const stripeRequests: string[] = [];
@@ -84,6 +104,16 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await page.screenshot({path:"test-results/postcard-v2/customer-mobile.png",fullPage:true});
   await page.getByRole("button", { name: "Continue to artwork" }).click();
   await expect(page).toHaveURL(/\/book\/cart$/);
+  await expect(page.getByRole("region",{name:"Checkout time"})).toContainText(/29:|30:/);
+  await page.reload();await expect(page.getByRole("region",{name:"Checkout time"})).toContainText(/29:|30:/);
+  const current=ok(await db.from("bookings").select("cart_id").in("edition_id",ids).eq("status","pending"))!;
+  const cartId=current[0].cart_id!;
+  ok(await db.from("bookings").update({hold_expires_at:new Date(Date.now()+240000).toISOString()}).eq("cart_id",cartId));
+  await page.reload();await expect(page.getByRole("button",{name:"Add 15 minutes for all areas"})).toBeVisible();
+  await page.context().setOffline(true);await page.getByRole("button",{name:"Add 15 minutes for all areas"}).click();
+  await expect(page.getByText("Connection interrupted.",{exact:false})).toBeVisible();await page.context().setOffline(false);
+  await page.getByRole("button",{name:"Add 15 minutes for all areas"}).click();await expect(page.getByText("All selected areas now share the extended deadline.")).toBeVisible();
+  expect(new Set(ok(await db.from("bookings").select("hold_expires_at").eq("cart_id",cartId))!.map(b=>b.hold_expires_at)).size).toBe(1);
   const other = await browser.newContext(); const second = await other.newPage();
   await second.goto("/areas");
   await second.getByRole("checkbox", { name: /Central Westchester/ }).check();
@@ -129,6 +159,18 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
     const downloaded = await db.storage.from("artwork").download(a.storage_path);
     expect(downloaded.error).toBeNull(); expect(Buffer.from(await downloaded.data!.arrayBuffer()).equals(images[i])).toBe(true);
   }
+  // Account-free private link, mobile requests and safe recovery. No email or Stripe provider calls.
+  const accessToken=randomBytes(32).toString("base64url");
+  ok(await db.from("booking_access_tokens").insert({booking_id:bookings[0].id,token_hash:createHash("sha256").update(accessToken).digest("hex"),expires_at:new Date(Date.now()+86400000).toISOString()}));
+  await page.goto(`/reservation/access#${accessToken}`);await page.getByRole("button",{name:"Open reservation",exact:true}).click();
+  await expect(page).toHaveURL(/\/reservation$/);await expect(page.getByRole("heading",{name:"Independent Artwork Fixture"})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Your campaign progress"})).toBeVisible();
+  await page.getByLabel("Details",{exact:true}).fill("Please help with a replacement image.");await page.getByRole("button",{name:"Submit request"}).click();
+  await expect(page.getByText("Request received.",{exact:false})).toBeVisible();
+  expect(ok(await db.from("customer_requests").select("kind,status").eq("booking_id",bookings[0].id))).toEqual([{kind:"artwork_change",status:"open"}]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  await page.goto("/reservation/recover");await page.getByLabel("Email",{exact:false}).fill("nobody@example.com");await page.getByLabel("Reservation reference",{exact:false}).fill("IN914-NOBODY");await page.getByRole("button",{name:"Email a private link"}).click();
+  await expect(page.getByText("If those details match a reservation",{exact:false})).toBeVisible();
   // Follow the SAME confirmed V2 back placement through admin review and the export API.
   const backBooking=bookings.find(b=>b.edition_id===ids[1])!;
   const adminContext=await browser.newContext();const review=await adminContext.newPage();

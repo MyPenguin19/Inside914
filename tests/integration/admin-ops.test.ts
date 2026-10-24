@@ -389,6 +389,10 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
       expect((await status("mark_mailed")).data).toBe("done");
       expect((await status("complete")).data).toBe("done");
 
+      const receiptPath=`${id}/${randomUUID()}.pdf`;
+      const receiptBytes=new TextEncoder().encode("%PDF-1.4 local published receipt");
+      expect((await service.storage.from("mailing-evidence").upload(receiptPath,receiptBytes,{contentType:"application/pdf"})).error).toBeNull();
+      expect((await service.from("mailing_evidence").update({storage_path:receiptPath,content_type:"application/pdf",byte_size:receiptBytes.length}).eq("id",receipt!)).error).toBeNull();
       expect((await admin.rpc("admin_publish_evidence", { p_id: receipt!, p_publish: true })).data).toBe("done");
       expect((await admin.rpc("admin_publish_evidence", { p_id: receipt!, p_publish: true })).data).toBe("already");
       expect((await events(receipt!)).map((e) => e.event_type)).toEqual(["evidence.uploaded", "evidence.published"]);
@@ -397,6 +401,7 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
       ]);
       expect((await member.rpc("admin_add_evidence", { p_edition_id: id, p: { kind: "other", title: "x" } })).error?.message).toBe("not_admin");
       expect((await member.from("mailing_evidence").select("id")).data).toEqual([]);
+      await service.storage.from("mailing-evidence").remove([receiptPath]);
       await service.from("mailing_evidence").delete().eq("edition_id", id);
     });
 

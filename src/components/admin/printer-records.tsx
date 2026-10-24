@@ -73,7 +73,7 @@ export async function PrinterRecords({editionId}:{editionId:string}) {
                       x.published_at ? (
                         <>Hides this document from advertisers again. The file and its history are kept.</>
                       ) : (
-                        <>Marks this genuine document as approved to show advertisers. Only publish real, final documentation.</>
+                        <>Shares this document with every advertiser in this campaign. Confirm it is genuine, current and safe to share; remove private contact, payment and unrelated customer information first. Printer confirmation must document the actual handoff, not a quote.</>
                       )
                     }
                   />

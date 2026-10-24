@@ -13,8 +13,10 @@ export function ReservationSummary({
   amountLabel = "Total authorized",
   zones,
   provisional = false,
+  showReservationTerms = true,
 }: {
   provisional?: boolean;
+  showReservationTerms?: boolean;
   view: ReservationView;
   amountLabel?: string;
   zones?: PostcardZone[]; // printed non-ad areas, when the layout has them
@@ -48,7 +50,7 @@ export function ReservationSummary({
         </span>
         <span className="font-display text-3xl font-medium">{formatPrice(view.priceCents)}</span>
       </div>
-      <p className="mt-1 text-xs text-muted">Charged only if the campaign fills and is approved. $0 today.</p>
+      {showReservationTerms&&<p className="mt-1 text-xs text-muted">Charged only if the campaign fills and is approved. $0 today.</p>}
     </section>
   );
 }
