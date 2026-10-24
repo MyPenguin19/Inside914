@@ -126,3 +126,62 @@ test("failed owner messages create in-app attention without recursive outbound a
  ok(await db.from("email_deliveries").update({status:"failed",attempts:3}).eq("id",id));ok(await db.rpc("refresh_operational_alerts"));
  expect(ok(await db.from("operational_alerts").select("kind").eq("logical_key",`email:${id}`).single()).kind).toBe("owner_email");
 });
+
+test("simultaneous recovery submissions share one token/envelope; a later request never revokes older access",async()=>{
+ const c=await confirmed(),ip=randomUUID();
+ const result=await Promise.all([requestReservationRecovery(db,{email:c.email,reference:c.reference},ip),requestReservationRecovery(db,{email:c.email,reference:c.reference},ip)]);
+ const rows=ok(await db.from("reservation_recoveries").select("id").eq("booking_id",c.booking.id));expect(rows).toHaveLength(1);
+ const first=result.find(Boolean)!;expect(first).toBeTruthy();deliveryIds.push(first);
+ ok(await db.from("reservation_recoveries").update({created_at:new Date(Date.now()-61000).toISOString()}).eq("id",rows[0].id));
+ const next=await requestReservationRecovery(db,{email:c.email,reference:c.reference},ip);expect(next).toBeTruthy();expect(next).not.toBe(first);deliveryIds.push(next!);
+ expect(await resolveAccessToken(db,c.access.token)).toBe(c.booking.id);
+});
+test("one-area checkout uses the same capped window and late Stripe return cannot confirm",async()=>{
+ const c=await createCart(db,[{editionId:editions[0],slotIds:[slots[0]],mode:"standard"}]);carts.push(c.id);
+ const cart=(await ownedCart(db,c.token))!;bookingIds.push(...cart.members.map(b=>b.id));
+ expect(Date.parse(cart.members[0].holdExpiresAt!)-Date.now()).toBeGreaterThan(29*60000);
+ ok(await db.from("bookings").update({stripe_setup_intent_id:"seti_fixture",stripe_customer_id:"cus_fixture",hold_expires_at:new Date(Date.now()-1).toISOString()}).eq("cart_id",c.id));
+ const result=await db.rpc("confirm_cart",{p_cart_id:c.id,p_setup_intent_id:"seti_fixture",p_payment_method_id:"pm_fixture",p_references:{}});
+ expect(result.error).toBeNull();expect(result.data).toBe("hold_expired");
+ expect((await db.rpc("extend_cart_hold",{p_hash:hashHoldToken(c.token)})).error).not.toBeNull();
+});
+test("owner jobs deduplicate, retain failed notifications and recover without recursive email",async()=>{
+ const {dispatchOwnerNotifications}=await import("@/lib/operations/notifications");
+ const {EmailProviderError}=await import("@/lib/email/provider");const c=await confirmed();
+ const alerts=ok(await db.from("operational_alerts").select("id").eq("logical_key",`reservation:${c.booking.id}`)),ids=alerts.map(a=>a.id);
+ expect(await dispatchOwnerNotifications(db,vi.fn(),ids)).toEqual({configured:false,processed:0});
+ vi.stubEnv("ADMIN_NOTIFICATION_EMAIL","owner-fixture@example.com");vi.stubEnv("INSIDE914_DEV_TEST_RESERVATIONS","false");
+ try {
+  const send=vi.fn(async()=>{throw new EmailProviderError("provider_http_429",true);});
+  await Promise.all([dispatchOwnerNotifications(db,send,ids),dispatchOwnerNotifications(db,send,ids)]);
+  const delivery=ok(await db.from("email_deliveries").select("id,status").eq("logical_key",`owner-alert:${ids[0]}`).single());deliveryIds.push(delivery.id);
+  expect(delivery.status).toBe("failed");expect(send).toHaveBeenCalledTimes(1);
+  ok(await db.from("email_deliveries").update({next_attempt_at:new Date(0).toISOString()}).eq("id",delivery.id));
+  const accepted=vi.fn(async()=>({id:randomUUID()}));await dispatchOwnerNotifications(db,accepted,ids);expect(accepted).toHaveBeenCalledTimes(1);
+  expect(accepted.mock.calls[0]).toEqual(send.mock.calls[0]);
+  expect(ok(await db.from("bookings").select("status").eq("id",c.booking.id).single()).status).toBe("reserved");
+ }finally{vi.unstubAllEnvs();}
+});
+test("first terminal email failure is visible without waiting for three impossible retries",async()=>{
+ const {queueDelivery}=await import("@/lib/email/delivery");const id=await queueDelivery(db,`ops-fixture:${randomUUID()}`,{from:"fixture@example.com",to:"client@example.com",subject:"fixture",html:"fixture",text:"fixture"});deliveryIds.push(id);
+ ok(await db.from("email_deliveries").update({status:"failed",attempts:1,retry_safe:false}).eq("id",id));ok(await db.rpc("refresh_operational_alerts"));
+ expect(ok(await db.from("operational_alerts").select("id").eq("logical_key",`email:${id}`))).toHaveLength(1);
+});
+
+test("extension respects both original creation cap and the campaign deadline",async()=>{
+ const c=await held();
+ ok(await db.from("reservation_carts").update({created_at:new Date(Date.now()-40*60000).toISOString()}).eq("id",c.id));
+ ok(await db.from("bookings").update({hold_expires_at:new Date(Date.now()+4*60000).toISOString()}).eq("cart_id",c.id));
+ const expiry=ok(await db.rpc("extend_cart_hold",{p_hash:hashHoldToken(c.token)}));
+ expect(Date.parse(expiry)-Date.now()).toBeLessThanOrEqual(5*60000);expect(Date.parse(expiry)-Date.now()).toBeGreaterThan(4*60000);
+ // A different fresh hold is capped to the earliest campaign deadline at creation.
+ const other=ok(await db.from("slots").select("id").eq("edition_id",editions[0]).eq("label","F2").single());
+ const deadline=new Date(Date.now()+4*60000).toISOString();ok(await db.from("editions").update({artwork_deadline:deadline}).eq("id",editions[0]));
+ try {
+  const second=await createCart(db,[{editionId:editions[0],slotIds:[other.id],mode:"standard"}]);carts.push(second.id);
+  const members=(await ownedCart(db,second.token))!.members;bookingIds.push(...members.map(b=>b.id));
+  expect(Date.parse(members[0].holdExpiresAt!)).toBe(Date.parse(deadline));
+  expect((await db.rpc("extend_cart_hold",{p_hash:hashHoldToken(second.token)})).error?.message).toBe("campaign_deadline_reached");
+  expect(ok(await db.from("reservation_carts").select("hold_extensions").eq("id",second.id).single()).hold_extensions).toBe(0);
+ }finally{ok(await db.from("editions").update({artwork_deadline:"2097-12-15T23:59:00Z"}).eq("id",editions[0]));}
+});

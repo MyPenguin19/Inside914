@@ -257,6 +257,9 @@ select pg_temp.assert((public.admin_collection_preview((select id from fixture w
 select pg_temp.assert((select array_agg(n order by k)=array[10,7,3,10]::bigint[] from (select f.k,count(b.id) n from fixture f left join bookings b on b.edition_id=f.id and b.status='reserved' where f.k like 'campaign%' group by f.k) counts),'Central/Southern/Northern/Eastern confirmed counts exactly 10/7/3/10');
 select pg_temp.assert((select count(*)=4 from editions where id in(select id from fixture where k like 'campaign%') and status='closed'),'no automatic activation');
 select pg_temp.assert((select count(*)=0 from zone_charges where edition_id in(select id from fixture where k like 'campaign%')),'no payment obligations before explicit activation');
+select public.refresh_operational_alerts();
+select public.refresh_operational_alerts();
+select pg_temp.assert((select count(*)=2 from operational_alerts where logical_key in(select 'full:'||id from fixture where k like 'campaign%')),'only the two filled campaigns produce one preparation alert each');
 create temporary table other_zone_state as select id,status from editions where id in(select id from fixture where k in('campaign2','campaign3','campaign4'));
 select pg_temp.assert(jsonb_array_length(public.admin_prepare_zone_collection((select id from fixture where k='campaign1')))=10,'Central explicit activation prepares ten obligations without Stripe');
 select pg_temp.assert(not exists(select 1 from other_zone_state s join editions e using(id) where e.status<>s.status),'Central activation leaves all other zone statuses unchanged');

@@ -8,13 +8,14 @@ import { ACCESS_COOKIE, ACCESS_TOKEN_DAYS, hashAccessToken, resolveAccessToken }
 import { exchangeRecovery, requestReservationRecovery, RECOVERY_RESPONSE } from "@/lib/access/recovery";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientAddress } from "@/lib/booking/hold-rate-limit";
-import { processDelivery } from "@/lib/email/delivery";
+import { deliverRecovery } from "@/lib/access/recovery-delivery";
+import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 export type CustomerActionState={message?:string;ok?:boolean};
 export async function recoverReservation(_previous:CustomerActionState,form:FormData):Promise<CustomerActionState> {
  const input={email:form.get("email"),reference:form.get("reference")};
  const address=clientAddress(await headers());
  after(async()=>{try {
-  const db=createAdminClient();const id=await requestReservationRecovery(db,input,address);if(id) await processDelivery(db,id);
+  const db=createAdminClient();const id=await requestReservationRecovery(db,input,address);if(id) await deliverRecovery(db,id);
  } catch { /* Generic response; no tokens or contacts logged. */ }});
  return {ok:true,message:RECOVERY_RESPONSE};
 }
@@ -32,5 +33,6 @@ export async function submitReservationRequest(_previous:CustomerActionState,for
  if(!token || !input.success) return {ok:false,message:"Enter a request using your private reservation link."};
  const result=await createAdminClient().rpc("submit_customer_request",{p_hash:hashAccessToken(token),p_kind:input.data.kind,p_message:input.data.message});
  if(result.error) return {ok:false,message:"This request can't be submitted right now. Artwork may be locked or its deadline passed. Contact support for help."};
- revalidatePath("/reservation");return {ok:true,message:"Request received. Your reservation and artwork stay unchanged until reviewed."};
+ notifyOwnerAfterResponse();
+ revalidatePath("/reservation");return {ok:true,message:"Request received. Your reservation and artwork stay unchanged until reviewed. Check this private page for the response; replies are not emailed."};
 }

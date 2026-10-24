@@ -18,7 +18,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      reservation_recoveries:{Row:{id:string;booking_id:string;token_hash:string;expires_at:string;used_at:string|null;created_at:string};Insert:{id?:string;booking_id:string;token_hash:string;expires_at:string;used_at?:string|null};Update:{used_at?:string|null};Relationships:[]}
+      reservation_recoveries:{Row:{id:string;booking_id:string;token_hash:string;expires_at:string;used_at:string|null;created_at:string};Insert:{id?:string;booking_id:string;token_hash:string;expires_at:string;used_at?:string|null};Update:{used_at?:string|null;created_at?:string;expires_at?:string;token_hash?:string;booking_id?:string};Relationships:[]}
       customer_requests:{Row:CustomerRequestRow;Insert:Partial<CustomerRequestRow>&Pick<CustomerRequestRow,"booking_id"|"kind"|"message">;Update:Partial<CustomerRequestRow>;Relationships:[]}
       operational_alerts:{Row:OperationalAlertRow;Insert:Partial<OperationalAlertRow>&Pick<OperationalAlertRow,"logical_key"|"kind"|"title"|"href">;Update:Partial<OperationalAlertRow>;Relationships:[]}
 
@@ -997,6 +997,7 @@ export type Database = {
       }
     }
     Functions: {
+      prepare_reservation_recovery:{Args:{p_booking:string;p_hash:string};Returns:{recovery_id:string;expires_at:string;created:boolean}[]}
       consume_reservation_recovery:{Args:{p_hash:string;p_session_hash:string};Returns:string|null}
       submit_customer_request:{Args:{p_hash:string;p_kind:string;p_message:string};Returns:string}
       admin_resolve_customer_request:{Args:{p_id:string;p_status:string;p_response:string};Returns:undefined}

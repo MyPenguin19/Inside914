@@ -17,7 +17,7 @@ async function Details() {
   const cart = await ownedCart(createAdminClient(), (await cookies()).get(CART_COOKIE)?.value);
   if (!cart || cartGate(cart.members)) redirect("/book/cart");
   const contact = cart.members[0].contact;
-  return <section className="mt-6 max-w-xl space-y-5"><CartHoldTimer expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/><h1 className="text-3xl font-semibold">Your business details</h1>
+  return <section className="mt-6 max-w-xl space-y-5"><CartHoldTimer extensionUsed={cart.members.some(b=>b.holdExtensions>0)} expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/><h1 className="text-3xl font-semibold">Your business details</h1>
     <p>Use one contact for all selected areas. We’ll contact you if we need help with your advertisement.</p>
     <ContactForm action={submitCartContact} hideCategory initial={{ businessName: contact?.business_name ?? "", contactName: contact?.contact_name ?? "", email: contact?.email ?? "", phone: contact?.phone ?? "", website: contact?.website ?? "", category: "" }} />
     <Link href="/book/cart" className="underline">Back to artwork</Link></section>;

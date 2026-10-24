@@ -29,6 +29,7 @@ export type CheckoutBooking = {
   priceCents: number;
   pricingMode: "launch" | "test";
   holdExpiresAt: string | null;
+  holdExtensions: number;
   stripeCustomerId: string | null;
   stripeSetupIntentId: string | null;
   reference: string | null;
@@ -55,6 +56,7 @@ function toCheckoutBooking(row: Row): CheckoutBooking {
     priceCents: row.price_cents,
     pricingMode: row.pricing_mode === "test" ? "test" : "launch",
     holdExpiresAt: row.hold_expires_at,
+    holdExtensions:row.hold_extensions,
     stripeCustomerId: row.stripe_customer_id,
     stripeSetupIntentId: row.stripe_setup_intent_id,
     reference: row.reference,

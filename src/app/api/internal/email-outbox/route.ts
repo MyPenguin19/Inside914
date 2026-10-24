@@ -1,10 +1,12 @@
-import { queueOwnerNotifications } from "@/lib/operations/notifications";
+import { dispatchOwnerNotifications, queueOwnerNotifications } from "@/lib/operations/notifications";
 import { processDueDeliveries } from "@/lib/email/delivery";
 import { timingSafeEqual } from "node:crypto";
 import { processDueCardRemovals } from "@/lib/checkout/card-removal";
 import { getStripe } from "@/lib/checkout/stripe";
 import { processDueOutbox } from "@/lib/email/outbox";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+export const maxDuration=300;
 
 // Daily job: closes campaigns whose reservation deadline passed, retries due emails, and removes
 // saved cards still attached to cancelled reservations. Scheduled
@@ -34,5 +36,6 @@ export async function GET(request: Request) {
   } catch { console.error("owner notification job failed; customer delivery continues"); }
   const results = await processDueOutbox(admin);
   const deliveries = await processDueDeliveries(admin);
+  try {await dispatchOwnerNotifications(admin);} catch {console.error("owner_notification_deferred");}
   return Response.json({ deliveries, campaignsClosed: campaignsClosed ?? 0, processed: results.length, results, cardRemovals });
 }

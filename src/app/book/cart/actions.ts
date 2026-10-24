@@ -1,4 +1,6 @@
 "use server";
+import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
+
 import { getReservationView } from "@/lib/checkout/reservation";
 import { cartConsentText } from "@/lib/checkout/terms";
 import { cookies, headers } from "next/headers";
@@ -206,7 +208,9 @@ export async function confirmAreas() {
   const cart = await ownedCart(admin, await token());
   if (!cart) return { outcome: "no_hold" };
   try {
-    return { outcome: await completeCart(admin, getStripe(), cart.id) };
+    const outcome=await completeCart(admin, getStripe(), cart.id);
+    if(outcome==="confirmed"||outcome==="already_confirmed")notifyOwnerAfterResponse();
+    return {outcome};
   } catch {
     return { outcome: "error" };
   }

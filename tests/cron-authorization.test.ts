@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 
-vi.mock("@/lib/operations/notifications",()=>({queueOwnerNotifications:vi.fn()}));
+vi.mock("@/lib/operations/notifications",()=>({queueOwnerNotifications:vi.fn(),dispatchOwnerNotifications:vi.fn()}));
 vi.mock("@/lib/email/delivery", () => ({processDueDeliveries: vi.fn(async()=>[])}));
 vi.mock("@/lib/checkout/card-removal", () => ({ processDueCardRemovals: vi.fn() }));
 vi.mock("@/lib/checkout/stripe", () => ({ getStripe: vi.fn() }));
