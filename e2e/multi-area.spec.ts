@@ -146,6 +146,18 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await page.getByLabel("Phone", { exact: false }).fill("9145550123");
   await page.getByRole("button", { name: "Continue to payment details" }).click();
   await expect(page).toHaveURL(/\/book\/cart\/payment$/);
+  await expect(page.getByText("Combined authorized maximum: $1,197", {exact:true})).toBeVisible();
+  await expect(page.getByText("Due today: $0.00. No payment is collected today.", {exact:true})).toBeVisible();
+  for (const name of selected) await expect(page.getByRole("region",{name:"Reservation summary"}).getByText(`Phase C fixture ${name}`,{exact:true})).toBeVisible();
+  const displayedConsent=await page.getByTestId("checkout-consent").textContent();
+  expect(displayedConsent).toContain("Inside Diagnostics LLC");
+  for (const width of [375,1440]) {
+    await page.setViewportSize({width,height:1000});
+    await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.screenshot({path:`test-results/legal-checkout-${width}.png`,fullPage:true});
+  }
+
+  await page.setViewportSize({width:375,height:1000});
   await expect(page.getByRole("checkbox")).not.toBeChecked();
   await expect(page.getByRole("button", { name: /Simulate.*card|Reserve.*TEST|Confirm TEST|Simulate reservation/i })).toBeDisabled();
   await page.getByRole("checkbox").check();
@@ -222,8 +234,9 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await adminContext.close();
   expect(stripeRequests).toEqual([]);
   expect(ok(await db.from("zone_charges").select("id").in("edition_id", ids))).toHaveLength(0);
-  const consents = ok(await db.from("payment_consents").select("amount_cents").in("booking_id", bookings.map(b => b.id)))!;
+  const consents = ok(await db.from("payment_consents").select("amount_cents,terms_version,consent_text").in("booking_id", bookings.map(b => b.id)))!;
   expect(consents).toHaveLength(3); expect(consents.every(c => c.amount_cents === 39900)).toBe(true);
+  for (const consent of consents) {expect(consent.terms_version).toBe("square-zones-2026-10-24-review-4");expect(consent.consent_text).toBe(displayedConsent);}
 });
 
 test("another advertiser can reserve another square in the same area without a category", async ({ page }) => {

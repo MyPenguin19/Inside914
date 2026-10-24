@@ -5,11 +5,14 @@ import { consentText, TERMS_VERSION } from "@/lib/checkout/terms";
 import { reservationConfirmedEmail } from "@/lib/email/reservation-confirmed";
 
 describe("future-payment consent", () => {
-  test("names the customer's exact amount: $500 standard, $900 double", () => {
-    expect(consentText(50000)).toContain("charge $500, as shown in my reservation summary");
-    expect(consentText(90000)).toContain("charge $900, as shown in my reservation summary");
-    expect(consentText(50000)).toContain("No charge occurs while the campaign is incomplete");
-    expect(TERMS_VERSION).toMatch(/draft/);
+  test("uses exact accepted prices, including intentional $1 tests and cents", () => {
+    for (const [cents, price] of [[100, "$1"], [39900, "$399"], [44950, "$449.50"]] as const) {
+      expect(consentText(cents)).toContain(`one possible future charge of up to ${price} for this campaign only`);
+    }
+    expect(consentText(39900)).toContain("Inside Diagnostics LLC, operating Inside914");
+    expect(consentText(39900)).toContain("No payment is collected today.");
+    expect(consentText(39900)).toContain("not a subscription");
+    expect(TERMS_VERSION).toBe("2026-10-24-review-4");
   });
 });
 
@@ -27,7 +30,7 @@ describe("confirmation email", () => {
     size: "double",
     priceCents: 90000,
     reservationUrl: "https://inside914.example/r/abc123",
-    supportEmail: "support@inside914.com",
+    supportEmail: "Info@inside914.com",
   });
 
   test("has the reservation essentials", () => {
@@ -38,7 +41,7 @@ describe("confirmation email", () => {
       expect(part).toContain("$900");
       expect(part).toContain("5,000 homes");
       expect(part).toContain("https://inside914.example/r/abc123");
-      expect(part).toContain("support@inside914.com");
+      expect(part).toContain("Info@inside914.com");
     }
     expect(email.text).toContain("No payment has been collected");
     expect(email.subject).toContain("IN914-7KQ2MX");

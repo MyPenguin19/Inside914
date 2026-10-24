@@ -56,7 +56,7 @@ export async function beginPayment(): Promise<BeginPaymentResult> {
   }
 }
 
-export async function giveConsent(input: { accepted: boolean; termsVersion: string }) {
+export async function giveConsent(input: { accepted: boolean; termsVersion: string; displayedConsent: string }) {
   try {
     return await recordConsent(createAdminClient(), await holdToken(), input);
   } catch (error) {

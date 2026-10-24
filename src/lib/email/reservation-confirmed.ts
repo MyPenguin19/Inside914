@@ -54,7 +54,7 @@ export function reservationConfirmedEmail(d: ReservationEmailData) {
     `View your reservation and your ad (private link, don't share it): ${d.reservationUrl}`,
     "",
     `Questions? Email ${d.supportEmail}.`,
-    "Inside914 · Local advertising you can verify.",
+    "Inside914 is operated by Inside Diagnostics LLC.",
   ].join("\n");
 
   const html = `<!doctype html><html><body style="margin:0;background:#fbfaf7;font-family:Helvetica,Arial,sans-serif;color:#1c1b19">
@@ -67,10 +67,10 @@ ${d.test ? `<tr><td style="padding:16px 32px 0"><p style="margin:0;padding:12px;
 <tr><td style="padding:8px 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">
 ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#5f5b53;width:42%">${escapeHtml(k)}</td><td style="padding:6px 0;font-weight:600">${escapeHtml(v)}</td></tr>`).join("")}
 </table></td></tr>
-<tr><td style="padding:8px 32px;color:#5f5b53;font-size:14px;line-height:21px">Once all postcard spaces are reserved and the campaign is approved, we'll attempt the authorized charge and let you know. ${d.deadlinePolicy ?? DEADLINE_POLICY}</td></tr>
+<tr><td style="padding:8px 32px;color:#5f5b53;font-size:14px;line-height:21px">Once all postcard spaces are reserved and the campaign is approved, we'll attempt the authorized charge and let you know. ${escapeHtml(d.deadlinePolicy ?? DEADLINE_POLICY)}</td></tr>
 <tr><td style="padding:16px 32px"><a href="${escapeHtml(d.reservationUrl)}" style="display:inline-block;background:#1c1b19;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-size:14px">View your reservation and ad</a>
 <p style="color:#5f5b53;font-size:12px">This private link is just for you. Please don't share it.</p></td></tr>
-<tr><td style="padding:8px 32px 28px;color:#5f5b53;font-size:12px;border-top:1px solid #e4e0d7">Questions? Email <a href="mailto:${escapeHtml(d.supportEmail)}" style="color:#1f5c4a">${escapeHtml(d.supportEmail)}</a>.<br>Inside914 · Local advertising you can verify.</td></tr>
+<tr><td style="padding:8px 32px 28px;color:#5f5b53;font-size:12px;border-top:1px solid #e4e0d7">Questions? Email <a href="mailto:${escapeHtml(d.supportEmail)}" style="color:#1f5c4a">${escapeHtml(d.supportEmail)}</a>.<br>Inside914 is operated by Inside Diagnostics LLC.</td></tr>
 </table></td></tr></table></body></html>`;
 
   return { subject, text, html };

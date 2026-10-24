@@ -1,4 +1,5 @@
 import "server-only";
+import { INVITATION_EMAIL_RELEASED, INVITATION_EMAIL_BLOCKER } from "./release";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -23,7 +24,7 @@ export async function invitationOffer(db:Db,id:string):Promise<InvitationOffer|n
 export function invitationMessage(offer:InvitationOffer,name:string|null) {
  const link=`${getAppUrl()}/book/multi?invite=${offer.id}`;
  const subject=`Inside914 invitation: ${offer.zoneName}`;
- const text=`${name?`Hello ${name},`:"Hello,"}\n\nYou're invited to advertise with Inside914 in ${offer.zoneName}, position ${offer.label}.\nCurrent price: ${formatPrice(offer.priceCents)}. Due when reserving: $0. Save a card; this area is charged only after its campaign fills and is approved.\nReservation deadline: ${formatDeadline(offer.deadline)}.\n\nChoose your area and position, upload artwork, enter your business details and complete card authorization: ${link}\n\nThis invitation does not reserve or guarantee a space. Availability and the current price are checked again at checkout. This link expires ${formatDeadline(offer.expiresAt)}.\n\nInside914`;
+ const text=`${name?`Hello ${name},`:"Hello,"}\n\nYou're invited to advertise with Inside914 in ${offer.zoneName}, position ${offer.label}.\nCurrent price: ${formatPrice(offer.priceCents)}. Due when reserving: $0. Save a card; this area is charged only after its campaign fills and is approved.\nReservation deadline: ${formatDeadline(offer.deadline)}.\n\nChoose your area and position, upload artwork, enter your business details and complete card authorization: ${link}\n\nThis invitation does not reserve or guarantee a space. Availability and the current price are checked again at checkout. This link expires ${formatDeadline(offer.expiresAt)}.\n\nInside914 is operated by Inside Diagnostics LLC. Contact: ${getEmailEnv().supportEmail}`;
  return {link,subject,text,html:`<h1>Inside914</h1>${text.split("\n\n").map(p=>`<p>${escapeHtml(p).replaceAll("\n","<br>")}</p>`).join("")}<p><a href="${escapeHtml(link)}">Choose your advertising position</a></p>`};
 }
 export function invitationFingerprint(offer:InvitationOffer) {return createHash("sha256").update(JSON.stringify(offer)).digest("hex");}
@@ -31,6 +32,7 @@ export function invitationFingerprint(offer:InvitationOffer) {return createHash(
 export async function queueInvitation(db:Db,id:string,fingerprint:string) {
  const offer=await invitationOffer(db,id);
  if(!offer||invitationFingerprint(offer)!==fingerprint)throw new Error("Invitation changed or position unavailable. Create a fresh preview.");
+ if (!INVITATION_EMAIL_RELEASED) throw new Error(INVITATION_EMAIL_BLOCKER);
  const row=await db.from("advertiser_invitations").select("recipient_email,business_name,delivery_id").eq("id",id).single();
  if(row.error||!row.data.recipient_email)throw new Error("This invitation has no recipient email.");
  const message=invitationMessage(offer,row.data.business_name);

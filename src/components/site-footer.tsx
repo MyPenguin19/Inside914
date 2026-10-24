@@ -10,6 +10,7 @@ export function SiteFooter() {
           <Logo />
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted">
             Shared postcard advertising for local businesses in Westchester County, New York.
+            Inside914 is operated by Inside Diagnostics LLC.
           </p>
         </div>
         <div>

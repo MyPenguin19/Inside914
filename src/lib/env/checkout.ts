@@ -42,7 +42,8 @@ export function getEmailEnv() {
   return {
     resendApiKey: process.env.RESEND_API_KEY || null,
     from: process.env.EMAIL_FROM || "Inside914 <onboarding@resend.dev>",
-    supportEmail: process.env.SUPPORT_EMAIL || SUPPORT_EMAIL,
+    supportEmail: !process.env.SUPPORT_EMAIL || process.env.SUPPORT_EMAIL.toLowerCase() === SUPPORT_EMAIL.toLowerCase()
+      ? SUPPORT_EMAIL : process.env.SUPPORT_EMAIL,
   };
 }
 

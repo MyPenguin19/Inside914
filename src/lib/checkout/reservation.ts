@@ -27,6 +27,7 @@ export type ReservationView = {
   businessName: string | null;
   contactName: string | null;
   email: string | null;
+  campaignName?: string;
   zoneName: string;
   households: number;
   issueMonth: string;
@@ -52,6 +53,7 @@ type Row = {
   stripe_customer_id: string | null;
   stripe_payment_method_id: string | null;
   card_removed_at: string | null;
+  editions: { name: string } | null;
   booking_contacts: { business_name: string; contact_name: string; email: string } | null;
   booking_slots: { released_at: string | null; slots: { label: string; side: string; x_in: number; y_in: number; width_in: number; height_in: number } | null }[];
 };
@@ -60,7 +62,7 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id, status, reference, confirmed_at, size, price_cents, pricing_mode, edition_id, stripe_customer_id, stripe_payment_method_id, card_removed_at, booking_contacts(business_name, contact_name, email), booking_slots(released_at, slots(label, side, x_in, y_in, width_in, height_in))",
+      "id, status, reference, confirmed_at, size, price_cents, pricing_mode, edition_id, stripe_customer_id, stripe_payment_method_id, card_removed_at, editions(name), booking_contacts(business_name, contact_name, email), booking_slots(released_at, slots(label, side, x_in, y_in, width_in, height_in))",
     )
     .eq("id", bookingId)
     .returns<Row[]>()
@@ -104,6 +106,7 @@ export async function getReservationView(admin: Admin, bookingId: string): Promi
     businessName: data.booking_contacts?.business_name ?? null,
     contactName: data.booking_contacts?.contact_name ?? null,
     email: data.booking_contacts?.email ?? null,
+    campaignName: data.editions?.name,
     zoneName: catalog.zoneName,
     households: catalog.households,
     issueMonth: catalog.issueMonth,

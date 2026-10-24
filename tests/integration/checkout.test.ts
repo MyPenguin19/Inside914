@@ -1,3 +1,4 @@
+import { consentText } from "@/lib/checkout/terms";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
@@ -91,7 +92,7 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
       if (!started.ok) throw new Error(`startPayment: ${started.reason}`);
       setupIntentId = started.setupIntentId;
       if (steps.consent !== false) {
-        expect(await checkout.recordConsent(admin, hold.token, { accepted: true, termsVersion: TERMS_VERSION })).toEqual({ ok: true });
+        expect(await checkout.recordConsent(admin, hold.token, { accepted: true, termsVersion: TERMS_VERSION, displayedConsent: consentText((await checkout.getBookingByHoldToken(admin, hold.token))!.priceCents) })).toEqual({ ok: true });
       }
     }
     return { token: hold.token, bookingId: hold.bookingId, stripe, setupIntentId };
@@ -153,6 +154,27 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
       expect(stripe.customers.create).toHaveBeenCalledTimes(1);
       expect(stripe.setupIntents.create).toHaveBeenCalledTimes(1);
     });
+  });
+
+  test("new exact consent is stored once, rejects stale displayed text, and preserves $1 and historical evidence",async()=>{
+    const {token,bookingId}=await prepare(["F1"],{consent:false});
+    const price=(await bookingRow(bookingId)).price_cents;
+    expect(await checkout.recordConsent(admin,token,{accepted:true,termsVersion:TERMS_VERSION,displayedConsent:"obsolete wording"})).toMatchObject({ok:false,reason:"terms_changed"});
+    expect(await checkout.recordConsent(admin,token,{accepted:true,termsVersion:TERMS_VERSION,displayedConsent:consentText(price)})).toEqual({ok:true});
+    const saved=await admin.from("payment_consents").select("*").eq("booking_id",bookingId).single();expect(saved.error).toBeNull();
+    expect(saved.data).toMatchObject({consent_text:consentText(price),terms_version:TERMS_VERSION,amount_cents:price,currency:"usd"});
+    expect(await checkout.recordConsent(admin,token,{accepted:true,termsVersion:TERMS_VERSION,displayedConsent:consentText(price)})).toEqual({ok:true});
+    expect((await admin.from("payment_consents").select("*").eq("booking_id",bookingId).single()).data).toEqual(saved.data);
+    expect((await bookingRow(bookingId)).price_cents).toBe(price);
+  });
+
+  test("an older acceptance is never overwritten or reported as acceptance of new wording",async()=>{
+    const {token,bookingId,setupIntentId}=await prepare(["F2"],{consent:false});
+    const booking=await bookingRow(bookingId);
+    const inserted=await admin.from("payment_consents").insert({booking_id:bookingId,edition_id:booking.edition_id,stripe_setup_intent_id:setupIntentId!,amount_cents:booking.price_cents,pricing_mode:booking.pricing_mode,currency:"usd",terms_version:"2026-10-24-draft-2",consent_text:"Synthetic prior local acceptance"}).select("*").single();
+    expect(inserted.error).toBeNull();
+    expect(await checkout.recordConsent(admin,token,{accepted:true,termsVersion:TERMS_VERSION,displayedConsent:consentText(booking.price_cents)})).toMatchObject({ok:false,reason:"terms_changed"});
+    expect((await admin.from("payment_consents").select("*").eq("booking_id",bookingId).single()).data).toEqual(inserted.data);
   });
 
   describe("confirming the reservation", () => {

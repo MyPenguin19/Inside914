@@ -57,6 +57,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await expect(page.getByRole("slider",{name:"House artwork zoom"})).toHaveValue("1.01");
   await expect(page.getByRole("button",{name:"Save house artwork"})).toBeEnabled();
   await page.screenshot({path:"../../outputs/inside914-background-comparison/house-crop-editor.png",fullPage:true});
+  expect(errors, "House editor must remain healthy after full-page capture").toEqual([]);
   await page.getByRole("button",{name:"Save house artwork"}).click();
   await expect(page.getByRole("status")).toContainText("House artwork saved");
   const savedHouse=ok(await db.from("house_artwork").select("storage_path,width_px,height_px").single())!;

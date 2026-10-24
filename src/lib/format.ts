@@ -1,7 +1,8 @@
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const usdWithCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 export function formatPrice(cents: number) {
-  return usd.format(cents / 100);
+  return (cents % 100 === 0 ? usd : usdWithCents).format(cents / 100);
 }
 
 // "2027-01-01" -> "January 2027" (date-only strings, read as UTC so the month never shifts).

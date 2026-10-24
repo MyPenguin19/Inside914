@@ -1,5 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
+import { assertBookingCollection } from "./booking-authorization";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, ZoneChargeRow } from "@/lib/supabase/database.types";
 import { getCollectionContext, type CollectionContext } from "./environment";
@@ -31,6 +32,7 @@ export async function collectCharge(db: Db, stripe: PaymentStripe, chargeId: str
   if (/devtest/.test(c.customer_id+c.payment_method_id)) throw new Error("Simulated reservations cannot be sent to Stripe");
   const consent=await db.rpc("assert_charge_consent",{p_charge:c.id});
   if(consent.error) throw new Error("Consent review required before collection");
+  await assertBookingCollection(db, c.booking_id);
   await verifyStripeAccount(stripe);
   let intent: Stripe.PaymentIntent;
   if(c.payment_intent_id) intent=await stripe.paymentIntents.retrieve(c.payment_intent_id);
@@ -42,6 +44,7 @@ export async function collectCharge(db: Db, stripe: PaymentStripe, chargeId: str
     const method=await stripe.paymentMethods.retrieve(c.payment_method_id);
     const owner=typeof method.customer === "string" ? method.customer : method.customer?.id;
     if (customer.deleted || customer.livemode !== (c.stripe_mode === "live") || method.livemode !== (c.stripe_mode === "live") || owner !== c.customer_id) throw new Error("Saved payment method mode/ownership mismatch");
+    await assertBookingCollection(db, c.booking_id);
     intent=await stripe.paymentIntents.create({amount:c.amount_cents,currency:"usd",customer:c.customer_id,payment_method:c.payment_method_id,
       automatic_payment_methods:{enabled:true,allow_redirects:"never"},
       metadata:{zone_charge_id:c.id,booking_id:c.booking_id,edition_id:c.edition_id,consent_id:c.consent_id}},
@@ -52,6 +55,7 @@ export async function collectCharge(db: Db, stripe: PaymentStripe, chargeId: str
   }
   verifyIntent(c,intent);
   if(intent.status === "requires_confirmation") {
+    await assertBookingCollection(db, c.booking_id);
     try { intent=await stripe.paymentIntents.confirm(intent.id,{off_session:true},{idempotencyKey:`zone-initial-confirm-${c.id}`}); }
     catch(error) {
       // Declines/authentication requirements still belong to this same intent.

@@ -49,8 +49,8 @@ export function reservationCancelledEmail(d: CancellationEmailData) {
     "",
     ...rows.map(([k, v]) => `${k}: ${v}`),
     "",
-    `Questions, or want to reserve again? Email ${d.supportEmail}.`,
-    "Inside914 · Local advertising you can verify.",
+    `Questions about your cancellation? Email ${d.supportEmail}.`,
+    "Inside914 is operated by Inside Diagnostics LLC.",
   ].join("\n");
 
   const html = `<!doctype html><html><body style="margin:0;background:#fbfaf7;font-family:Helvetica,Arial,sans-serif;color:#1c1b19">
@@ -62,7 +62,7 @@ export function reservationCancelledEmail(d: CancellationEmailData) {
 <tr><td style="padding:8px 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">
 ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#5f5b53;width:42%">${escapeHtml(k)}</td><td style="padding:6px 0;font-weight:600">${escapeHtml(v)}</td></tr>`).join("")}
 </table></td></tr>
-<tr><td style="padding:16px 32px 28px;color:#5f5b53;font-size:12px;border-top:1px solid #e4e0d7">Questions, or want to reserve again? Email <a href="mailto:${escapeHtml(d.supportEmail)}" style="color:#1f5c4a">${escapeHtml(d.supportEmail)}</a>.<br>Inside914 · Local advertising you can verify.</td></tr>
+<tr><td style="padding:16px 32px 28px;color:#5f5b53;font-size:12px;border-top:1px solid #e4e0d7">Questions about your cancellation? Email <a href="mailto:${escapeHtml(d.supportEmail)}" style="color:#1f5c4a">${escapeHtml(d.supportEmail)}</a>.<br>Inside914 is operated by Inside Diagnostics LLC.</td></tr>
 </table></td></tr></table></body></html>`;
 
   return { subject, text, html };

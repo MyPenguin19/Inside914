@@ -34,6 +34,7 @@ function setup(opts: {
   outcome?: string;
   begin?: { ok: true; clientSecret: string; status: string } | { ok: false; reason: string };
   publishableKey?: string | null;
+  multiple?: boolean;
 } = {}) {
   const { stripe, completeCard } = fakeStripe(opts.confirm ?? (async () => ({ setupIntent: { status: "succeeded" } })));
   const actions = {
@@ -43,8 +44,9 @@ function setup(opts: {
   };
   render(
     <PaymentStep
+      multiple={opts.multiple}
       publishableKey={opts.publishableKey === undefined ? "pk_test_x" : opts.publishableKey}
-      consentText="I authorize Inside914 to … charge $500 …"
+      consentText="Proposed authorization for a maximum of $399."
       termsVersion="v1"
       actions={actions}
       loadStripeJs={(async () => stripe) as never}
@@ -87,7 +89,7 @@ describe("PaymentStep", () => {
     await readyAndFilled(s);
     fireEvent.click(s.submit());
     await waitFor(() => expect(push).toHaveBeenCalledWith("/book/confirmed"));
-    expect(s.actions.giveConsent).toHaveBeenCalledWith({ accepted: true, termsVersion: "v1" });
+    expect(s.actions.giveConsent).toHaveBeenCalledWith({ accepted: true, termsVersion: "v1", displayedConsent: "Proposed authorization for a maximum of $399." });
     expect(s.stripe.confirmSetup).toHaveBeenCalledWith(expect.objectContaining({ redirect: "if_required" }));
     expect(s.actions.confirmReservation).toHaveBeenCalledTimes(1);
   });
@@ -186,4 +188,15 @@ describe("PaymentStep in development TEST mode", () => {
     expect((await screen.findByRole("alert")).textContent).toMatch(/Test mode isn't available/);
     expect(actions.confirmReservation).not.toHaveBeenCalled();
   });
+});
+
+test.each([
+  [false, "Save card and reserve my space — $0 today"],
+  [true, "Save card and reserve my advertising spaces — $0 today"],
+] as const)("uses the approved review button wording for multiple=%s", async (multiple, label) => {
+  setup({multiple,begin:{ok:true,clientSecret:"mock",status:"succeeded"}});
+  await screen.findByText("Your card is already saved. Just confirm below.");
+  expect(screen.getByRole("button",{name:label})).toBeTruthy();
+  expect(screen.getByText("Due today: $0.00. No payment is collected today.")).toBeTruthy();
+  expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(false);
 });

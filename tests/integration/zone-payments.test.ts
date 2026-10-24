@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { processOutboxRow } from "@/lib/email/outbox";
+import { TERMS_VERSION, CART_TERMS_VERSION } from "@/lib/checkout/terms";
 import { issueRecovery,resolveRecovery } from "@/lib/payments/recovery";
 const run=promisify(execFile);
 const command=(sql:string)=>execFileSync("python3",["scripts/local-test-db.py","-At","-c",sql],{encoding:"utf8",stdio:["ignore","pipe","pipe"]});
@@ -42,6 +43,17 @@ afterAll(async()=>{
  delete from auth.users where id='${fixture.admin}';
  delete from private.approved_layout_templates where template_key='amazingmail-9x6-ten-square-draft' and approval_reference='TRANSACTION-ONLY TEST; rolled back; NOT printer approval';commit;`);
 });
+test("proposed single and cart review versions cannot authorize collection", () => {
+ for (const version of [TERMS_VERSION, CART_TERMS_VERSION]) {
+  const result=command(`begin;
+   insert into payment_consents(booking_id,edition_id,stripe_setup_intent_id,amount_cents,pricing_mode,terms_version)
+   select booking_id,edition_id,'seti_proposed_review_fixture',amount_cents,pricing_mode,'${version}'
+   from payment_consents where edition_id='${fixture.campaign1}' limit 1;
+   select private.consent_review_reason(id) from payment_consents where stripe_setup_intent_id='seti_proposed_review_fixture';
+   rollback;`);
+  expect(result).toContain("Draft or unrecognized terms require owner/counsel approval before collection");
+ }
+});
 test("concurrent administrators authorize exactly one ledger per booking",async()=>{
  const sql=`set request.jwt.claim.sub='${fixture.admin}';set role authenticated;select public.admin_prepare_zone_collection('${fixture.campaign1}');`;
  const results=await Promise.all([run("python3",["scripts/local-test-db.py","-At","-c",sql]),run("python3",["scripts/local-test-db.py","-At","-c",sql])]);
@@ -55,6 +67,12 @@ test("private recovery tokens expire, rotate and are consumed on success",async(
  const id=command(`select id from zone_charges where edition_id='${fixture.campaign1}' limit 1;`).trim();
  command(`select public.record_zone_payment('${id}','pi_recovery_fixture','requires_payment_method','evt_recovery_fixture',100,null,'test','acct_fixture');`);
  const token=await issueRecovery(db,id);expect((await resolveRecovery(db,token))?.id).toBe(id);
+ const booking=command(`select booking_id from zone_charges where id='${id}';`).trim();
+ command(`insert into customer_requests(booking_id,kind,message) values('${booking}','cancellation','Local cancellation during recovery');`);
+ expect(await resolveRecovery(db,token)).toBeNull();
+ command(`set request.jwt.claim.sub='${fixture.admin}';set role authenticated;select public.admin_resolve_customer_request(id,'declined','Fixture only') from customer_requests where booking_id='${booking}' and kind='cancellation';`);
+ expect((await resolveRecovery(db,token))?.id).toBe(id);
+
  expect(await resolveRecovery(db,"x".repeat(43))).toBeNull();
  const replacement=await issueRecovery(db,id);expect(await resolveRecovery(db,token)).toBeNull();
  command(`update zone_charges set recovery_expires_at=now()-interval '1 second' where id='${id}';`);

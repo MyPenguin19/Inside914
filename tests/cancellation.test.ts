@@ -13,7 +13,7 @@ describe("cancellation email", () => {
     issueMonth: "2027-01-01",
     positions: ["F4"],
     side: "front" as const,
-    supportEmail: "support@inside914.com",
+    supportEmail: "Info@inside914.com",
     card: "removed" as const,
   };
 
@@ -24,7 +24,7 @@ describe("cancellation email", () => {
       expect(body).toMatch(/canceled/i);
       expect(body).toMatch(/not been charged/i);
       expect(body).toMatch(/saved card has been removed/i);
-      expect(body).toContain("support@inside914.com");
+      expect(body).toContain("Info@inside914.com");
     }
     expect(email.html).toContain("Pat&#39;s &lt;Bakery&gt;");
     expect(email.html).not.toContain("<Bakery>");

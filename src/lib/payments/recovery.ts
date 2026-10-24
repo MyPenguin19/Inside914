@@ -1,4 +1,5 @@
 import "server-only";
+import { bookingAllowsCollection } from "./booking-authorization";
 import { createHoldToken, hashHoldToken } from "@/lib/booking/hold-token";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
@@ -14,5 +15,6 @@ export async function resolveRecovery(db:SupabaseClient<Database>,token:string|u
   const {data,error}=await db.from("zone_charges").select("*").eq("recovery_hash",hashHoldToken(token)).gt("recovery_expires_at",new Date().toISOString()).in("status",["requires_action","requires_payment_method","processing"]).maybeSingle();
   if(error) throw new Error("Recovery lookup unavailable");
   if(data) {const consent=await db.rpc("assert_charge_consent",{p_charge:data.id});if(consent.error)return null;}
+  if (data && !await bookingAllowsCollection(db, data.booking_id)) return null;
   return data;
 }
