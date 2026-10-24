@@ -114,6 +114,12 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await expect(page.getByText("Connection interrupted.",{exact:false})).toBeVisible();await page.context().setOffline(false);
   await page.getByRole("button",{name:"Add 15 minutes for all areas"}).click();await expect(page.getByText("All selected areas now share the extended deadline.")).toBeVisible();
   expect(new Set(ok(await db.from("bookings").select("hold_expires_at").eq("cart_id",cartId))!.map(b=>b.hold_expires_at)).size).toBe(1);
+  const extendedExpiry=ok(await db.from("bookings").select("hold_expires_at").eq("cart_id",cartId).limit(1).single())!.hold_expires_at!;
+  ok(await db.from("bookings").update({hold_expires_at:new Date(Date.now()+240000).toISOString()}).eq("cart_id",cartId));
+  await page.reload();await expect(page.getByRole("region",{name:"Checkout time"})).toContainText(/3:|4:/);
+  await expect(page.getByRole("button",{name:"Add 15 minutes for all areas"})).toHaveCount(0);
+  ok(await db.from("bookings").update({hold_expires_at:extendedExpiry}).eq("cart_id",cartId));
+  await page.reload();
   const other = await browser.newContext(); const second = await other.newPage();
   await second.goto("/areas");
   await second.getByRole("checkbox", { name: /Central Westchester/ }).check();
@@ -179,6 +185,13 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await review.goto("/admin/login");
   await review.getByLabel("Email").fill(credentials.email);await review.getByLabel("Password").fill(credentials.password);
   await review.getByRole("button",{name:"Sign in",exact:true}).click();await expect(review).toHaveURL(/\/admin$/);
+  await review.goto(`/admin/advertisers/${bookings[0].id}`);
+  await review.getByRole("button",{name:"Record resolution",exact:true}).click();
+  await review.getByLabel("Response to advertiser",{exact:true}).fill("We reviewed your request. Please contact support with the replacement image.");
+  await review.getByRole("button",{name:"Confirm",exact:true}).click();
+  await expect(review.getByText("Response: We reviewed your request.",{exact:false})).toBeVisible();
+  await page.goto("/reservation");
+  await expect(page.getByText("artwork change · resolved — We reviewed your request.",{exact:false})).toBeVisible();
   await review.goto(`/admin/artwork/${backBooking.id}`);
   await expect(review.getByText("Printed ad: 2.2925″ × 2.815″")).toBeVisible();
   await expect(review.getByAltText("The advertiser's ad on the postcard")).toBeVisible();

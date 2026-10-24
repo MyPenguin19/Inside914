@@ -1,4 +1,5 @@
 "use server";
+import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 import { after } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
@@ -23,7 +24,8 @@ export async function sendInvitation(_prev:InvitationState,form:FormData):Promis
  if(!parsed.success)return {message:"Review the invitation and confirm this individual email."};
  try {
   const db=createAdminClient(),id=await queueInvitation(db,parsed.data.id,parsed.data.fingerprint);
-  after(async()=>{try{await processDelivery(db,id);}catch{/* Durable record is retained; no contact/token logging. */}});
+  try {after(async()=>{try{await processDelivery(db,id);}catch{/* Durable record is retained; no contact/token logging. */}});}catch{/* The worker recovers this already-queued message. */}
+  notifyOwnerAfterResponse();
   return {sent:true,message:"Invitation queued. Repeated clicks use the same delivery record; acceptance is tracked in the action center if it fails."};
  }catch{return {message:"This invitation changed, expired or became unavailable. Create a fresh preview before sending."};}
 }

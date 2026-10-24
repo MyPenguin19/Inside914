@@ -78,3 +78,14 @@ test("explicit invitation queuing is idempotent and refuses stale preview; no pr
  const message=decryptEnvelope(row.payload_ciphertext,row.logical_key);expect(message.text).toContain("$1");expect(message.text).toContain("does not reserve or guarantee");expect(message.html).toContain("&lt;Business&gt;");
  expect(ok(await db.from("bookings").select("id").eq("edition_id",edition))).toEqual([]);
 });
+
+test("a price change invalidates the preview and a pause or closure cannot be bypassed by an invitation",async()=>{
+ const id=ok(await admin.rpc("admin_create_invitation",{p_edition:edition,p_slot:slot,p_email:"interested@example.com"}));const offer=(await invitationOffer(db,id))!;
+ ok(await admin.rpc("admin_update_campaign",{p_id:edition,p:{name:"Evidence fixture",unit_price_cents:39900,target_quantity:5000}}));
+ await expect(queueInvitation(db,id,invitationFingerprint(offer))).rejects.toThrow("changed");expect((await invitationOffer(db,id))?.priceCents).toBe(39900);
+ ok(await admin.rpc("admin_set_campaign_status",{p_id:edition,p_action:"pause"}));expect(await invitationOffer(db,id)).toBeNull();
+ ok(await admin.rpc("admin_set_campaign_status",{p_id:edition,p_action:"resume"}));expect(await invitationOffer(db,id)).not.toBeNull();
+ ok(await admin.rpc("admin_set_campaign_status",{p_id:edition,p_action:"close"}));expect(await invitationOffer(db,id)).toBeNull();
+ ok(await admin.rpc("admin_set_campaign_status",{p_id:edition,p_action:"open"}));
+ ok(await admin.rpc("admin_update_campaign",{p_id:edition,p:{name:"Evidence fixture",unit_price_cents:100,target_quantity:5000}}));
+});

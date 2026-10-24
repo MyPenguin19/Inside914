@@ -1,0 +1,79 @@
+INSIDE914 — PHASE 6.15D FINAL HARDENING
+October 24, 2026. Baseline main/production: ece490764338748466349663a370b625befa949c.
+Scope: harden the existing A/B/C draft PR stack locally, verify with isolated fixtures, push feature branches only. This report supersedes earlier Phase 6.15 verification counts; the earlier implementation report remains a historical record.
+
+DISPOSITION
+The confirmed code defects listed below have been corrected. Production rollout remains blocked by missing email configuration/provider verification and unresolved commercial terms. No production migration, merge to main, deployment, real email, Stripe operation, campaign/price/artwork change, print order or collection enablement was performed. LIVE_COLLECTION_RELEASED remains false. Production settings were read as metadata only and were not changed.
+
+FINDINGS BY SEVERITY
+CRITICAL — Short-lived recovery depended on a daily fallback that could outlive the token. Fixed with bounded immediate dispatch, exact database expiry, a pre-send validity margin, deduplicated preparation and safe explicit customer resubmission. Provider outages longer than token lifetime still require a fresh user request or support; daily cron is not advertised as a recovery SLA.
+CRITICAL — Original consent had no immutable deadline snapshot or fail-closed review for later extensions/draft wording. Fixed for new consent with a database snapshot/immutability trigger and collection guards. Historical deadlines are deliberately not invented. Legacy records with unknown authorization, extended dates or unresolved draft versions are blocked from collection. Owner/counsel decisions and a reviewed explicit renewal path remain release prerequisites.
+HIGH — Terminal failed emails could occupy the oldest preparation batch forever and starve new confirmations. Fixed with an outbox-to-delivery anti-join; existing durable messages are handled only by the delivery worker. Batch failures are isolated.
+HIGH — Duplicate recovery submissions could issue multiple tokens/envelopes immediately; provider retries and late events needed stricter handling. Fixed with serialized one-minute preparation deduplication, stable encrypted content/idempotency keys, sticky ambiguous outcomes, lease fencing and bounded attempts. Delivered/adverse outcomes no longer regress on later positive/intermediate events.
+HIGH — Owner alerts relied primarily on daily delivery and first terminal failures could remain unnoticed. Fixed with managed after-response dispatch backed by transactional in-app alerts, nonrecursive failure visibility, durable retries and an explicit missing-address warning. Event-triggered delivery has documented runtime/batch limits; unattended deadlines still rely on the daily job.
+HIGH — Production EMAIL_PAYLOAD_ENCRYPTION_KEY, RESEND_WEBHOOK_SECRET and ADMIN_NOTIFICATION_EMAIL are absent; no Inside914 outbound Resend webhook exists. OPEN ROLLOUT BLOCKER: exact setup and secure verification are documented, not silently configured. Domain inside914.com is verified. Existing secret validity/inbox delivery remains unverified without an approved controlled provider test.
+HIGH — New checkout terms remain drafts and differ materially from earlier deadline promises. OPEN COMMERCIAL-LAUNCH BLOCKER: preserve draft notices and archived versions; approve final policy/version and applicable renewed authorization before public commercial release. Collection-disabled is not a substitute for approved checkout policy.
+MEDIUM — Browser refresh forgot a previously used cart extension. Fixed by passing the persisted extension count; SQL rejects extensions that add no time. The shared hold remains capped at 45 minutes and the earliest campaign deadline.
+MEDIUM — Historical charged bookings without a matching ledger could be presented as unpaid, and a test ledger could look like a live charge. Fixed with explicit unverified/test states; removed the obsolete admin claim that collection was not built.
+MEDIUM — Invitation send state could carry into the next preview, and a scheduling failure could misreport an already-queued invitation as failed. Fixed with keyed preview send state and durable-queue fallback. Expiry, changed price, occupied position and paused/closed campaign are revalidated.
+MEDIUM — Webhook size was bounded after reading the entire body. Fixed with bounded streaming; unsupported signed event types are acknowledged without DB work.
+LOW / OPERATIONAL — Provider acceptance is not guaranteed inbox delivery; previously issued evidence URLs can remain usable for their 60-second lifetime after unpublication. Neither limit is described as stronger protection than it provides. Final printer acceptance and mailing quantities remain separate approvals.
+
+EMAIL / RECOVERY VERIFICATION
+Stable logical key -> one encrypted immutable envelope -> fenced lease -> accepted, failed or investigation. The payload and provider idempotency key remain identical across retries. A timeout before or after possible acceptance is ambiguous; retries stop before the provider's 24-hour retention boundary. An old delivery that never started does not spend that retention window. Late signed events reconcile a crashed/expired worker without requiring another send. Missing encryption key preserves the ciphertext and raises investigation; it does not revoke potentially delivered access links. Maximum eight persisted attempts; terminal and ambiguous outcomes remain visible.
+Recovery choice is bounded pathway B: two provider attempts at most, ten seconds each and one-second pause; no silent regeneration. At least one minute must remain before dispatch. A provider can delay an accepted message beyond that margin; the generic form explains 15-minute expiry and safe resubmission. Three requests per email/hour and ten per IP/hour remain; single-use token exchange is serialized. Existing valid reservation sessions are not revoked. Parallel exchange creates only one session for the consumed token. A later deliberate recovery request may coexist with prior still-valid access.
+Focused tests cover success, before/after-acceptance timeout, 429, 5xx, permanent rejection, outage, expired queue, lost key, concurrent workers/submissions/exchanges, lease expiry, invalid reference/email, used/expired tokens and duplicate/out-of-order events. No provider email or payment was used.
+
+WEBHOOK SECURITY
+Validated against Resend's published outbound event schema and Svix protocol, not just old mocks. Raw HMAC verification, constant-time comparison, five-minute timestamp tolerance, strict signing configuration, 256-KiB streamed limit, unique event IDs and provider/delivery identity checks. data.tags is an object and the delivery_id tag is optional; fallback uses a previously recorded provider ID. No recipient-based association. Unknown valid event types do not reach DB mutation. No contact, token, secret, signed URL or raw body is logged. Signed negative outcomes remain visible and do not get cleared by later sent/delivered noise.
+
+OWNER NOTIFICATIONS
+Confirmed reservation and request transactions retain durable action-center records. After-response jobs prompt queue/drain after checkout, requests, webhook processing and cleanup. Filled campaign/deadline/production blockers are refreshed without activating campaigns. Duplicate jobs share stable alert/delivery identities. Six due messages per prompt drain; daily worker is the recovery path. Missing recipient leaves in-app alerts visible with a warning. Owner email failure is never a source of another owner email. Fixed-code logs only. Customer confirmation succeeds even if callback scheduling or provider delivery fails.
+
+CONSENT / COMMERCIAL SAFETY
+Historical amount, currency, version and any recorded wording cannot be updated by the new trigger. New consent captures the authoritative reservation deadline under a shared campaign lock. Legacy null snapshots remain null. Collection readiness, new ledger insertion, charge execution before any Stripe call and payment-recovery access all enforce consent review. Existing payment outcomes can still reconcile; nothing rewrites historical payments. Intentional $1 reservations remain unchanged. Original displayed source is archived in legacy-consent-sources.txt; proposed policy remains visibly draft. No claim of legal approval, automatic reconsent or unrestricted refund functionality is made.
+
+CUSTOMER MANAGEMENT / EVIDENCE / INVITATIONS
+Private bearer-cookie access is checked before customer data. Recovery fragments are not sent in HTTP query logs. Request submission does not cancel, change art, charge or refund; admin resolution and its response are visible on the private reservation page. Copy correctly says responses appear online, not by email.
+Only published, current campaign evidence for the authorized booking is exposed. Superseded artwork/house/layout proofs are filtered; private notes/contact/payment references are not returned in customer DTOs. Private Storage download URLs expire after 60 seconds; routes are no-store and no-referrer. Unauthorized or other-booking access is denied. Already-published document CONTENT still needs owner review before new customer visibility is released.
+Invitations require explicit reviewed send authorization, expire, never hold inventory or guarantee a position, and pass through normal checkout. Current price, slot occupancy and paused/closed/deadline state are revalidated. Queued emails have stable identities; a new preview resets prior UI send state. No actual invitation was sent.
+
+HOLD VERIFICATION
+One and four areas use the shared 30-minute window. A single 15-minute extension is available only during the last five minutes, never after expiry or beyond 45 minutes from original creation or the campaign deadline. Slow multi-image upload, refresh, offline retry, concurrent slot competition, expired group and late simulated Stripe return are covered. Refresh does not restore the extension. The database is authoritative; no reclaimed/expired slot is resurrected by the browser.
+
+MIGRATION / SECURITY AUDIT
+39 pre-existing repository migrations remain unchanged. All 44 application migrations replayed successfully into a new isolated PostgreSQL database using the installed Auth/Storage schema only; 33 application tables, zero customer rows, no missing public-table RLS. This is local replay, not a production backup restore.
+The three original Phase 6.15 files remain byte-for-byte identical to their published versions. Two new additive hardening files are interleaved after A and B. No destructive business-data statements, price/consent updates, seeds or storage replacements. Each file runs transactionally. Counters default to zero; legacy consent additions remain null. Constraint changes widen administrative metadata values. Existing production code was reviewed for nullable/default compatibility; new code requires all five files. See the runbook for deployment ordering and rollout conditions.
+Active local DB and clean replay DB both match all 24 latest SQL function-body hashes, all 18 public RPC grant checks, six-table RLS/policies, four new columns and three triggers. The three existing artwork/evidence buckets remain private. Generated TypeScript types include the new tables, columns, relationships and RPCs; typecheck and DB-backed tests verify their use. The private reservation-confirmed trigger cannot be called as an ordinary RPC. Existing authorization and layout/payment gates remain in place.
+
+FINAL VERIFICATION
+Typecheck: PASS.
+Lint: PASS.
+Unit: 434 passed, 0 skipped.
+Integration: 165 passed; 3 Stripe-dependent tests skipped (not counted as passes).
+E2E: 23 passed, 0 skipped in the final full Chromium run; the additional focused house-editor investigation also passed.
+Production build: PASS (optimized Next.js production build; no deployment).
+Migration replay: 44/44 passed; 24/24 SQL body hashes and 18/18 public RPC grant checks matched in both local databases.
+The verification wrapper pins localhost Supabase, clears real Stripe/Resend credentials and forces disabled collection. Browser checkout uses clearly marked fake payment IDs. One newly added timer assertion initially expected a leading zero; corrected to match the existing display. No app behavior was changed for that assertion. A separate intermediate development-server run showed a client error during the existing house-art screenshot/zoom check; it did not reproduce in the isolated traced run or the final frozen-source full suite. No house-art code was changed, and no fix for that transient is claimed.
+
+STACK / HANDOFF
+PR11: https://github.com/MyPenguin19/Inside914/pull/11
+  feature/phase615a-core-reliability -> main
+  a408fee3c71c720aa35d6e0e518bce564b5cdeaf
+PR12: https://github.com/MyPenguin19/Inside914/pull/12
+  feature/phase615b-customer-operations -> feature/phase615a-core-reliability
+  4bb83a7759a62bd6af1ddc4d7418db2ad6988c95
+PR13: https://github.com/MyPenguin19/Inside914/pull/13
+  feature/phase615c-transparency-invitations -> feature/phase615b-customer-operations
+  Final C head is reported in the GitHub PR and completion message (a commit cannot embed its own SHA).
+All remain draft/unmerged. A fixes were merged forward into B and then C; no published history was rewritten. Stage-specific file inventory is in phase615d-files-changed.txt. No dependencies, print geometry, pricing formula or collection release setting changed.
+
+REMAINING PREREQUISITES
+1. Owner-approved secure email settings, key custody/restore plan, Resend endpoint/events and controlled test inbox delivery.
+2. Owner/counsel decisions in phase615d-production-checklist.txt, approved wording/version and treatment of original deadlines/renewed authorization. No live collection until this is resolved.
+3. Fresh production mapping-aware audit, verified backup including independent Storage originals, and explicit Phase 6.16 authorization. Apply the five exact migrations before deploying dependent code.
+4. Owner review of existing published evidence and scheduler fallback SLA. No guaranteed 15-minute outage recovery or unlimited retries.
+5. Controlled reviewed-stack merge/deploy and safe smoke checks, all separately authorized. Final printer approval/production proof and mailing commitments remain unchanged prerequisites outside this coding task.
+Exact five migration SHA-256 hashes and ordered steps: phase616-runbook.txt.
+Environment/provider checklist and owner matrix: phase615d-production-checklist.txt.
+Read-only schema checks: phase615d-schema-verification.sql.
