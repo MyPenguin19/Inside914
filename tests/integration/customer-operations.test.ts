@@ -90,6 +90,8 @@ test("requests deduplicate, require a private token, respect artwork lock and re
  const results=await Promise.all([db.rpc("submit_customer_request",args),db.rpc("submit_customer_request",args)]);const id=ok(results[0]);expect(ok(results[1])).toBe(id);
  expect((await anon.rpc("submit_customer_request",args)).error).not.toBeNull();expect((await db.rpc("submit_customer_request",{...args,p_hash:"f".repeat(64)})).error).not.toBeNull();
  expect((await anon.from("customer_requests").select("*")).data??[]).toEqual([]);
+ const alert=ok(await db.from("operational_alerts").select("id").eq("logical_key",`reservation:${c.booking.id}`).single());
+ ok(await admin.rpc("admin_acknowledge_alert",{p_id:alert.id}));
  ok(await admin.rpc("admin_resolve_customer_request",{p_id:id,p_status:"resolved",p_response:"We will contact you to review a replacement."}));
  expect(ok(await db.from("customer_requests").select("status,resolved_by").eq("id",id).single())).toMatchObject({status:"resolved",resolved_by:user});
  ok(await db.from("editions").update({artwork_due_at:new Date(0).toISOString()}).eq("id",c.booking.editionId));

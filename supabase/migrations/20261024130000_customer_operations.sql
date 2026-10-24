@@ -1,4 +1,7 @@
 -- Phase 6.15B. Account-free requests/recovery, deduplicated owner attention, bounded cart holds.
+alter table public.admin_events drop constraint admin_events_target_type_check;
+alter table public.admin_events add constraint admin_events_target_type_check check(target_type in ('campaign','slot','booking','artwork','evidence','zone','operational_alert'));
+
 create table public.reservation_recoveries (
  id uuid primary key default gen_random_uuid(), booking_id uuid not null references public.bookings(id) on delete cascade,
  token_hash text not null unique check(token_hash ~ '^[0-9a-f]{64}$'), expires_at timestamptz not null,
