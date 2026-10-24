@@ -1,3 +1,4 @@
+import { EmailDeliveryStatus } from "@/components/admin/email-delivery-status";
 
 import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
@@ -74,6 +75,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
         </Notice>
       )}
 
+      <EmailDeliveryStatus bookingId={b.id} />
       <ReservationActions booking={b} spaces={own.map((s) => s.label)} now={now} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">

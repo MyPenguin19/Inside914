@@ -18,7 +18,7 @@ import { processOutboxForBooking } from "@/lib/email/outbox";
 
 type Admin = SupabaseClient<Database>;
 export const CART_COOKIE = "inside914_cart";
-export const CART_TERMS = "square-zones-v1";
+export { CART_TERMS_VERSION as CART_TERMS } from "@/lib/checkout/terms";
 export const cartMemberToken = (token: string, edition: string) =>
   createHmac("sha256", token)
     .update(`inside914-area:${edition}`)

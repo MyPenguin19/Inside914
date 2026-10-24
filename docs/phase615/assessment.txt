@@ -1,0 +1,29 @@
+Phase 6.15 assessment — 2026-10-24
+Baseline: ece490764338748466349663a370b625befa949c (local main = origin/main; clean).
+No production writes, migrations, deployment, live Stripe calls or advertiser emails are authorized during implementation.
+
+A. Reliability
+Already present: transactional reservation/cancellation outbox, atomic short claims, token-hash access, daily deadline closing, guarded admin extension/cancellation, shared-card cleanup with retries, consent text/version snapshots.
+Missing: stable encrypted email payload/link, finite provider-idempotency handling, signed delivery reconciliation, safe admin retry visibility, prominent deadline needs-action summary, complete legal drafts/history.
+Backend: durable encrypted delivery envelopes, fenced leases, signed webhook reconciliation with duplicate/out-of-order protection; preserve all existing access tokens. New additive migration. Preserve guarded campaign RPCs.
+Frontend: compact delivery status/retry and deadline action summary on existing admin screens. Legal drafts and owner decisions remain explicitly unapproved.
+Risks: provider idempotency only 24 hours; ambiguous older sends must stop for investigation. Never promise exactly once. New encryption key and webhook secret require separate production configuration approval. Legacy ambiguous rows must not blindly resend.
+Acceptance: stable body/key/token across timeouts, one lease per worker, late/duplicate webhook handling, safe retries, existing deadline/cancellation guards and saved-card tests.
+
+B. Customer operations
+Already present: account-free private reservation page, artwork preview, multi-zone holds, database expiry, explicit saved-card consent, internal attentionItems helper.
+Missing: recovery, customer requests, persistent deduplicated owner notifications, compact action center, bounded multi-area extension/countdown.
+Backend: private rate-limited recovery and request RPCs, durable owner notifications; database-enforced 30-minute cart hold and one near-expiry extension bounded by campaign deadlines. Additive migration.
+Frontend: simple recovery form, requests on existing reservation page, action summary linked to existing admin pages, countdown and restart guidance.
+Risks: enumeration, link leakage, requests after production lock, notification duplication and inventory monopolization. No automatic cancellation/approval/charging.
+Acceptance: unauthorized requests refused, generic recovery response, old links survive, locked artwork unchanged, concurrent extension/booking guards, multi-area and mobile tests.
+
+C. Transparency / invitations
+Already present: private mailing evidence and approval/readiness records, campaign exports, normal slot reservation flow.
+Missing: explicitly published advertiser evidence, factual customer timeline, shareable invitations with optional explicit send.
+Backend: admin-only publication bound to current layout/artwork proof; short-lived authorized signed evidence URLs, invitation metadata and durable explicit email delivery. Additive migration.
+Frontend: timeline/evidence on reservation page; small invitation form on campaign detail, normal checkout destination with availability recheck.
+Risks: stale proofs, private document exposure, invitations accidentally claiming inventory, unapproved outreach.
+Acceptance: unpublished/superseded evidence hidden, published evidence authorized, invitation never holds inventory or overrides price/status, occupied positions handled normally.
+
+Implementation: independent A/B/C commits and stacked reviewable PRs, automatic branch deployments disabled before push. No merge or production application. All suites use scripts/verify-local-mvp.mjs with local fixtures/mocks only.

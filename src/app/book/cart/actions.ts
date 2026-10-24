@@ -1,4 +1,6 @@
 "use server";
+import { getReservationView } from "@/lib/checkout/reservation";
+import { cartConsentText } from "@/lib/checkout/terms";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -181,6 +183,9 @@ export async function giveCartConsent(input: {
     (b) => b.stripeSetupIntentId,
   )?.stripeSetupIntentId;
   if (!intent) return { ok: false, reason: "payment_not_started" };
+  const consentViews=await Promise.all(cart!.members.map(b=>getReservationView(admin,b.id)));
+  if(consentViews.some(v=>!v)) return {ok:false,reason:"error"};
+  const text=cartConsentText(cart!.members.map((b,i)=>({name:consentViews[i]!.zoneName,amount:b.priceCents})));
   const { error } = await admin.from("payment_consents").upsert(
     cart!.members.map((b) => ({
       booking_id: b.id,
@@ -190,6 +195,7 @@ export async function giveCartConsent(input: {
       pricing_mode: b.pricingMode,
       currency: "usd",
       terms_version: CART_TERMS,
+      consent_text: text,
     })),
     { onConflict: "booking_id,stripe_setup_intent_id", ignoreDuplicates: true },
   );

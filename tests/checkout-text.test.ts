@@ -8,7 +8,7 @@ describe("future-payment consent", () => {
   test("names the customer's exact amount: $500 standard, $900 double", () => {
     expect(consentText(50000)).toContain("charge $500, as shown in my reservation summary");
     expect(consentText(90000)).toContain("charge $900, as shown in my reservation summary");
-    expect(consentText(50000)).toContain("canceled without charge");
+    expect(consentText(50000)).toContain("No charge occurs while the campaign is incomplete");
     expect(TERMS_VERSION).toMatch(/draft/);
   });
 });

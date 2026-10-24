@@ -41,7 +41,7 @@ export function CampaignStatusControls({ edition: e, stats, now }: { edition: Ad
   if (missed && stats.reservations > 0) {
     controls.push(
       <ConfirmAction key="cancel" label="Cancel campaign (didn't fill)" action={setCampaignStatus} fields={f("cancel")} confirmLabel="Cancel campaign and reservations" tone="danger"
-        consequence={<>All {stats.reservations} confirmed {stats.reservations === 1 ? "reservation is" : "reservations are"} canceled. Each customer is emailed that the campaign didn&apos;t fill, nobody is charged, and every saved card is removed from Stripe. This can&apos;t be undone.</>} />,
+        consequence={<>All {stats.reservations} confirmed {stats.reservations === 1 ? "reservation is" : "reservations are"} canceled. Each customer is emailed that the campaign didn&apos;t fill, nobody is charged, and unused saved cards are removed from Stripe. Cards shared with another active reservation are retained. This can&apos;t be undone.</>} />,
     );
   } else if (["draft", "open", "closed"].includes(e.status) && stats.reservations === 0) {
     controls.push(

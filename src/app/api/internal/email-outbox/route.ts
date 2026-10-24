@@ -1,3 +1,4 @@
+import { processDueDeliveries } from "@/lib/email/delivery";
 import { timingSafeEqual } from "node:crypto";
 import { processDueCardRemovals } from "@/lib/checkout/card-removal";
 import { getStripe } from "@/lib/checkout/stripe";
@@ -26,5 +27,6 @@ export async function GET(request: Request) {
     console.error("card removal job failed", error instanceof Error ? error.message.slice(0, 80) : "unknown");
   }
   const results = await processDueOutbox(admin);
-  return Response.json({ campaignsClosed: campaignsClosed ?? 0, processed: results.length, results, cardRemovals });
+  const deliveries = await processDueDeliveries(admin);
+  return Response.json({ deliveries, campaignsClosed: campaignsClosed ?? 0, processed: results.length, results, cardRemovals });
 }

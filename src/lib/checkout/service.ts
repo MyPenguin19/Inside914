@@ -9,7 +9,7 @@ import { isTestStripeId } from "@/lib/dev/test-mode";
 import type { Database } from "@/lib/supabase/database.types";
 import { parseContact, type ContactErrors } from "./contact";
 import type { StripeClient } from "./stripe";
-import { TERMS_VERSION } from "./terms";
+import { TERMS_VERSION, consentText } from "./terms";
 
 // Checkout steps after artwork: contact details -> SetupIntent (save card, $0) -> consent ->
 // confirmation. Customer-facing steps are authorized by the hold token; prices always come from
@@ -202,6 +202,7 @@ export async function recordConsent(admin: Admin, token: string | undefined, raw
       pricing_mode: booking!.pricingMode,
       currency: "usd",
       terms_version: TERMS_VERSION,
+      consent_text: consentText(booking!.priceCents),
     },
     { onConflict: "booking_id,stripe_setup_intent_id", ignoreDuplicates: true },
   );
