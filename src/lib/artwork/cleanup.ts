@@ -19,7 +19,8 @@ export async function cleanupAbandonedArtwork(admin: SupabaseClient<Database>) {
     if (complete) {
       const deleted = await admin.from("artwork_uploads").delete().eq("id", upload.id).eq("status", "deleting");
       if (!deleted.error) removed++;
-    }
+      else await admin.rpc("note_artwork_cleanup_failure",{p_id:upload.id});
+    } else await admin.rpc("note_artwork_cleanup_failure",{p_id:upload.id});
   }
   return { claimed: claimed.data.length, removed };
 }

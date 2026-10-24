@@ -19,7 +19,7 @@ const DOCS: Record<string, { title: string; sections: [string, string][] }> = {
   "reservation-policy": {
     title: "Reservation and cancellation policy",
     sections: [
-      ["Holds", "Choosing a position holds it for 15 minutes while you finish booking."],
+      ["Holds", "Multi-area checkout holds selected positions for 30 minutes, with one 15-minute extension in the last five minutes, subject to the campaign deadline. Other holds follow the timer shown during checkout. Expired positions must be checked again."],
       ["If the campaign doesn't fill", DEADLINE_POLICY],
       ["Canceling", "Contact us before the campaign is approved for production to cancel. Detailed timing and refund terms will be added here after legal review."],
     ],

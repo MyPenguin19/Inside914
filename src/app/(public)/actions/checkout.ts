@@ -1,4 +1,6 @@
 "use server";
+import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
+
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -71,6 +73,7 @@ export async function confirmReservation(): Promise<{ outcome: ConfirmOutcome | 
     if (!booking) return { outcome: "no_hold" };
     const outcome = await completeReservation(admin, getStripe(), booking.id);
     if (outcome === "confirmed" || outcome === "already_confirmed") {
+      notifyOwnerAfterResponse();
       await processOutboxForBooking(admin, booking.id).catch(() => {}); // retried later if it fails
     }
     return { outcome };

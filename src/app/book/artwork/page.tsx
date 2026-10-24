@@ -56,7 +56,7 @@ async function Studio({ searchParams }: { searchParams: Promise<{ upload?: strin
         layoutKey={booking.layoutTemplate}
         key={booking.cartId ? `${booking.id}:${artwork?.version ?? "empty"}` : booking.id}
         nextHref={booking.cartId ? "/book/cart" : undefined}
-        hold={{ expiresAt: booking.expiresAt, extensionsLeft: booking.cartId ? 0 : MAX_EXTENSIONS - booking.holdExtensions }}
+        hold={{ expiresAt: booking.expiresAt, extensionsLeft: booking.cartId ? Math.max(0,1-booking.holdExtensions) : MAX_EXTENSIONS - booking.holdExtensions }}
         ad={{
           side: area.side,
           area,

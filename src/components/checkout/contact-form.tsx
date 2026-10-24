@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState, useEffect } from "react";
+import { startTransition, useActionState, useEffect, useRef } from "react";
 import type { ContactFormState } from "@/app/(public)/actions/checkout";
 import { BUSINESS_CATEGORIES, type ContactField } from "@/lib/checkout/contact";
 import { checkoutMessage } from "@/lib/checkout/messages";
@@ -23,6 +23,13 @@ export function ContactForm({ action, initial, onDone, lockedCategory, hideCateg
   useEffect(() => {
     if (state.done) onDone?.();
   }, [state.done, onDone]);
+  const formRef=useRef<HTMLFormElement>(null);
+  useEffect(()=>{
+    // Only public business name/website are retained locally; no personal contact or card data.
+    try { const saved=JSON.parse(sessionStorage.getItem("inside914-business-draft")??"{}");
+      for(const name of ["businessName","website"]) { const field=formRef.current?.elements.namedItem(name);if(field instanceof HTMLInputElement&&!field.value&&typeof saved[name]==="string")field.value=saved[name]; }
+    } catch { /* Storage may be unavailable. */ }
+  },[]);
   const values = initial; // uncontrolled fields keep what the customer typed
   const errors = state.errors ?? {};
 
@@ -30,6 +37,8 @@ export function ContactForm({ action, initial, onDone, lockedCategory, hideCateg
   // which could wipe a correction typed while the response was arriving.
   return (
     <form
+      ref={formRef}
+      onChange={()=>{try{const form=formRef.current;if(!form)return;const data=new FormData(form);sessionStorage.setItem("inside914-business-draft",JSON.stringify({businessName:data.get("businessName"),website:data.get("website")}));}catch{/* Optional convenience only. */}}}
       noValidate
       className="flex flex-col gap-5"
       onSubmit={(event) => {

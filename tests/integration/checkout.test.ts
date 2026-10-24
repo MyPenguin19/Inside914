@@ -332,10 +332,10 @@ describe.skipIf(!secretKey)("checkout and confirmation (real Supabase, fake Stri
 
       const message = (working.mock.calls[0] as unknown[])[0] as { to: string; text: string };
       expect(message).toEqual(failing.mock.calls[0][0]);
-      const linkToken=message.text.match(/\/r\/([A-Za-z0-9_-]{43})/)![1];
+      const linkToken=message.text.match(/\/reservation\/access#([A-Za-z0-9_-]{43})/)![1];
       expect(await tokens.resolveAccessToken(admin,linkToken)).toBe(bookingId);
       expect(message.to).toBe("ana@example.com");
-      expect(message.text).toMatch(/\/r\/[A-Za-z0-9_-]{43}/);
+      expect(message.text).toMatch(/\/reservation\/access#[A-Za-z0-9_-]{43}/);
       expect(message.text).not.toMatch(/\b(cus|seti|pm)_/);
 
       expect(await outbox.processOutboxRow(admin, outboxId, working)).toBe("skipped");

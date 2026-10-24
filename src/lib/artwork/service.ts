@@ -183,7 +183,10 @@ const EXTEND_ERRORS: Record<string, ExtendFailure> = {
 // "Need more time?": renews a hold in its last 5 minutes, at most twice (enforced in extend_hold()).
 export async function extendHold(admin: Admin, token: string | undefined) {
   if (!token) return { ok: false as const, reason: "no_hold" as ExtendFailure };
-  if ((await getHeldBooking(admin, token))?.cartId) return { ok: false as const, reason: "extension_limit" as ExtendFailure };
+  if ((await getHeldBooking(admin, token))?.cartId) {
+    const result=await admin.rpc("extend_cart_hold",{p_hash:hashHoldToken(token)});
+    return result.error?{ok:false as const,reason:"extension_limit" as ExtendFailure}:{ok:true as const,expiresAt:result.data};
+  }
   const { data, error } = await admin.rpc("extend_hold", { p_token_hash: hashHoldToken(token) });
   if (error) {
     const reason = EXTEND_ERRORS[error.code];

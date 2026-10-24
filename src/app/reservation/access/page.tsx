@@ -1,0 +1,3 @@
+import { ReservationAccess } from "@/components/checkout/reservation-access";
+export const metadata={title:"Open reservation · Inside914",robots:{index:false,follow:false},referrer:"no-referrer" as const};
+export default function Page(){return <main className="page-width max-w-xl py-12"><ReservationAccess/></main>;}

@@ -1,0 +1,45 @@
+Phase 6.15B — customer operations (local implementation, not released)
+
+Reuses private booking access, confirmed reservation views, administrator authorization,
+normal guarded cancellation/artwork workflows, the encrypted email delivery queue and
+the existing once-daily Vercel job. No account, password or dashboard was added.
+
+Recovery asks for email plus reservation reference. Every submission immediately returns
+the same response. After-response work applies HMAC address/email rate limits, queues a
+15-minute single-use verification token and sends only that message. Tokens are hashed
+in the database and encrypted inside durable email envelopes. New links use URL fragments
+and an explicit POST exchange, so HTTP access logs and email scanners don't consume them.
+Exchanging a recovery link creates a normal private session without revoking earlier links.
+Expired recovery envelopes cannot be sent. No raw token is logged.
+
+Requests are scoped to the private booking token. Artwork changes are requests only,
+blocked after the artwork deadline, production lock or any collection attempt. Cancellation
+requests never cancel automatically. The owner records a resolution/decline on the existing
+advertiser page, then uses existing guarded actions if a change is approved. The customer
+sees the recorded response on the same private page.
+
+Owner alerts are durable and deduplicated: confirmed reservation, artwork review, customer
+requests, full campaign/preparation, approaching/passed deadline, repeated email failures,
+and repeated cleanup failure. The compact action center also computes current campaign
+attention at read time. ADMIN_NOTIFICATION_EMAIL is intentionally unconfigured; supply a
+verified owner recipient at release. Only minimal operational metadata goes in emails.
+The existing Hobby daily job drains alerts, so email can take up to a daily cron interval;
+this is not a realtime notification SLA. Dashboard attention is available immediately.
+No notifications authorize a payment, cancellation, artwork approval or mailing operation.
+
+Hold investigation: each original position began a 15-minute hold at creation; uploads,
+editing, contact details and Stripe return consumed that same period. Multi-area members
+could not use the existing single-booking extension. A four-area flow leaves at most
+3.75 minutes per image before contact/card setup; this is a structural risk, not measured
+customer abandonment telemetry. New carts now share 30 minutes, capped by the earliest
+campaign deadline. One extension in the final five minutes adds at most 15 minutes;
+the database enforces a 45-minute cap, checks all members and serializes competing holds.
+The same expiry survives refresh, artwork navigation and payment return. An expired cart
+cannot be revived or confirm another customer's position. Business name/website may be
+restored from sessionStorage; personal contact and card data are not retained there.
+Legacy single holds retain their existing limits. Existing active holds are not extended
+by the migration itself.
+
+Tests use localhost Supabase only. New migration is pending separate production approval:
+20261024130000_customer_operations.sql. All production state, owner $1 pricing and live
+Stripe references remain untouched. Collection remains disabled.

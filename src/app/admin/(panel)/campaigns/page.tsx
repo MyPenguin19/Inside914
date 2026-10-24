@@ -1,3 +1,4 @@
+import { ActionCenter } from "@/components/admin/action-center";
 import { layoutVersion } from "@/lib/print/layouts";
 import { isConfirmed } from "@/lib/admin/metrics";
 import Link from "next/link";
@@ -51,6 +52,7 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
         <p>Confirmed reservations and their agreed amounts are unchanged. No automatic cancellation or charge.</p>
         <Link className="underline" href={`/admin/campaigns/${e.id}#status-title`}>Review amounts, extend deadline or cancel campaign</Link>
       </Notice>)}
+      <ActionCenter />
       <nav aria-label="Filter by status" className="flex flex-wrap gap-2 text-sm">
         {STATUSES.map((s) => (
           <Link
