@@ -24,7 +24,11 @@ beforeEach(()=>{
  bookingStatus="reserved";openCancellation=false;requestError=false;
  row={stripe_mode:"test",stripe_account_id:"acct_fixture",id:"00000000-0000-4000-8000-000000000001",booking_id:"b",edition_id:"e",consent_id:"c",amount_cents:39900,customer_id:"cus_test",payment_method_id:"pm_test",payment_intent_id:null,status:"pending",created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:"admin",recovery_hash:null,recovery_expires_at:null,last_event_at:0,failure_code:null};
  intent={id:"pi_test",livemode:false,amount:39900,currency:"usd",customer:"cus_test",metadata:{zone_charge_id:row.id,booking_id:"b",edition_id:"e"},status:"requires_confirmation"} as unknown as Stripe.PaymentIntent;
- rpc=vi.fn(async()=>({data:"recorded",error:null}));
+ rpc=vi.fn(async(name:string,args?:Record<string,unknown>)=>{
+  if(name==="begin_payment_operation")return {data:{decision:"allowed",token:"operation-fixture"},error:null};
+  if(name==="finish_payment_operation") {if(args?.p_intent)row.payment_intent_id=String(args.p_intent);return {data:"in_progress",error:null};}
+  return {data:"recorded",error:null};
+ });
 });
 test("creates one per-booking intent, persists it, and confirms off-session with stable keys",async()=>{
  const api=stripe();await collectCharge(db(),api as unknown as PaymentStripe,row.id);
@@ -130,4 +134,18 @@ test("a cancellation received during intent creation blocks confirmation",async(
  const api=stripe();api.paymentIntents.create.mockImplementation(async()=>{openCancellation=true;return intent;});
  await expect(collectCharge(db(),api as unknown as PaymentStripe,row.id)).rejects.toThrow("cancellation");
  expect(api.paymentIntents.confirm).not.toHaveBeenCalled();
+});
+
+test("database operation claim failure prevents provider writes even after successful account reads",async()=>{
+ const original=rpc.getMockImplementation() as (name:string,args?:Record<string,unknown>)=>Promise<{data:unknown;error:unknown}>;
+ rpc.mockImplementation(async(name:string,args?:Record<string,unknown>)=>name==="begin_payment_operation" ? {data:null,error:{message:"database unavailable"}} : original(name,args));
+ const api=stripe();await expect(collectCharge(db(),api as unknown as PaymentStripe,row.id)).rejects.toThrow("authorization unavailable");
+ expect(api.paymentIntents.create).not.toHaveBeenCalled();expect(api.paymentIntents.confirm).not.toHaveBeenCalled();
+});
+test("lost outcome persistence cannot advance from creation to confirmation",async()=>{
+ const original=rpc.getMockImplementation() as (name:string,args?:Record<string,unknown>)=>Promise<{data:unknown;error:unknown}>;
+ rpc.mockImplementation(async(name:string,args?:Record<string,unknown>)=>name==="finish_payment_operation" ? {data:null,error:{message:"database unavailable"}} : original(name,args));
+ const api=stripe();await expect(collectCharge(db(),api as unknown as PaymentStripe,row.id)).rejects.toThrow("requires reconciliation");
+ expect(api.paymentIntents.create).toHaveBeenCalledTimes(1);expect(api.paymentIntents.confirm).not.toHaveBeenCalled();
+ expect(api.paymentIntents.create).toHaveBeenCalledWith(expect.anything(),{idempotencyKey:`zone-create-${row.id}`});
 });

@@ -1,4 +1,5 @@
 import { findPostcardLayout, isLayoutV2 } from "@/lib/print/layouts";
+import { PrinterProgress } from "./printer-progress";
 import { publishEvidence } from "@/app/admin/admin-actions";
 import { requireAdmin } from "@/lib/admin/auth";
 import { listEvidence, signEvidence } from "@/lib/admin/data";
@@ -14,10 +15,13 @@ export async function PrinterRecords({editionId}:{editionId:string}) {
  const {data:edition}=await supabase.from("editions").select("layout_template").eq("id",editionId).single();
  const layout=findPostcardLayout(edition?.layout_template);
  const evidence=await listEvidence(supabase,editionId);
+ const events=await supabase.from("printer_order_events").select("*").eq("edition_id",editionId).order("recorded_at");
+ if(events.error) throw new Error("Printer progress could not be loaded");
  const evidenceLinks=await Promise.all(evidence.map(x=>x.storage_path ? signEvidence(x.storage_path) : null));
  return <details><summary className="cursor-pointer text-lg font-semibold">Advanced / Printer Records</summary>
  <p className="my-4 text-sm text-muted">{isLayoutV2(layout?.key) ? "V2: front 2.78 × 2.78 inches; back 2.2925 × 2.815 inches. Paid/postal clearance 0.3075 inch; house/postal gap 0.125 inch." : "V1: paid squares remain 2.5 × 2.5 inches. Back paid/postal clearance is only 0.0125 inch; the house panel touches the postal boundary."} Reservation geometry is approved; final printing still requires printer confirmation covering the current customer and house artwork. Export: 7300 × 4900 pixels, 800 DPI metadata; advertiser source: at least 300 effective DPI at its placed size. Resampling adds no detail. Mailing-service eligibility, including EDDM, is not certified.</p>
       <section aria-labelledby="evidence-title">
+        <PrinterProgress editionId={editionId} events={events.data} evidence={evidence.filter(e=>!!e.storage_path).map(e=>({id:e.id,title:e.title}))}/>
         <h2 id="evidence-title" className="text-lg font-semibold">
           Mailing evidence
         </h2>

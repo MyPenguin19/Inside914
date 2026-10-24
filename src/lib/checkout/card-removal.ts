@@ -1,7 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isFakeStripe } from "@/lib/dev/fake-stripe";
-import { isTestStripeId } from "@/lib/dev/test-mode";
+import { isDevTestModeActive, isTestStripeId } from "@/lib/dev/test-mode";
+import { LIVE_COLLECTION_RELEASED } from "@/lib/payments/environment";
 import type { Database } from "@/lib/supabase/database.types";
 import type { StripeClient } from "./stripe";
 
@@ -33,6 +34,10 @@ export async function removeSavedCard(admin: Admin, stripe: StripeClient, bookin
   if (activeError) throw activeError;
   if (active?.length) return "skipped";
   const testCard = isTestStripeId(b.stripe_payment_method_id);
+  // This release permits no live Stripe writes, including deferred cron detaches.
+  // Local fixtures use provider mocks. Revoked DB authority remains enforced even
+  // while a card is retained for this or another campaign.
+  if (!testCard && !LIVE_COLLECTION_RELEASED && !isDevTestModeActive()) return "skipped";
   if (!testCard && isFakeStripe(stripe)) return "skipped"; // a real card is only removed with real Stripe
   if (!testCard) {
     try {

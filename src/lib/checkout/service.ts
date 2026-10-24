@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCheckoutReleased } from "@/lib/checkout/release";
 import { acceptsCrop } from "@/lib/print/layouts";
 import { randomInt } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -138,6 +139,7 @@ const REUSABLE = new Set(["requires_payment_method", "requires_confirmation", "r
 
 // Step 2: a Stripe Customer and a SetupIntent for FUTURE off-session use. Saves a card; charges $0.
 export async function startPayment(admin: Admin, stripe: StripeClient, token: string | undefined) {
+  assertCheckoutReleased();
   const booking = await getBookingByHoldToken(admin, token);
   if (booking?.cartId) return { ok: false as const, reason: "use_cart" as const };
   const gate = checkoutGate(booking, { contact: true });
@@ -185,6 +187,7 @@ const ConsentInput = z.object({ accepted: z.literal(true), termsVersion: z.strin
 
 // Step 3: record the customer's explicit consent, for the amount the SERVER computed.
 export async function recordConsent(admin: Admin, token: string | undefined, raw: unknown) {
+  assertCheckoutReleased();
   const input = ConsentInput.safeParse(raw);
   if (!input.success) return { ok: false as const, reason: "consent_required" as const };
   if (input.data.termsVersion !== TERMS_VERSION) return { ok: false as const, reason: "terms_changed" as const };
@@ -248,6 +251,7 @@ const RELEASE_CARD: ConfirmOutcome[] = ["hold_expired", "not_pending", "inventor
 // browser), then runs the all-or-nothing confirm_booking(). Safe to call repeatedly and
 // concurrently (from the browser and from the webhook).
 export async function completeReservation(admin: Admin, stripe: StripeClient, bookingId: string): Promise<ConfirmOutcome> {
+  assertCheckoutReleased();
   const booking = await getBookingById(admin, bookingId);
   if (booking?.cartId) return (await import("@/lib/booking/cart")).completeCart(admin, stripe, booking.cartId);
   if (!booking?.stripeSetupIntentId) return "not_pending";

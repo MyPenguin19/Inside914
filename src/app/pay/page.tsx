@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PAYMENT_COOKIE,resolveRecovery } from "@/lib/payments/recovery";
-import { getCollectionStripe,verifyIntent,verifyLedgerContext,verifyStripeAccount } from "@/lib/payments/charge";
+import { beginOperation,getCollectionStripe,verifyIntent,verifyLedgerContext,verifyStripeAccount } from "@/lib/payments/charge";
 import { RecoveryForm } from "@/components/payments/recovery-form";
 import { Card } from "@/components/ui/primitives";
 import { SiteHeader } from "@/components/site-header";
@@ -23,6 +23,7 @@ async function Payment(){
       await verifyStripeAccount(stripe);
       const intent=await stripe.paymentIntents.retrieve(charge.payment_intent_id);verifyIntent(charge,intent);
       const {data:edition}=await db.from("editions").select("name,zones(name)").eq("id",charge.edition_id).single();
+      await beginOperation(db,charge.id,"recovery");
       details={intent,name:edition?.name ?? edition?.zones?.name ?? "Your zone"};
     }
   }catch{details=null;}

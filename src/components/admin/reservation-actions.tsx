@@ -18,7 +18,7 @@ export function ReservationActions({ booking: b, spaces, now }: { booking: Admin
           {b.stripePaymentMethodId &&
             (b.cancellation.cardRemovedAt
               ? ` Saved card removed from Stripe ${formatTimestamp(b.cancellation.cardRemovedAt)}.`
-              : " Saved card removal from Stripe is pending; the daily job retries it. This reservation can't be charged.")}
+              : " Saved card removal is not yet confirmed. This reservation cannot be charged.")}
         </Notice>
       )}
       {b.flag && (
@@ -32,7 +32,7 @@ export function ReservationActions({ booking: b, spaces, now }: { booking: Admin
         ) : (
           <ConfirmAction label="Flag for investigation" action={flagBooking} fields={{ booking_id: b.id }} reasonLabel="What needs looking into?" confirmLabel="Flag" consequence={<>Marks this reservation for follow-up. Nothing changes for the customer.</>} />
         )}
-        {!ended && !paymentState && live && (
+        {!ended && (live || paymentState) && (
           <ConfirmAction
             label={isConfirmed(b) ? "Cancel reservation" : "Release hold"}
             action={cancelBooking}
@@ -42,16 +42,16 @@ export function ReservationActions({ booking: b, spaces, now }: { booking: Admin
             tone="danger"
             consequence={
               <>
-                {spaces.length === 2 ? "Both spaces" : "The space"} {spaces.join(" + ")} will be released together and become available again.
+                {spaces.length === 2 ? "Both spaces" : "The space"} {spaces.join(" + ")} will be released only after payment and printer checks allow cancellation. An in-flight payment or printer commitment stays pending review.
                 The booking, its history and the advertiser&apos;s details are kept. No card is charged or refunded.
-                {isConfirmed(b) && <> The customer is emailed that it was canceled, and their saved card is removed from Stripe.</>}
+                {isConfirmed(b) && <> A completed cancellation queues the customer notice; card removal is recorded only when verified.</>}
               </>
             }
           />
         )}
       </div>
       {paymentState && (
-        <p className="text-sm text-muted">This reservation has a payment state, so it can&apos;t be canceled here. It needs the payment-resolution workflow (a later task).</p>
+        <p className="text-sm text-muted">Review this reservation’s payment state in its campaign. An unpaid intent must be verified canceled before the reservation can be canceled. Paid reservations require a separate refund decision.</p>
       )}
     </div>
   );

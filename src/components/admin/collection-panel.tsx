@@ -2,7 +2,7 @@ import { formatPrice } from "@/lib/format";
 import { loadHouseArtwork } from "@/lib/print/house-artwork";
 import { requireAdmin } from "@/lib/admin/auth";
 import { getCollectionContext } from "@/lib/payments/environment";
-import { activateZone } from "@/app/admin/collection-actions";
+import { activateZone, reconcilePaymentCancellation } from "@/app/admin/collection-actions";
 import { ConfirmAction } from "./confirm-action";
 import { Card } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,12 @@ export async function CollectionPanel({editionId}:{editionId:string}) {
   ]);
   let configured=true;try {getCollectionContext();} catch {configured=false;}
   const result=preview as {ready?:boolean;existing?:boolean;reason?:string}|null;
+  const controls=charges?.length ? await supabase.from("booking_payment_controls").select("*").in("booking_id",charges.map(c=>c.booking_id)) : {data:[],error:null};
   const houseReady=!!await loadHouseArtwork(supabase);
-  const ready=houseReady && configured && !error && !ledgerError && !bookingsError && result?.ready===true;
+  const ready=houseReady && configured && !error && !ledgerError && !bookingsError && !controls.error && !controls.data?.some(c=>c.revoked_at || c.state==="reconciliation") && result?.ready===true;
   return <Card><h2 className="text-lg font-semibold">Payments for this campaign</h2>
     <p className="mt-2 text-sm text-muted">Advertisers save a card with $0 due when they reserve. Once all 10 spaces are filled and the final postcard proof is approved, review the agreed amounts below. Total authorized: {formatPrice((bookings ?? []).reduce((total,b)=>total+b.price_cents,0))}.</p>
-    {!configured && <p className="mt-2 text-sm">Charging is currently turned off. Advertisers can still reserve spaces and save their cards.</p>}
+    {!configured && <p className="mt-2 text-sm">Charging is currently turned off. Existing reservations and saved authorizations are preserved.</p>}
     {result?.reason && <p className="mt-2 text-sm">Next: {collectionReason(result.reason)}</p>}
     {houseReady && result?.ready && !result.existing && <p className="mt-2 text-sm">All payment checks passed. Review the advertisers below before approving collection.</p>}
     {(error || ledgerError || bookingsError) && <p role="alert">Could not verify payment readiness. Collection is blocked.</p>}
@@ -32,6 +33,13 @@ export async function CollectionPanel({editionId}:{editionId:string}) {
     <div className="mt-4">{ready ? <ConfirmAction label="Charge Advertisers & Prepare Mailing" action={activateZone} fields={{id:editionId}} confirmLabel="Confirm payment requests" consequence={<>Request the listed agreed amount separately for each advertiser in this campaign only. Successful payments are never requested again. Other areas are unchanged.</>}/> : <Button disabled>Charge Advertisers &amp; Prepare Mailing</Button>}</div>
     {!!charges?.length && <div className="mt-4"><DataTable caption="Campaign payments" columns={["Business","Amount","Status","Recovery"]} rows={charges.map(c=>[bookings?.find(b=>b.id===c.booking_id)?.booking_contacts?.business_name ?? "Advertiser",formatPrice(c.amount_cents),simplePaymentStatus(c.status),["requires_action","requires_payment_method"].includes(c.status) ? (c.recovery_expires_at && Date.parse(c.recovery_expires_at)>now ? <RecoveryLink key={c.id} id={c.id}/> : "Contact the owner for help") : "—"])}/></div>}
     {!!charges?.length && <details className="mt-3 text-sm"><summary>Advanced details</summary>{charges.map(c=><p key={c.id} className="break-all">{c.id}: {c.status}{c.failure_code ? ` · ${c.failure_code}` : ""}</p>)}</details>}
+    {controls.error && <p role="alert">Payment coordination could not be verified. Further collection is blocked.</p>}
+    {controls.data?.filter(c=>c.revoked_at || c.state==="reconciliation").map(control=>{
+      const charge=charges?.find(c=>c.booking_id===control.booking_id);
+      return <div key={control.booking_id} className="mt-3 rounded-xl border border-line p-3 text-sm"><p>Payment {control.state.replaceAll("_"," ")} · {control.revoked_at ? "Authorization revoked. No further collection or recovery is permitted." : "Provider state needs verification."}</p>
+        <p>A previously issued payment action may still be in flight. Verify its provider state before completing cancellation. Refunds require a separate decision.</p>
+        {configured && charge && control.revoked_at && <ConfirmAction label="Reconcile cancellation" action={reconcilePaymentCancellation} fields={{id:charge.id}} confirmLabel="Verify and cancel unpaid intent" consequence={<>Retrieve this payment’s current state and cancel an unpaid intent if eligible. This never creates a charge or refunds a payment.</>}/>}</div>;
+    })}
   </Card>;
 }
 
@@ -47,6 +55,7 @@ function collectionReason(reason: string) {
     ten_positions_required: "This campaign needs all 10 paid positions.",
     ten_confirmed_required: "Wait for all 10 reservations.",
     reservation_not_ready: "Approve every advertisement and check that every advertiser saved a card and authorized payment.",
+    collection_authorization_revoked: "Resolve the cancellation requests. Revoked authorizations cannot be reused.",
     inventory_conflict: "Review this campaign’s positions.",
   };
   return messages[reason] ?? "Review the campaign before collecting payment.";

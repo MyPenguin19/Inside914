@@ -1,3 +1,4 @@
+import { checkoutReleased, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -5,6 +6,7 @@ import { CART_COOKIE, ownedCart, completeCart } from "@/lib/booking/cart";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/checkout/stripe";
 export async function GET(request: Request) {
+  if (!checkoutReleased()) return new Response(CHECKOUT_CLOSED_MESSAGE,{status:403});
   // Read request data before initializing services: completion must never run at build time.
   const token = (await cookies()).get(CART_COOKIE)?.value;
   const admin = createAdminClient();

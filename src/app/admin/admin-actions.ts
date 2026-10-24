@@ -148,6 +148,7 @@ export async function cancelBooking(_prev: ActionResult, form: FormData): Promis
   const { data, error } = await supabase.rpc("admin_cancel_booking", { p_booking_id: booking.data, p_reason: why.data });
   if (error) return { message: adminErrorMessage(error) };
   if (data === "already") return done("Already canceled: nothing changed.");
+  if (data === "requires_resolution") return done("Cancellation is pending payment or printer review. Further collection is blocked. No refund or completed cancellation has been recorded.");
   const followUp = await afterCancel(booking.data);
   return done(`Canceled. Its spaces are available again.${followUp}`);
 }

@@ -1,4 +1,5 @@
 "use server";
+import { assertCheckoutReleased } from "@/lib/checkout/release";
 import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 
 
@@ -46,6 +47,7 @@ export type BeginPaymentResult =
   | { ok: false; reason: string };
 
 export async function beginPayment(): Promise<BeginPaymentResult> {
+  assertCheckoutReleased();
   try {
     const result = await startPayment(createAdminClient(), getStripe(), await holdToken());
     return result.ok ? { ok: true, clientSecret: result.clientSecret, status: result.status } : result;
@@ -57,6 +59,7 @@ export async function beginPayment(): Promise<BeginPaymentResult> {
 }
 
 export async function giveConsent(input: { accepted: boolean; termsVersion: string; displayedConsent: string }) {
+  assertCheckoutReleased();
   try {
     return await recordConsent(createAdminClient(), await holdToken(), input);
   } catch (error) {
@@ -67,6 +70,7 @@ export async function giveConsent(input: { accepted: boolean; termsVersion: stri
 
 // After Stripe confirms the card in the browser: confirm the reservation on the server.
 export async function confirmReservation(): Promise<{ outcome: ConfirmOutcome | "no_hold" | "error" }> {
+  assertCheckoutReleased();
   try {
     const admin = createAdminClient();
     const booking = await getBookingByHoldToken(admin, await holdToken());

@@ -1,6 +1,8 @@
 import {createHmac} from "node:crypto";
 import {afterEach,beforeEach,expect,test,vi} from "vitest";
 vi.mock("server-only",()=>({}));
+const notify=vi.hoisted(()=>vi.fn());
+vi.mock("@/lib/operations/notify-after",()=>({notifyOwnerAfterResponse:notify}));
 const rpc=vi.fn(async()=>({data:"recorded",error:null}));
 const lookup=vi.fn(async()=>({data:{id:"00000000-0000-4000-8000-000000000001"},error:null}));
 const client=vi.fn(()=>({rpc,from:()=>({select:()=>({eq:()=>({maybeSingle:lookup})})})}));
@@ -12,7 +14,7 @@ function request(body=JSON.stringify(payload),timestamp=String(Math.floor(Date.n
  const signature=createHmac("sha256",key).update(`event-fixture.${timestamp}.${body}`).digest("base64");
  return new Request("http://localhost/api/resend/webhook",{method:"POST",body,headers:{"svix-id":"event-fixture","svix-timestamp":timestamp,"svix-signature":`v1,${signature}`}});
 }
-beforeEach(()=>vi.stubEnv("RESEND_WEBHOOK_SECRET",secret));
+beforeEach(()=>{vi.stubEnv("RESEND_WEBHOOK_SECRET",secret);rpc.mockResolvedValue({data:"recorded",error:null});});
 afterEach(()=>{vi.unstubAllEnvs();vi.clearAllMocks();});
 test("documented signed outbound payload associates provider identity and tag",async()=>{
  expect((await POST(request())).status).toBe(200);expect(rpc).toHaveBeenCalledWith("record_email_event",{p_event_id:"event-fixture",p_delivery_id:payload.data.tags.delivery_id,p_provider_id:"provider-id",p_kind:"email.delivered",p_at:payload.created_at});
@@ -26,4 +28,10 @@ test("oversized streaming bodies are stopped before parsing or database work",as
 test("authenticated unsupported events are acknowledged without association",async()=>{expect(await (await POST(request(JSON.stringify({type:"domain.updated",data:{id:"unrelated"}})))).json()).toEqual({received:true,ignored:true});expect(client).not.toHaveBeenCalled();});
 test("events without tags use the recorded provider identity",async()=>{
  const data={...payload.data,tags:undefined};expect((await POST(request(JSON.stringify({...payload,data})))).status).toBe(200);expect(lookup).toHaveBeenCalledTimes(1);
+});
+
+test("successful and duplicate delivery callbacks do not drain unrelated owner alerts",async()=>{
+ await POST(request());expect(notify).not.toHaveBeenCalled();
+ rpc.mockResolvedValueOnce({data:"duplicate",error:null});await POST(request(JSON.stringify({...payload,type:"email.failed"})));expect(notify).not.toHaveBeenCalled();
+ await POST(request(JSON.stringify({...payload,type:"email.failed"})));expect(notify).toHaveBeenCalledTimes(1);
 });

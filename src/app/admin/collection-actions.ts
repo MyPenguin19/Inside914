@@ -4,7 +4,7 @@ import { z } from "zod";
 import { refresh } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { collectCharge, getCollectionStripe, verifyStripeAccount, verifyLedgerContext } from "@/lib/payments/charge";
+import { collectCharge, reconcileCancellation, getCollectionStripe, verifyStripeAccount, verifyLedgerContext } from "@/lib/payments/charge";
 import { issueRecovery } from "@/lib/payments/recovery";
 import { getCollectionContext } from "@/lib/payments/environment";
 import type { ActionResult } from "./admin-actions";
@@ -42,6 +42,16 @@ export async function recoveryLink(_previous:{url?:string;message?:string},form:
     const token=await issueRecovery(db,id);
     return {url:`/pay/${token}`};
   } catch {return {message:"Recovery unavailable or overdue. Review this payment before taking further action."};}
+}
+
+export async function reconcilePaymentCancellation(_previous:ActionResult,form:FormData):Promise<ActionResult> {
+  await requireAdmin();
+  try {
+    const stripe=getCollectionStripe();
+    const result=await reconcileCancellation(createAdminClient(),stripe,z.uuid().parse(form.get("id")));
+    refresh();
+    return {ok:result==="canceled",message:result==="canceled" ? "Stripe confirms the payment intent is canceled. You may now complete the reservation cancellation, subject to printer review." : "Payment still requires review. No refund or completed cancellation was recorded."};
+  } catch {return {message:"Reconciliation is unavailable or the provider outcome is unknown. Collection remains blocked; no cancellation was promised."};}
 }
 
 export async function markCampaignMailed(_previous:ActionResult,form:FormData):Promise<ActionResult> {

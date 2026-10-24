@@ -1,0 +1,37 @@
+Inside914 final production safety release — 2026-10-24
+
+Release boundaries
+The application can deploy with commercial checkout, live collection and promotional invitation sending closed. PUBLIC_CHECKOUT_RELEASED, LIVE_COLLECTION_RELEASED and INVITATION_EMAIL_RELEASED remain false in source. Vercel Production INSIDE914_COLLECTION_MODE remains disabled. Existing authorized reservation access, public browsing, admin operations and transactional email remain available. No policy is declared legally effective by this release. Review-4 policies and historic accepted amounts/versions are preserved.
+
+Payment/cancellation coordination
+booking_payment_controls is a durable record per booking. State is not_started, in_progress, accepted, failed, canceled or reconciliation. All payment RPCs and cancellation submission serialize on the booking, then ledger and control rows. Campaign operations take the campaign lock first. No transaction stays open during a Stripe call.
+
+The service-only begin_payment_operation RPC acquires a two-minute fenced operation token before create, confirm, reconcile or cancel. Each phase reports verified provider state through finish_payment_operation. Concurrent callers receive busy. A process crash retains its identity; unknown create retries use the original zone-create-{charge_id} key only within a conservative 23-hour window. Confirmation keeps zone-initial-confirm-{charge_id}. There is never a replacement intent identity for this booking. Unknown identities outside the replay window require provider investigation; they do not authorize another create.
+
+Cancellation submission permanently revokes that booking's collection authority and invalidates recovery links. It prevents ledger preparation, create/confirm and new secret exposure. Declining a request does not silently restore payment authorization. Previously exposed secrets or in-flight requests require provider reconciliation. The application makes no promise that a request already sent to Stripe was revoked. A known unpaid intent can be explicitly canceled through the gated reconciliation action. Success and processing require review; no automatic refund is implemented. A canceled/unknown authorization cannot be reused. Provider webhooks remain the source of truth for marking bookings paid; late success remains visible and auditable even when cancellation is pending.
+
+A canceled reservation is recorded only if collection never started or Stripe confirmed cancellation, and no printer commitment exists. Otherwise admin cancellation returns requires_resolution, preserves inventory and records an alert. Cancellation requests cannot be marked resolved until the booking is actually canceled. Shared-card detachment still respects other reservations; all live detach writes are also blocked for this release.
+
+Printer operations
+Under a campaign's Advanced / Printer Records, upload a genuine document, then record each stage in order: submitted, accepted/committed, printed, submitted for mailing, confirmed mailed. No event means not submitted. Events retain the admin, timestamp, evidence and explanation. The server checks the stored file; SQL requires a matching private Storage object. These are records of externally verified events, not printer orders. Accepted/committed is the production commitment boundary and blocks automatic cancellation pending review. The record does not itself publish evidence or change customer-facing campaign status.
+
+Checkout and email
+The booking layout displays a neutral closed message. Shared hold, setup, consent and confirmation services and server actions enforce the gate; direct completion routes return 403. The only bypass is isolated development/test mode with localhost Supabase and no Vercel runtime. Production flags cannot enable it. Setup webhooks preserve existing reserved access without confirming a new gated checkout. Successful/duplicate Resend callbacks do not drain unrelated owner notifications. New adverse delivery events remain actionable.
+
+Migration and recovery
+Only 20261024221633_payment_cancellation_release_safety.sql is pending after the 44 already-applied migrations. The historical name/content mapping was checked; no historical migration changed.
+Migration SHA-256: 85c64ec556f212f66fd370012c0ab4373cbec4ebe5e48a414af5fdf56a4c49ea
+The fresh private database archive includes all schemas, and application/Auth/Storage/history data restored into a separate local database with all 74 table digests matching. Seventeen Storage object files have independent byte/hash verification. Managed platform ownership/default grants remain in the complete archive and require a privileged Supabase restore; the local validation preserves object grants but omits unsupported managed-role default grants.
+The new migration was applied on that restored production schema and all prior table digests remained identical. Thirteen function bodies/security definitions and new RLS/grants matched the independently tested local database. Verify with docs/releases/payment-safety-verification.sql. No new bucket or storage policy is required.
+Apply through Supabase's migration API with the exact reviewed SQL and descriptive name, recording its generated applied version. Do not db push, repair, reset or replay historical migrations. Verify production schema and protected record digests before Git merge/deployment. If the application fails, roll back the application only; retain the additive audit/operation records and keep all release gates closed. Never restore over customer data as a shortcut.
+
+Verification scope
+Provider success, failure, cancellation, recovery and concurrency tests use real local PostgreSQL with provider mocks. They do not certify live Stripe behavior. Three credential-dependent Stripe tests remain skipped by owner instruction. The intermittent house-editor error was not reproduced in three focused repeats plus the full browser run; diagnostic logs are retained privately. No house-editor fix is claimed.
+A controlled real owner email is separate from automated tests and must use a single delivery identity, never a whole-queue drain. Acceptance alone is not delivery. Verify the provider event, application reconciliation and owner receipt separately.
+
+Remaining release decisions
+Final approved policies and effective version must precede public checkout release. Live collection additionally needs separately authorized Stripe provider verification, operational review and release approval. Historic or changed consents must not be fabricated or rewritten. Printer confirmation must cover final current advertiser/house artwork and mailing eligibility. Marketing invitations remain separately gated by sender-address/opt-out compliance.
+
+Production migration verification
+Applied through the supported migration API as 20261024224229_payment_cancellation_release_safety. All 13 function bodies, RLS and grants match the isolated tested schema. All 73 pre-existing data tables (excluding migration history) retained identical digests: seven campaigns, 20 bookings, nine consents and 17 Storage objects; no zone charges. The two new audit/control tables are empty.
+Final checks: typecheck, lint and production build pass; 463 unit tests, 182 integration tests and 29 browser tests pass. Three Stripe credential-dependent integration tests are intentionally skipped. Database test suites were rerun sequentially after local fixture interference; final runs are clean.

@@ -29,6 +29,7 @@ export async function POST(request:Request) {
   if(!deliveryId) return Response.json({received:true,matched:false});
   const result=await db.rpc("record_email_event",{p_event_id:id,p_delivery_id:deliveryId,p_provider_id:event.data.email_id,p_kind:event.type,p_at:event.created_at});
   if(result.error) return new Response("Retry later",{status:503});
-  notifyOwnerAfterResponse();
+  // Delivery success/deduplication must not drain unrelated owner notifications.
+  if(result.data==="recorded" && ["email.bounced","email.complained","email.failed","email.suppressed"].includes(event.type)) notifyOwnerAfterResponse();
   return Response.json({received:true});
 }
