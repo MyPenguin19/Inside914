@@ -16,7 +16,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      email_deliveries: { Row:EmailDeliveryRow; Insert:Partial<EmailDeliveryRow>&Pick<EmailDeliveryRow,"logical_key"|"payload_ciphertext">; Update:Partial<EmailDeliveryRow>; Relationships:[] }
+      email_deliveries: { Row:EmailDeliveryRow; Insert:Partial<EmailDeliveryRow>&Pick<EmailDeliveryRow,"logical_key"|"payload_ciphertext">; Update:Partial<EmailDeliveryRow>; Relationships:[{foreignKeyName:"email_deliveries_outbox_id_fkey";columns:["outbox_id"];isOneToOne:true;referencedRelation:"email_outbox";referencedColumns:["id"]}] }
       email_delivery_events: { Row:{id:string;delivery_id:string;provider_message_id:string;kind:string;occurred_at:string;received_at:string}; Insert:{id:string;delivery_id:string;provider_message_id:string;kind:string;occurred_at:string;received_at?:string}; Update:{kind?:string}; Relationships:[] }
 
       artwork_uploads: {
