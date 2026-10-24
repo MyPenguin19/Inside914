@@ -1,5 +1,5 @@
 "use server";
-import { assertCheckoutReleased } from "@/lib/checkout/release";
+import { checkoutReleased, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 
 import { getReservationView } from "@/lib/checkout/reservation";
@@ -39,7 +39,7 @@ const options = {
   maxAge: 86400,
 };
 export async function holdAreas(raw: unknown) {
-  assertCheckoutReleased();
+  if (!checkoutReleased()) return {ok:false as const,message:CHECKOUT_CLOSED_MESSAGE};
   try {
     const admin = createAdminClient();
     if (
@@ -163,7 +163,7 @@ export async function submitCartContact(
   redirect("/book/cart/payment");
 }
 export async function beginCartPayment() {
-  assertCheckoutReleased();
+  if (!checkoutReleased()) return {ok:false as const,reason:"checkout_closed"};
   try {
     return await startCartPayment(
       createAdminClient(),
@@ -179,7 +179,7 @@ export async function giveCartConsent(input: {
   accepted: boolean;
   termsVersion: string;
 }) {
-  assertCheckoutReleased();
+  if (!checkoutReleased()) return {ok:false as const,reason:"checkout_closed"};
   if (input.accepted !== true || input.termsVersion !== CART_TERMS)
     return { ok: false, reason: "consent_required" };
   const admin = createAdminClient();
@@ -216,7 +216,7 @@ export async function giveCartConsent(input: {
   return {ok:true};
 }
 export async function confirmAreas() {
-  assertCheckoutReleased();
+  if (!checkoutReleased()) return {outcome:"checkout_closed"};
   const admin = createAdminClient();
   const cart = await ownedCart(admin, await token());
   if (!cart) return { outcome: "no_hold" };

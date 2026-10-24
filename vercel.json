@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "fix/checkout-release-message": false,
       "feature/final-production-safety": false,
       "revision/shared-postcard-mvp": false,
       "feature/campaign-management-pricing": false,
