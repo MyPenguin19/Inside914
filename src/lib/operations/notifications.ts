@@ -9,7 +9,7 @@ import { isDevTestModeActive } from "@/lib/dev/test-mode";
 export async function queueOwnerNotifications(db:SupabaseClient<Database>) {
  const recipient=z.email().safeParse(process.env.ADMIN_NOTIFICATION_EMAIL);
  if(!recipient.success) return 0; // In-app alerts remain available without outbound configuration.
- const alerts=await db.from("operational_alerts").select("id,title,href").is("resolved_at",null).is("delivery_id",null).order("created_at").limit(20);
+ const alerts=await db.from("operational_alerts").select("id,title,href").is("resolved_at",null).neq("kind","owner_email").is("delivery_id",null).order("created_at").limit(20);
  if(alerts.error) throw new Error("owner_alerts_unavailable");
  for(const alert of alerts.data) {
   const url=new URL(alert.href,getAppUrl()).toString();

@@ -31,6 +31,7 @@ afterEach(async()=>{
  for(const id of bookingIds) {await db.from("operational_alerts").delete().like("href",`%${id}`);await db.from("admin_events").delete().eq("target_id",id);}
  ok(await db.from("bookings").delete().in("edition_id",editions));
  if(carts.length) ok(await db.from("reservation_carts").delete().in("id",carts.splice(0)));
+ for(const id of deliveryIds) ok(await db.from("operational_alerts").delete().eq("logical_key",`email:${id}`));
  if(deliveryIds.length) ok(await db.from("email_deliveries").delete().in("id",deliveryIds.splice(0)));
  for(const edition of editions) ok(await db.from("operational_alerts").delete().like("href",`%${edition}%`));
  bookingIds.length=0;
@@ -117,4 +118,11 @@ test("expired recovery delivery and final ambiguous attempt never resend unsafel
   expect(send).toHaveBeenCalledTimes(expired?0:1);
   expect(ok(await db.from("email_deliveries").select("status").eq("id",id).single()).status).toBe(expired?"failed":"investigation");
  }
+});
+
+test("failed owner messages create in-app attention without recursive outbound alerts",async()=>{
+ const {queueDelivery}=await import("@/lib/email/delivery");
+ const id=await queueDelivery(db,`owner-alert:${randomUUID()}`,{from:"sender@example.com",to:"owner@example.com",subject:"fixture",text:"fixture",html:"fixture"});deliveryIds.push(id);
+ ok(await db.from("email_deliveries").update({status:"failed",attempts:3}).eq("id",id));ok(await db.rpc("refresh_operational_alerts"));
+ expect(ok(await db.from("operational_alerts").select("kind").eq("logical_key",`email:${id}`).single()).kind).toBe("owner_email");
 });

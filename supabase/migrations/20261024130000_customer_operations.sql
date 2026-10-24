@@ -1,6 +1,6 @@
 -- Phase 6.15B. Account-free requests/recovery, deduplicated owner attention, bounded cart holds.
 alter table public.admin_events drop constraint admin_events_target_type_check;
-alter table public.admin_events add constraint admin_events_target_type_check check(target_type in ('campaign','slot','booking','artwork','evidence','zone','operational_alert'));
+alter table public.admin_events add constraint admin_events_target_type_check check(target_type in ('campaign','slot','booking','artwork','evidence','zone','email_delivery','operational_alert'));
 
 create table public.reservation_recoveries (
  id uuid primary key default gen_random_uuid(), booking_id uuid not null references public.bookings(id) on delete cascade,
@@ -126,7 +126,7 @@ begin
   end if;
  end loop;
  insert into public.operational_alerts(logical_key,kind,title,href)
- select 'email:'||d.id,'email','Transactional email needs investigation',case when o.booking_id is not null then '/admin/advertisers/'||o.booking_id else '/admin' end
+ select 'email:'||d.id,case when d.logical_key like 'owner-alert:%' then 'owner_email' else 'email' end,'Transactional email needs investigation',case when o.booking_id is not null then '/admin/advertisers/'||o.booking_id else '/admin' end
  from public.email_deliveries d left join public.email_outbox o on o.id=d.outbox_id
  where d.status='investigation' or (d.status='failed' and d.attempts>=3)
  on conflict(logical_key) do nothing;
