@@ -1,0 +1,669 @@
+# PART 2 — COMPLETE ADVERTISING TERMS
+
+Implement the following complete proposed policy in `/legal/terms`.
+
+Preserve the meaning and all substantive sections.
+
+## INSIDE914 — ADVERTISING TERMS AND CONDITIONS
+
+**Operated by Inside Diagnostics LLC**
+
+**Proposed version:** 2026-10-24-review-3
+
+**Effective date:** Pending approval
+
+**Contact:** Info@inside914.com
+
+### 1. Agreement and Parties
+
+These Advertising Terms and Conditions govern the reservation and purchase of advertising placements through Inside914, a shared direct-mail advertising service operated by Inside Diagnostics LLC.
+
+“Inside914,” “we,” “us,” and “our” refer to Inside Diagnostics LLC in connection with the Inside914 service.
+
+“Advertiser,” “you,” and “your” refer to the business or individual reserving advertising.
+
+By completing a reservation, you agree to the applicable Advertising Terms, Reservation and Cancellation/Refund Policy, and campaign-specific conditions presented during checkout.
+
+If you act on behalf of a business or organization, you represent that you are authorized to enter the agreement for that business.
+
+### 2. Advertising Services
+
+Inside914 offers shared postcard advertising distributed to selected geographic areas, initially within Westchester County, New York.
+
+A standard campaign contains ten paid advertising positions across the front and back of one shared postcard.
+
+Each selected advertising area constitutes a separate campaign and reservation, even when several areas are selected during one checkout.
+
+An advertising reservation is for the displayed position and campaign only.
+
+No advertiser receives exclusive geographic, business-category or market rights unless separately agreed in writing.
+
+### 3. Prices and Reservations
+
+The price of each advertising position is displayed before checkout and recorded with the reservation.
+
+Inside914 may change prices for future reservations but will not increase an existing accepted reservation amount without appropriate new authorization.
+
+**Amount charged today: $0.00.**
+
+A confirmed reservation means advertising space has been reserved. It does not mean the postcard has been paid for, approved for production, printed or mailed.
+
+### 4. Saved Payment Method and Future Authorization
+
+Stripe securely processes and stores the advertiser's payment method.
+
+The advertiser authorizes no more than one future charge for each selected campaign, up to that campaign's individually accepted amount.
+
+Collection may occur only when:
+
+1. All ten positions in the campaign are reserved.
+2. Required artwork has been reviewed and approved.
+3. Required production and printer-proof checks are completed.
+4. Inside914 explicitly approves the campaign for collection and production.
+5. Valid payment authorization remains in effect.
+6. No unresolved qualifying cancellation request or authorization problem prevents collection.
+
+A completed campaign does not authorize charging an unrelated or incomplete campaign.
+
+There are no recurring subscriptions or automatic monthly advertising fees.
+
+If additional cardholder authentication is required, Inside914 may contact the advertiser through the secure payment-recovery process.
+
+### 5. Campaign Deadlines
+
+Every campaign has a displayed reservation deadline.
+
+If all ten positions are not reserved by the deadline, new bookings close while Inside914 reviews whether to cancel the campaign or offer a revised date.
+
+An incomplete campaign cannot be charged.
+
+**Proposed operational standard:** Inside914 will communicate the decision within five business days of the original deadline.
+
+A material deadline extension or revised payment condition requires an appropriate new agreement.
+
+Existing customers retain the rights provided by the terms originally accepted.
+
+If a qualifying extension is not accepted, the affected reservation will be canceled without charge under the applicable policy.
+
+### 6. Artwork Ownership and Permissions
+
+The advertiser retains ownership of its submitted artwork.
+
+The advertiser grants Inside Diagnostics LLC and its contracted production providers a limited, nonexclusive license to store, review, format, reproduce, print and distribute the artwork for the agreed campaign.
+
+This license does not authorize unrelated commercial resale of the artwork.
+
+The advertiser represents that it possesses the necessary rights to all submitted photographs, graphics, logos, trademarks, text and promotional content.
+
+The advertiser is responsible for ensuring that advertising claims are accurate, lawful and adequately substantiated.
+
+QR codes, website addresses, offers and contact details must be accurate and functional.
+
+### 7. Artwork Review and Rejection
+
+Inside914 may reject or request changes to artwork that is unlawful, misleading, infringing, inappropriate or technically unsuitable for printing.
+
+Examples include insufficient image resolution, unusable QR codes, misleading claims and unauthorized copyrighted material.
+
+Inside914 will provide a reasonable opportunity to correct rejected artwork before the applicable deadline, subject to production requirements.
+
+Automated image-quality checks and administrator review do not constitute legal endorsement of the advertiser's claims.
+
+A failure to provide acceptable replacement artwork may result in cancellation under the applicable cancellation policy.
+
+### 8. Artwork Changes and Production Lock
+
+Advertisers may request artwork changes using their private reservation link or by contacting Info@inside914.com.
+
+Requests are subject to review and applicable deadlines.
+
+Submitting a request does not automatically replace approved artwork.
+
+Once the final printer order has been committed, artwork changes may no longer be possible.
+
+A timely acknowledged artwork-change request must be resolved before committing a conflicting final production version.
+
+### 9. Printing and Mailing
+
+Inside914 uses third-party providers for printing, mailing and related services.
+
+Household counts, delivery-area estimates and mailing dates are planning estimates unless a specific commitment is expressly included in the accepted campaign agreement.
+
+Inside914 does not guarantee that every residence or mailbox within an area will receive a postcard.
+
+Inside914 does not guarantee a specific number of leads, sales, calls, website visits or responses.
+
+Printer acceptance, postal acceptance and individual household delivery are different events.
+
+Inside914 will not describe postal acceptance as proof of delivery to every household.
+
+### 10. Campaign Status and Evidence
+
+Advertisers may receive access to a private reservation page displaying campaign progress, artwork status, payment status and authorized production or mailing records.
+
+Only approved and appropriate records are shared.
+
+Published documentation may include printer confirmation, a final approved proof, postal acceptance or a mailing confirmation.
+
+Documentation establishes only the milestone actually supported by the record.
+
+### 11. Cancellation and Refunds
+
+Advertisers may request cancellation according to the separate Reservation and Cancellation/Refund Policy.
+
+A cancellation request does not automatically delete or cancel the reservation.
+
+Eligible unresolved cancellation requests must be reviewed before charging the affected reservation.
+
+Refund eligibility depends on the payment and production stage, the reason for cancellation, any failure to perform the agreed service and applicable law.
+
+### 12. Production Delays and Errors
+
+Printing and mailing may be delayed by printer problems, postal disruptions, severe weather or other operational circumstances.
+
+Inside914 will notify affected advertisers of material production or mailing problems.
+
+If Inside914 cannot complete the agreed mailing service, it will offer an appropriate full refund for the unfulfilled service or a replacement mailing expressly accepted by the advertiser.
+
+Material printing or distribution errors will be reviewed against actual printer records, the accepted agreement and applicable legal rights.
+
+### 13. Advertiser Responsibilities
+
+Advertisers must provide accurate contact information and respond reasonably to requests needed to complete the campaign.
+
+Advertisers are responsible for the accuracy, legality and fulfillment of their products, services, offers and advertised claims.
+
+Promotional deadlines and offers should remain appropriate for the anticipated mailing period.
+
+### 14. Privacy and Information Security
+
+Inside914 handles business, artwork, contact and payment-related information according to its Privacy Policy.
+
+Full card numbers are entered through Stripe and are not stored by Inside914.
+
+Private reservation links should be kept confidential.
+
+### 15. Complaints and Disputes
+
+Questions or disputes should be sent to:
+
+Info@inside914.com
+
+Include the reservation reference and relevant information.
+
+Inside914 will review claims using the accepted agreement, payment records, artwork history and printer/mailing documentation.
+
+The proposed governing law is New York, subject to qualified legal review and mandatory applicable law.
+
+No provision is intended to eliminate rights that cannot lawfully be waived.
+
+### 16. Changes to Terms
+
+New versions apply prospectively unless an appropriate agreement provides otherwise.
+
+Existing accepted payment amounts, deadline rights and material terms must not be silently overwritten.
+
+The accepted version and exact checkout authorization wording must remain auditable.
+
+### 17. Contact Information
+
+Inside914 is operated by Inside Diagnostics LLC.
+
+Business mailing address: [OWNER MUST PROVIDE VERIFIED ADDRESS]
+
+New York, United States.
+
+Email: Info@inside914.com
+
+**Status: Proposed policy pending owner and qualified legal-counsel review.**
+
+---
+
+# PART 3 — RESERVATION, CANCELLATION AND REFUND POLICY
+
+Implement the following complete policy at:
+
+`/legal/reservation-policy`
+
+## INSIDE914 — RESERVATION, CANCELLATION AND REFUND POLICY
+
+**Operated by Inside Diagnostics LLC**
+
+**Proposed version:** 2026-10-24-review-3
+
+**Effective date:** Pending approval
+
+### 1. Temporary Holds and Confirmed Reservations
+
+Customers may choose positions in one or multiple Inside914 postcard campaigns.
+
+A temporary hold is not a confirmed reservation.
+
+For multi-area checkout, the current system provides a 30-minute hold and one optional 15-minute extension near expiration, with a maximum 45-minute window subject to campaign deadlines.
+
+Other checkout flows follow their displayed timer.
+
+An expired position may become available to another customer.
+
+Confirmation requires completion of the required artwork, business information, saved-card setup and authorization process.
+
+### 2. No Upfront Charge
+
+Nothing is charged when reserving advertising space.
+
+The advertiser authorizes a possible future payment limited to the accepted amount for each selected campaign.
+
+No monthly subscription or recurring billing is created.
+
+### 3. Eligibility for Future Collection
+
+A charge may be initiated only when the campaign has ten confirmed paid placements and all applicable artwork, printer-proof, payment-consent and owner-approval requirements are satisfied.
+
+An incomplete campaign cannot be charged.
+
+An unresolved qualifying cancellation request or authorization issue must be reviewed before initiating collection.
+
+### 4. Campaign Not Filled by Deadline
+
+At the reservation deadline, an incomplete campaign closes to new reservations and requires owner review.
+
+Inside914 proposes to communicate a decision within five business days.
+
+The owner may cancel the campaign or offer a revised deadline.
+
+A revised deadline does not silently extend an earlier customer's agreement.
+
+Existing customers retain their original contractual rights unless they expressly accept applicable new conditions.
+
+If the campaign is canceled before payment, no advertising fee is charged.
+
+### 5. Customer Cancellation Before Payment
+
+Customers may request cancellation through their private reservation page or by email to Info@inside914.com.
+
+**Proposed policy:** A timely cancellation request received before payment collection and irreversible production commitment may be resolved without an advertising fee.
+
+Inside914 will review the request, record its outcome and prevent collection if cancellation is approved.
+
+A canceled, uncharged reservation cannot later be charged using that canceled authorization.
+
+### 6. Cancellation After Payment but Before Printer Commitment
+
+If payment has been collected but the associated printer order has not been irrevocably committed, an eligible customer-requested cancellation will receive a full refund of the advertising charge for that campaign.
+
+The actual payment and printer-order status must be verified before processing.
+
+### 7. Cancellation After Printer Commitment
+
+Once the final printer order has been accepted and committed, production or mailing costs may no longer be recoverable.
+
+A voluntary customer cancellation at that stage does not automatically guarantee a refund.
+
+Inside914 will review actual costs, the service status, the accepted agreement and applicable law.
+
+This rule does not eliminate remedies for Inside914's failure to deliver the agreed service or rights that cannot lawfully be waived.
+
+### 8. Rejected Artwork
+
+Inside914 may request a correction or replacement when advertising material is unsuitable.
+
+A reasonable correction opportunity will be provided when feasible before the applicable artwork deadline.
+
+If acceptable artwork cannot be obtained and the campaign cannot proceed before payment, the affected reservation may be canceled without charge.
+
+If payment has occurred but production has not been committed, a full refund will be available where the campaign cannot proceed.
+
+### 9. Campaign Canceled or Not Mailed by Inside914
+
+If Inside914 cancels the campaign or cannot provide the agreed mailing service:
+
+- Uncharged reservations are canceled without payment.
+- Amounts collected for an unfulfilled campaign are eligible for a full refund.
+- The advertiser may alternatively accept a documented replacement mailing.
+- A replacement mailing will not be imposed without customer agreement.
+
+### 10. Printing Errors and Distribution Problems
+
+A material print or mailing error will be investigated using production records and available provider evidence.
+
+Appropriate remedies may include a corrected mailing, a full or proportionate refund, or another agreed resolution.
+
+Normal postal variation, lack of customer response or failure of an advertising offer to generate sales does not automatically establish a service failure.
+
+### 11. Refund Processing
+
+**Proposed service standard:** Approved refunds will normally be initiated to the original payment method within ten business days after final resolution, subject to applicable legal requirements.
+
+The bank or processor may take additional time to post the credit.
+
+Refunds must be documented against the original transaction where supported.
+
+### 12. Payment Method Removal
+
+When a reservation is canceled, no further charge may be initiated under its canceled authorization.
+
+Inside914 will request removal of a stored card when it is no longer needed.
+
+If the same card supports another active, separately authorized reservation, it may remain available for that reservation.
+
+Delay in removing a card does not restore charging permission for a canceled reservation.
+
+### 13. How to Request Changes or Cancellation
+
+Customers may use the private reservation page or email:
+
+Info@inside914.com
+
+Include the reservation reference, business name and request details.
+
+**Proposed response standard:** Within three business days.
+
+Submitting a request does not automatically change artwork, reverse a payment or cancel a committed printer order.
+
+Qualifying requests that affect authorization or production must nevertheless be resolved before the affected action proceeds.
+
+### 14. Existing Customers
+
+Historical reservations remain governed by their originally accepted terms unless an appropriate new agreement is obtained.
+
+Original prices, deadlines, authorized amounts and consent records must be preserved.
+
+No new policy may retroactively expand the permission to charge.
+
+### 15. Contact
+
+Inside Diagnostics LLC — Inside914
+
+Email: Info@inside914.com
+
+Business mailing address: [TO BE VERIFIED]
+
+**Status: Proposed policy pending owner and qualified legal-counsel review.**
+
+---
+
+# PART 4 — PRIVACY POLICY
+
+Implement the following full Privacy Policy at:
+
+`/legal/privacy`
+
+## INSIDE914 — PRIVACY POLICY
+
+**Operated by Inside Diagnostics LLC**
+
+**Proposed version:** 2026-10-24-review-3
+
+**Effective date:** Pending approval
+
+**Privacy contact:** Info@inside914.com
+
+### 1. Introduction
+
+Inside914 is a shared direct-mail advertising service operated by Inside Diagnostics LLC.
+
+This Privacy Policy describes how information is collected, used, stored, shared and protected when visitors use the website, reserve advertising, submit artwork or communicate with the business.
+
+### 2. Information Collected
+
+Inside914 may collect:
+
+**Business and contact information:** Business name, contact person, email address, telephone number, website and other submitted details.
+
+**Reservation information:** Campaign area, advertising position, accepted price, reservation reference, relevant deadlines and booking status.
+
+**Artwork information:** Submitted advertisements, logos, images, promotional content, original files, crop settings, revised versions and artwork-review records.
+
+**Payment-related information:** Stripe customer/payment-method references, consent records, accepted amounts, transaction states and relevant processing history.
+
+Inside914 does not receive or store complete payment-card numbers or card security codes.
+
+**Communications:** Customer requests, reservation emails, correspondence, cancellation communications and support history.
+
+**Technical information:** IP addresses where processed, browser/device information, timestamps, essential cookies, access-token metadata, security events and operational logs.
+
+Some security-related data may be represented using keyed hashes.
+
+### 3. Purposes of Processing
+
+Information is used to:
+
+- Process advertising reservations.
+- Manage available advertising positions.
+- Review and prepare artwork.
+- Produce and distribute postcard campaigns.
+- Save authorized payment methods.
+- Process approved future payments and refunds.
+- Send reservation and operational communications.
+- Provide private reservation access.
+- Resolve customer requests and disputes.
+- Maintain security and prevent abuse.
+- Maintain accounting, consent and legally required records.
+
+Reservation authorization does not permit unrelated charges.
+
+### 4. Stripe Payment Processing
+
+Stripe handles payment-card entry and storage.
+
+Inside914 stores relevant processor references and authorization evidence but does not directly store complete card numbers.
+
+Stripe may separately process data according to its own privacy practices and applicable payment-network requirements.
+
+### 5. Service Providers
+
+The service uses or may use:
+
+- Supabase for database services, authentication and private storage.
+- Vercel for application hosting.
+- Stripe for payment processing.
+- Resend for transactional email delivery.
+- Contracted printing and mailing providers for approved campaign fulfillment.
+
+Only information reasonably needed for the applicable service should be shared.
+
+Inside914 may also disclose information where legally required or necessary to protect rights and investigate misuse.
+
+### 6. Public Advertising Artwork
+
+The final approved advertisement is intended for distribution on physical postcards.
+
+Business contact details, URLs, QR codes and other information included in the printed advertisement may be viewed by postcard recipients.
+
+Customers should not submit private information for public printing unless they intend that information to be distributed.
+
+Original upload files, payment references and internal administrative notes are not intended to be publicly accessible merely because a final postcard is mailed.
+
+### 7. Email Communications
+
+Inside914 sends transactional messages including confirmations, private access links, artwork notifications, payment communications, cancellation information and campaign updates.
+
+Individually reviewed advertising invitations or promotional messages may be sent where legally permitted.
+
+Commercial promotional email must follow applicable sender-identification, address and opt-out obligations.
+
+Operational customer emails and promotional campaigns must remain appropriately distinguished.
+
+Inside914 does not sell customer email lists for unrelated third-party marketing.
+
+### 8. Cookies and Reservation Access
+
+Essential cookies and private credentials may be used to maintain checkout state and provide reservation access.
+
+Private reservation links can grant access to customer information and should be kept confidential.
+
+Access is restricted through expiration rules, secure token handling and server authorization.
+
+If nonessential analytics or advertising trackers are later introduced, this policy and any required consent or notice mechanisms will be updated.
+
+### 9. Data Security
+
+Inside914 uses administrative, technical and operational safeguards intended to reduce unauthorized access and disclosure.
+
+These include private Storage, authenticated administration, restricted database access, secure payment processing, encrypted email-delivery payloads and hashed access credentials where appropriate.
+
+No online system can guarantee absolute security.
+
+Security incidents will be reviewed and notifications provided where required by applicable law.
+
+### 10. Data Retention
+
+Business information, artwork, payment consents, support communications and operational records may be retained for campaign fulfillment, legal compliance, security, accounting and dispute resolution.
+
+Original artwork and historical versions may be retained following campaign completion where justified.
+
+Abandoned uploads may be removed under documented cleanup procedures.
+
+A formal retention schedule must be approved and implemented for each data category.
+
+Until verified, the public policy must not claim that all records are automatically deleted after a fixed period.
+
+### 11. Access, Correction and Deletion
+
+Customers may contact Info@inside914.com to request access to, correction of or deletion of relevant personal information.
+
+Reasonable identity verification may be required.
+
+Requests are evaluated under applicable law and legitimate retention obligations.
+
+Some records may need to remain available for active transactions, tax/accounting records, disputes or legal requirements.
+
+### 12. Children's Privacy
+
+Inside914 is intended for business advertising customers and is not directed at children.
+
+Inside914 does not knowingly solicit children's personal information for advertising reservations.
+
+Information identified as improperly collected will be reviewed and addressed as applicable law requires.
+
+### 13. Security Incidents
+
+Inside914 will investigate suspected unauthorized access or disclosure and take appropriate corrective action.
+
+Notifications will be provided when required by applicable data-breach laws.
+
+### 14. Policy Changes
+
+Future policy versions may be published with an updated effective date.
+
+Material changes will receive any notice or consent required by applicable law.
+
+A Privacy Policy update does not itself alter previously accepted payment authorization.
+
+### 15. Contact Information
+
+Inside914 is operated by Inside Diagnostics LLC.
+
+New York, United States.
+
+Business mailing address: [OWNER MUST PROVIDE VERIFIED ADDRESS]
+
+Privacy and general inquiries:
+
+Info@inside914.com
+
+Website: https://inside914.vercel.app
+
+**Status: Proposed policy pending owner verification and qualified legal-counsel review.**
+
+---
+
+# PART 5 — COMPLETE CHECKOUT AUTHORIZATION
+
+Update the checkout consent rendering and its server-side versioning.
+
+The following is the authoritative proposed wording for NEW reservations only.
+
+### IMPORTANT
+
+Do not use hardcoded prices in checkout consent.
+
+All amounts and campaign names must come from the actual server-authorized reservations.
+
+Do not reprice existing $1 tests or change the standard campaign prices.
+
+## A. SINGLE-CAMPAIGN AUTHORIZATION
+
+Display:
+
+Campaign: [Actual selected campaign]
+
+Position: [Actual selected position]
+
+Authorized maximum: [Actual agreed price]
+
+Due today: $0.00
+
+### Required checkbox wording
+
+"I agree to the Inside914 Advertising Terms and Reservation and Cancellation/Refund Policy, and acknowledge the Privacy Policy. I authorize Inside Diagnostics LLC, operating Inside914, to securely save my payment method through Stripe for one possible future charge of up to [ACTUAL AGREED PRICE] for this campaign only.
+
+No payment is collected today.
+
+A charge may occur only after all ten advertising positions in this campaign are reserved, the required artwork and final production proof have been approved, Inside914 explicitly authorizes payment collection, and my authorization remains valid.
+
+If the campaign remains incomplete at its reservation deadline, I will not be charged while it remains incomplete. Any material extension or revised payment condition requiring renewed agreement must be expressly accepted.
+
+This is a one-time advertising purchase, not a subscription. My cancellation and refund rights are described in the linked policies."
+
+Primary button:
+
+**Save card and reserve my space — $0 today**
+
+## B. MULTI-CAMPAIGN AUTHORIZATION
+
+Display each actual campaign and accepted price separately.
+
+Display the correct combined maximum.
+
+Due today: $0.00.
+
+### Required checkbox wording
+
+"I agree to the Inside914 Advertising Terms and Reservation and Cancellation/Refund Policy, and acknowledge the Privacy Policy.
+
+I authorize Inside Diagnostics LLC, operating Inside914, to securely save my payment method through Stripe for separate possible future charges for the campaigns listed in my reservation summary.
+
+Each campaign has its own agreed maximum amount. A charge for a campaign may occur only after all ten positions in that campaign are reserved, its required artwork and final production proof are approved, Inside914 expressly authorizes collection, and the related payment authorization remains valid.
+
+Completion of one selected campaign does not authorize charging any other campaign that remains incomplete.
+
+The combined total of these campaign authorizations will not exceed [ACTUAL SERVER-COMPUTED COMBINED TOTAL], and no individual campaign charge will exceed its accepted price.
+
+No payment is collected today. These are one-time advertising purchases, not subscriptions or recurring payments.
+
+Any material revised deadline or payment condition requiring renewed agreement must be separately accepted.
+
+My cancellation and refund rights are described in the linked policies."
+
+Primary button:
+
+**Save card and reserve my advertising spaces — $0 today**
+
+## C. REVISED DEADLINE AUTHORIZATION
+
+This is a specification for a separately approved future renewal workflow.
+
+Do NOT expose this as an active functional control unless a secure server-side renewal mechanism has been implemented and tested.
+
+Required displayed information:
+
+- Original campaign.
+- Original reservation deadline.
+- Proposed new deadline.
+- Original agreed maximum.
+- Proposed agreed maximum.
+- Applicable proposed terms.
+- Amount charged today.
+
+### Proposed affirmative acceptance
+
+"I have reviewed the revised campaign deadline and applicable terms. I expressly agree to continue my existing Inside914 reservation under the displayed revised conditions and authorize my previously saved payment method to remain available for one possible future charge not exceeding the newly displayed accepted maximum, subject to the required campaign, artwork, production and collection approvals.
+
+I understand that declining does not create a new charge and that my original rights remain governed by the terms I previously accepted unless an appropriate new agreement replaces them."
+
+Only implement this workflow when the associated authorization data can be captured, retained and verified securely.
+
+Do not create a button that appears to grant renewed authorization without corresponding database enforcement.
+
+---

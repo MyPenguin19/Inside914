@@ -24,7 +24,7 @@ describe("error page", () => {
     expect(screen.getByText("3471982011")).toBeTruthy(); // reference for support
     expect(document.body.textContent).not.toContain("secret-detail");
     expect(screen.getByRole("link", { name: "Go to the homepage" }).getAttribute("href")).toBe("/");
-    expect(within(screen.getByRole("main")).getByRole("link", { name: "support@inside914.com" })).toBeTruthy();
+    expect(within(screen.getByRole("main")).getByRole("link", { name: "Info@inside914.com" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(retry).toHaveBeenCalledTimes(1);

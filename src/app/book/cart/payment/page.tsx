@@ -54,6 +54,7 @@ async function Payment() {
   const views = await Promise.all(
     cart.members.map((b) => getReservationView(admin, b.id)),
   );
+  if (views.some(view => !view?.campaignName)) return <p>Campaign details are unavailable. Please try again.</p>;
   const total = cart.members.reduce((n, b) => n + b.priceCents, 0);
   const testMode = isDevTestModeActive();
   return (
@@ -81,14 +82,15 @@ async function Payment() {
         )}
       </div>
       <p className="text-xl font-semibold">
-        Total authorized: {formatPrice(total)}
+        Combined authorized maximum: {formatPrice(total)}
       </p>
       <div className="max-w-xl">
         <PaymentStep
+          multiple={cart.members.length > 1}
           publishableKey={testMode ? null : getStripePublishableKey()}
           testMode={testMode}
           termsVersion={CART_TERMS}
-          consentText={cartConsentText(cart.members.map((b,i)=>({name:views[i]?.zoneName??"Selected area",amount:b.priceCents})))}
+          consentText={cartConsentText(cart.members.map((b,i)=>({name:views[i]!.campaignName!,amount:b.priceCents})))}
           successHref="/book/cart"
           returnHref="/book/cart/complete"
           actions={{

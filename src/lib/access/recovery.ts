@@ -32,10 +32,11 @@ export async function requestReservationRecovery(db:Db,raw:unknown,address:strin
  }
  // Fragment is not sent to access logs or HTTP referrers. A deliberate POST exchanges it.
  const link=`${getAppUrl()}/reservation/recover#${token}`;
+ const support = getEmailEnv().supportEmail;
  try {return await queueDelivery(db,`recovery:${prepared.recovery_id}`,{from:getEmailEnv().from,to:input.data.email,subject:"Open your Inside914 reservation",
   expiresAt:new Date(prepared.expires_at).toISOString(),
-  text:`Use this private link within 15 minutes: ${link}\nYour existing links remain valid. If you didn't request this, ignore it.`,
-  html:`<p>Open your reservation within 15 minutes.</p><p><a href="${escapeHtml(link)}">Open reservation</a></p><p>Existing links remain valid. Ignore this email if you did not request it.</p>`},
+  text:`Use this private link within 15 minutes: ${link}\nYour existing links remain valid. If you didn't request this, ignore it.\nQuestions? Email ${support}. Inside914 is operated by Inside Diagnostics LLC.`,
+  html:`<p>Open your reservation within 15 minutes.</p><p><a href="${escapeHtml(link)}">Open reservation</a></p><p>Existing links remain valid. Ignore this email if you did not request it.</p><p>Questions? <a href="mailto:${escapeHtml(support)}">${escapeHtml(support)}</a>. Inside914 is operated by Inside Diagnostics LLC.</p>`},
   {isTest:isTestStripeId(booking.data.stripe_customer_id)});
  } catch {
   await db.from("operational_alerts").upsert({logical_key:`recovery-preparation:${prepared.recovery_id}`,kind:"email",title:"Reservation recovery email could not be prepared",href:`/admin/advertisers/${booking.data.id}`},{onConflict:"logical_key",ignoreDuplicates:true});

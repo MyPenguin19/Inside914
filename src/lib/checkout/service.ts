@@ -181,7 +181,7 @@ export async function startPayment(admin: Admin, stripe: StripeClient, token: st
   return { ok: true as const, clientSecret: intent.client_secret!, setupIntentId: intent.id, status: intent.status };
 }
 
-const ConsentInput = z.object({ accepted: z.literal(true), termsVersion: z.string() });
+const ConsentInput = z.object({ accepted: z.literal(true), termsVersion: z.string(), displayedConsent: z.string().max(10000).optional() });
 
 // Step 3: record the customer's explicit consent, for the amount the SERVER computed.
 export async function recordConsent(admin: Admin, token: string | undefined, raw: unknown) {
@@ -195,6 +195,7 @@ export async function recordConsent(admin: Admin, token: string | undefined, raw
   if (gate) return { ok: false as const, reason: gate };
   if (!booking!.stripeSetupIntentId) return { ok: false as const, reason: "payment_not_started" as const };
 
+  if (input.data.displayedConsent !== consentText(booking!.priceCents)) return { ok: false as const, reason: "terms_changed" as const };
   const { error } = await admin.from("payment_consents").upsert(
     {
       booking_id: booking!.id,
@@ -209,6 +210,13 @@ export async function recordConsent(admin: Admin, token: string | undefined, raw
     { onConflict: "booking_id,stripe_setup_intent_id", ignoreDuplicates: true },
   );
   if (error) throw new Error(`Could not record consent: ${error.message}`);
+  const saved = await admin.from("payment_consents").select("terms_version,consent_text,amount_cents")
+    .eq("booking_id", booking!.id).eq("stripe_setup_intent_id", booking!.stripeSetupIntentId!).single();
+  if (saved.error) throw new Error("Could not verify recorded consent");
+  // An older acceptance is immutable, even if it uses the same SetupIntent.
+  if (saved.data.terms_version !== TERMS_VERSION || saved.data.consent_text !== input.data.displayedConsent || saved.data.amount_cents !== booking!.priceCents) {
+    return { ok: false as const, reason: "terms_changed" as const };
+  }
   return { ok: true as const };
 }
 

@@ -4,6 +4,7 @@ import { beforeAll, afterAll, afterEach, expect, test, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
 import { deleteLocalCampaignFixtures } from "./local-layout-fixture";
 vi.mock("server-only",()=>({}));
+const {bookingAllowsCollection}=await import("@/lib/payments/booking-authorization");
 const {createCart,ownedCart,cartMemberToken}=await import("@/lib/booking/cart");
 const {hashHoldToken}=await import("@/lib/booking/hold-token");
 const {issueAccessToken,hashAccessToken,resolveAccessToken}=await import("@/lib/access/tokens");
@@ -184,4 +185,15 @@ test("extension respects both original creation cap and the campaign deadline",a
   expect((await db.rpc("extend_cart_hold",{p_hash:hashHoldToken(second.token)})).error?.message).toBe("campaign_deadline_reached");
   expect(ok(await db.from("reservation_carts").select("hold_extensions").eq("id",second.id).single()).hold_extensions).toBe(0);
  }finally{ok(await db.from("editions").update({artwork_deadline:"2097-12-15T23:59:00Z"}).eq("id",editions[0]));}
+});
+
+test("pending cancellation blocks the existing reservation until reviewed; canceled stays blocked",async()=>{
+ const c=await confirmed();expect(await bookingAllowsCollection(db,c.booking.id)).toBe(true);
+ const id=ok(await db.rpc("submit_customer_request",{p_hash:hashAccessToken(c.access.token),p_kind:"cancellation",p_message:"Please cancel my reservation before collection."}));
+ expect(await bookingAllowsCollection(db,c.booking.id)).toBe(false);
+ ok(await admin.rpc("admin_resolve_customer_request",{p_id:id,p_status:"declined",p_response:"Fixture decision only"}));
+ expect(await bookingAllowsCollection(db,c.booking.id)).toBe(true);
+ ok(await admin.rpc("admin_cancel_booking",{p_booking_id:c.booking.id,p_reason:"Local fixture cancellation"}));
+ expect(await bookingAllowsCollection(db,c.booking.id)).toBe(false);
+ expect(ok(await db.from("bookings").select("price_cents").eq("id",c.booking.id).single()).price_cents).toBe(100);
 });

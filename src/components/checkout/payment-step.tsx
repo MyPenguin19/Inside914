@@ -10,11 +10,12 @@ import { checkoutMessage, START_OVER } from "@/lib/checkout/messages";
 type Actions = {
   beginPayment: () => Promise<BeginPaymentResult>;
   simulateCardSetup?: () => Promise<{ ok: boolean; reason?: string }>; // development TEST mode only
-  giveConsent: (input: { accepted: boolean; termsVersion: string }) => Promise<{ ok: boolean; reason?: string }>;
+  giveConsent: (input: { accepted: boolean; termsVersion: string; displayedConsent: string }) => Promise<{ ok: boolean; reason?: string }>;
   confirmReservation: () => Promise<{ outcome: string }>;
 };
 
 type Props = {
+  multiple?: boolean;
   successHref?: string;
   returnHref?: string;
   publishableKey: string | null;
@@ -29,7 +30,7 @@ type Phase = "loading" | "ready" | "saved" | "submitting" | "processing" | "unav
 
 // Saves a card with Stripe's own secure form (card details never touch our servers) after an
 // explicit, unticked-by-default consent. Then asks the server to confirm the reservation.
-export function PaymentStep({ successHref = "/book/confirmed", returnHref = "/book/complete", publishableKey, consentText, termsVersion, actions, testMode = false, loadStripeJs = loadStripe }: Props) {
+export function PaymentStep({ multiple = false, successHref = "/book/confirmed", returnHref = "/book/complete", publishableKey, consentText, termsVersion, actions, testMode = false, loadStripeJs = loadStripe }: Props) {
   const router = useRouter();
   const mountRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
@@ -100,7 +101,7 @@ export function PaymentStep({ successHref = "/book/confirmed", returnHref = "/bo
     setError(null);
     setPhase("submitting");
 
-    const consentResult = await actions.giveConsent({ accepted: consent, termsVersion });
+    const consentResult = await actions.giveConsent({ accepted: consent, termsVersion, displayedConsent: consentText });
     if (!consentResult.ok) {
       setPhase(stripeRef.current ? "ready" : "saved");
       return fail(consentResult.reason ?? "error");
@@ -179,6 +180,7 @@ export function PaymentStep({ successHref = "/book/confirmed", returnHref = "/bo
         </div>
       )}
 
+      <p className="text-sm text-muted">Proposed authorization {termsVersion} · Pending owner and legal review.</p>
       <label className="flex gap-3 rounded-xl border border-line bg-surface p-4 text-sm leading-6">
         <input
           type="checkbox"
@@ -187,7 +189,7 @@ export function PaymentStep({ successHref = "/book/confirmed", returnHref = "/bo
           className="mt-1 h-5 w-5 shrink-0 accent-[var(--accent)]"
           aria-describedby="consent-links"
         />
-        <span>{consentText}</span>
+        <span data-testid="checkout-consent" className="min-w-0 whitespace-pre-line break-words">{consentText}</span>
       </label>
       <p id="consent-links" className="-mt-2 text-xs text-muted">
         Please read our{" "}
@@ -223,9 +225,9 @@ export function PaymentStep({ successHref = "/book/confirmed", returnHref = "/bo
             : "Saving your card…"
           : testMode
             ? "Simulate card and create TEST reservation"
-            : "Save card and reserve my space"}
+            : multiple ? "Save card and reserve my advertising spaces — $0 today" : "Save card and reserve my space — $0 today"}
       </button>
-      <p className="text-center text-xs text-muted">You won&apos;t be charged today.</p>
+      <p className="text-center text-xs text-muted">Due today: $0.00. No payment is collected today.</p>
     </form>
   );
 }

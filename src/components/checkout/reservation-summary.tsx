@@ -34,6 +34,7 @@ export function ReservationSummary({
           )}
         </PostcardPreview>)}</div>
         <dl className="grid content-start gap-2 text-sm">
+          {view.campaignName && <Row label="Campaign" value={view.campaignName} />}
           <Row label="Edition" value={`${view.zoneName} · ${formatIssueMonth(view.issueMonth)}`} />
           <Row label="Planned mailing" value={provisional ? (view.households > 0 ? `≈ ${formatHouseholds(view.households)} homes, provisional` : "Household count awaiting confirmation") : `≈ ${formatHouseholds(view.households)} homes`} />
           <Row label="Position" value={`${side} · ${view.positions.map((p) => p.label).join(" + ")}`} />
@@ -50,7 +51,7 @@ export function ReservationSummary({
         </span>
         <span className="font-display text-3xl font-medium">{formatPrice(view.priceCents)}</span>
       </div>
-      {showReservationTerms&&<p className="mt-1 text-xs text-muted">Charged only if the campaign fills and is approved. $0 today.</p>}
+      {showReservationTerms&&<p className="mt-1 text-xs text-muted">Charged only if the campaign fills and is approved. Due today: $0.00.</p>}
     </section>
   );
 }

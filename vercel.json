@@ -9,7 +9,8 @@
       "feature/artwork-editor-ux-fix": false,
       "feature/phase615a-core-reliability": false,
       "feature/phase615b-customer-operations": false,
-      "feature/phase615c-transparency-invitations": false
+      "feature/phase615c-transparency-invitations": false,
+      "feature/phase616a-legal-policy-integration": false
     }
   },
   "crons": [

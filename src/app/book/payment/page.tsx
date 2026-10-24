@@ -64,7 +64,7 @@ async function Payment({ searchParams }: { searchParams: PageProps<"/book/paymen
           {[
             ["Today", "You save a card with Stripe. $0 is charged."],
             ["When the postcard fills", `and we approve it for print, we charge ${formatPrice(booking.priceCents)} and email you.`],
-            ["If it doesn't fill", `by ${formatDeadline(view.artworkDeadline)}, your reservation is canceled. You're never charged.`],
+            ["If it doesn't fill", `by ${formatDeadline(view.artworkDeadline)}, new reservations close while we review cancellation or revised dates. No charge occurs while the campaign is incomplete.`],
           ].map(([when, what]) => (
             <li key={when} className="rounded-xl border border-line bg-surface p-3.5">
               <p className="font-medium">{when}</p>
@@ -91,7 +91,7 @@ async function Payment({ searchParams }: { searchParams: PageProps<"/book/paymen
         </div>
       </section>
       <aside className="order-first lg:order-last lg:sticky lg:top-20 lg:self-start">
-        <ReservationSummary view={view} amountLabel="Amount you'll authorize" />
+        <ReservationSummary view={view} amountLabel="Authorized maximum" />
       </aside>
     </div>
   );

@@ -172,6 +172,7 @@ export async function beginCartPayment() {
   }
 }
 export async function giveCartConsent(input: {
+  displayedConsent: string;
   accepted: boolean;
   termsVersion: string;
 }) {
@@ -186,8 +187,9 @@ export async function giveCartConsent(input: {
   )?.stripeSetupIntentId;
   if (!intent) return { ok: false, reason: "payment_not_started" };
   const consentViews=await Promise.all(cart!.members.map(b=>getReservationView(admin,b.id)));
-  if(consentViews.some(v=>!v)) return {ok:false,reason:"error"};
-  const text=cartConsentText(cart!.members.map((b,i)=>({name:consentViews[i]!.zoneName,amount:b.priceCents})));
+  if(consentViews.some(v=>!v?.campaignName)) return {ok:false,reason:"error"};
+  const text=cartConsentText(cart!.members.map((b,i)=>({name:consentViews[i]!.campaignName!,amount:b.priceCents})));
+  if (input.displayedConsent !== text) return {ok:false,reason:"terms_changed"};
   const { error } = await admin.from("payment_consents").upsert(
     cart!.members.map((b) => ({
       booking_id: b.id,
@@ -201,7 +203,13 @@ export async function giveCartConsent(input: {
     })),
     { onConflict: "booking_id,stripe_setup_intent_id", ignoreDuplicates: true },
   );
-  return error ? { ok: false, reason: "error" } : { ok: true };
+  if (error) return {ok:false,reason:"error"};
+  const saved = await admin.from("payment_consents").select("booking_id,terms_version,consent_text,amount_cents")
+    .in("booking_id", cart!.members.map(b=>b.id)).eq("stripe_setup_intent_id", intent);
+  if (saved.error) return {ok:false,reason:"error"};
+  if (saved.data.length !== cart!.members.length || saved.data.some(row => row.terms_version !== CART_TERMS || row.consent_text !== text ||
+    row.amount_cents !== cart!.members.find(b=>b.id===row.booking_id)?.priceCents)) return {ok:false,reason:"terms_changed"};
+  return {ok:true};
 }
 export async function confirmAreas() {
   const admin = createAdminClient();

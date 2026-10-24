@@ -1,3 +1,4 @@
+import { consentText } from "@/lib/checkout/terms";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
@@ -58,7 +59,7 @@ describe.skipIf(!process.env.SUPABASE_SECRET_KEY)("development TEST reservations
     fakeStripe.simulateSuccess(ctx.setupIntentId);
     expect(await checkout.completeReservation(admin, fake, ctx.bookingId)).toBe("consent_missing");
 
-    await checkout.recordConsent(admin, ctx.token, { accepted: true, termsVersion: TERMS_VERSION });
+    await checkout.recordConsent(admin, ctx.token, { accepted: true, termsVersion: TERMS_VERSION, displayedConsent: consentText((await checkout.getBookingByHoldToken(admin, ctx.token))!.priceCents) });
     expect(await checkout.completeReservation(admin, fake, ctx.bookingId)).toBe("confirmed");
 
     const row = (await admin.from("bookings").select("*").eq("id", ctx.bookingId).single()).data!;
@@ -89,7 +90,7 @@ describe.skipIf(!process.env.SUPABASE_SECRET_KEY)("development TEST reservations
     const send = vi.fn(async () => ({ id: "should-not-happen" }));
 
     const ctx = await testReservationUpToCard("F4");
-    await checkout.recordConsent(admin, ctx.token, { accepted: true, termsVersion: TERMS_VERSION });
+    await checkout.recordConsent(admin, ctx.token, { accepted: true, termsVersion: TERMS_VERSION, displayedConsent: consentText((await checkout.getBookingByHoldToken(admin, ctx.token))!.priceCents) });
     fakeStripe.simulateSuccess(ctx.setupIntentId);
     expect(await checkout.completeReservation(admin, fake, ctx.bookingId)).toBe("confirmed");
 

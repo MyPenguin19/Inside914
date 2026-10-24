@@ -1,3 +1,4 @@
+import { consentText } from "@/lib/checkout/terms";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
@@ -53,7 +54,7 @@ describe.skipIf(!enabled)("Stripe test mode: saved cards, no charges", () => {
     if (!started.ok) throw new Error(started.reason);
     const booking = await checkout.getBookingById(admin, hold.bookingId);
     customers.push(booking!.stripeCustomerId!);
-    await checkout.recordConsent(admin, hold.token, { accepted: true, termsVersion: TERMS_VERSION });
+    await checkout.recordConsent(admin, hold.token, { accepted: true, termsVersion: TERMS_VERSION, displayedConsent: consentText((await checkout.getBookingByHoldToken(admin, hold.token))!.priceCents) });
     return { ...hold, setupIntentId: started.setupIntentId, customerId: booking!.stripeCustomerId! };
   }
 

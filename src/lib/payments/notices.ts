@@ -1,5 +1,6 @@
 import { formatPrice } from "@/lib/format";
 import "server-only";
+import { getEmailEnv } from "@/lib/env/checkout";
 import { mkdir, writeFile } from "node:fs/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
@@ -28,8 +29,9 @@ export async function preparePaymentNotice(db:Db,row:NoticeRow,context:Collectio
   const title=(context.mode==="test" ? "Test payment " : "Payment ")+(row.kind==="payment_receipt" ? "received" : "needs attention");
   let link="";
   if(row.kind==="payment_needed") link=new URL(`/pay/${await issueRecovery(db,c.id)}`,base).toString();
-  const text=`${title}\n${e?.zones?.name ?? "Your zone"}\n${formatPrice(c.amount_cents)} for this zone only. Other zones are unchanged.\n${link ? `Complete payment by ${c.recovery_expires_at}: ${link}` : "No further payment is due for this reservation."}`;
-  return {to:contact.email,subject:title,text,html:`<h1>${escape(title)}</h1><pre>${escape(text)}</pre>${link ? `<a href="${escape(link)}">Resolve payment</a>` : ""}`,idempotencyKey:`payment-notice-${row.id}`};
+  const support = getEmailEnv().supportEmail;
+  const text=`${title}\n${e?.zones?.name ?? "Your zone"}\n${formatPrice(c.amount_cents)} for this zone only. Other zones are unchanged.\n${link ? `Complete payment by ${c.recovery_expires_at}: ${link}` : "No further payment is due for this reservation."}\n\nQuestions? Email ${support}. Inside914 is operated by Inside Diagnostics LLC.`;
+  return {to:contact.email,subject:title,text,html:`<h1>${escape(title)}</h1><pre>${escape(text)}</pre><p><a href="mailto:${escape(support)}">${escape(support)}</a></p>${link ? `<a href="${escape(link)}">Resolve payment</a>` : ""}`,idempotencyKey:`payment-notice-${row.id}`};
 }
 
 // The runtime gate blocks this entire path while collection is disabled.

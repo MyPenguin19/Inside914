@@ -1,0 +1,56 @@
+INSIDE914 — PHASE 6.16A REVIEW NOTES
+Prepared 2026-10-24. Proposed implementation only; merge and deployment remain on hold.
+
+IMPLEMENTED
+The existing /legal/terms, /legal/reservation-policy and /legal/privacy routes render the complete owner-supplied proposed policies (17, 15 and 15 numbered sections). The legal entity is Inside Diagnostics LLC; Inside914 remains its customer-facing brand. Every page states proposed review status and a pending effective date. Missing physical addresses remain visible placeholders.
+
+Immutable proposed content: src/lib/legal/versions/2026-10-24-review-3.json and 2026-10-24-review-3-consent.json. The full source proposal, including the inactive revised-deadline specification, is archived in docs/legal/2026-10-24-review-3-source.txt. Prior page and consent source from main c98a402 are archived under docs/legal/archive/2026-10-24-draft-2/. Existing docs/phase615 archives are unchanged.
+
+New authorization identifiers are 2026-10-24-review-3 and square-zones-2026-10-24-review-3. Single and multi checkout use the complete supplied wording. A one-campaign cart uses the single-campaign wording. Multi consent also lists actual campaign names and accepted amounts. Amounts come from the reservation, including $1 fixtures; fractional-dollar amounts are no longer rounded away. Summaries show actual campaign names, positions, maximums and $0.00 today. Buttons use the supplied single/multi labels. The legacy single-checkout automatic-cancellation summary is corrected for new proposed terms.
+
+Both acceptance paths compare the displayed text with current server-generated wording, store that exact wording, and verify the stored result. Retries do not overwrite older consent. An existing older acceptance using the same SetupIntent is rejected as acceptance of the new version, rather than silently reported as updated. Historical deadlines, amounts, currencies, identifiers and timestamps are not rewritten. No renewal workflow or automatic refund was added.
+
+Info@inside914.com is the active support default and displayed contact, with mailto links in policies, footer, payment help, confirmations, cancellations and recovery messages. Transactional messages identify the operator. The verified sending identity is unchanged. The prior production preflight recorded SUPPORT_EMAIL=info@inside914.com; source normalizes this same address to the requested display capitalization. No production setting was read or changed in this phase. Any different configured override still wins and must be reviewed before a later deployment.
+
+PAYMENT ENFORCEMENT REVIEW
+Existing database controls remain unchanged: closed, unpaused, non-archived square campaign; approved layout; ten confirmed reservations covering ten distinct positions; accepted positive amounts and saved-card references; reviewed/approved artwork and valid crop; permanent house artwork; current published final proof; print-resolution requirements; explicit authenticated administrator authorization. Ledger mode/account, amount, currency, customer and metadata checks remain. Creation and confirmation retain their existing idempotency keys and stale-unknown-intent reconciliation block. A successful Stripe response alone still cannot mark a booking paid; verified webhooks record outcomes.
+
+Existing consent checks reject unknown/proposed versions, missing legacy deadline snapshots, extensions beyond accepted deadlines, and mismatched amounts/currency/campaigns. The collection-preparation and mailing-readiness SQL also explicitly select the old square-zones-v1 version. This phase deliberately does not add review-3 to any allowlist. Final approved identifiers and corresponding, separately reviewed database enforcement will be required before collection under any new version. Simply changing an environment variable is insufficient.
+
+Added application checks reject canceled, released, pending, already-charged or missing reservations and open cancellation requests. Query failures fail closed. Checks run before any collection API access and again immediately before intent creation/confirmation, and before exposing a payment recovery intent through a valid recovery token. Tests cover cancellation arriving during provider reads and intent creation, plus local database recovery blocking. No real Stripe calls are used in those tests.
+
+REMAINING LIVE-COLLECTION BLOCKERS — NOT SOLVED BY THE APPLICATION PRECHECK
+1. A request can arrive after the last database read but before Stripe acts. A recovery client secret already delivered to a browser can remain usable. The database collection registry currently does not serialize cancellation requests with Stripe operations. Before live release, approve and implement an in-flight collection/cancellation protocol with reconciliation, revocation of recoverable payment authorization where appropriate, and concurrency tests. This requires separate database/provider-operation authorization. Existing guards must remain in force.
+2. The administrative collection preview/preparation RPC does not itself check pending cancellation requests. The added per-booking application checks prevent affected new calls, but do not establish an atomic all-campaign cancellation boundary. New approved terms must not be declared fully enforced until the preceding protocol covers this path too.
+3. Resolving a request is not the same as canceling a reservation. An approved cancellation must complete the appropriate cancellation/payment-resolution operation; marking a request resolved alone must not be treated as revocation. Paid or in-flight payments require a separately approved resolution, not an automatic refund.
+4. Timely acknowledged artwork changes and irreversible printer commitment need an approved operating procedure and production lock. Inside914 does not place printer orders, and the database does not currently model an irrevocable printer-order commitment. Current final-proof checks are retained, but cannot by themselves prove an external printer order's cancellation/refund eligibility.
+5. New approved policy identifiers, deployment authorization, preserved-consent review, provider/webhook verification and a separately approved collection release are still required. LIVE_COLLECTION_RELEASED remains false; collection mode was not changed. No price, layout, campaign, reservation, artwork, migration or payment provider configuration was changed in production.
+
+PROMOTIONAL EMAIL
+Transactional confirmations, private recovery links, payment notices and operational owner alerts remain distinct from advertiser invitation email. Invitation previews and links remain available. Sending/queueing invitations is blocked by INVITATION_EMAIL_RELEASED=false with a visible admin explanation. The durable delivery worker also blocks previously queued invitation messages and prevents automatic retry. Transactional delivery behavior is preserved.
+
+A verified physical mailing address and approved opt-out/suppression handling are missing. Obtain owner/counsel review of sender identity, advertising disclosure, recipient basis, opt-out handling and suppression before removing this blocker. Individual B2B commercial invitations are not exempt merely because they are sent one at a time. Reference: FTC CAN-SPAM compliance guide, https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business . No claim of legal compliance is made.
+
+OWNER / COUNSEL DECISIONS STILL REQUIRED
+- Verified street/mailing address; verified assumed-name/DBA status where relevant. No registration is asserted.
+- Final legal approval, effective date and newly archived approved identifiers.
+- Proposed five-business-day campaign decision, three-business-day customer response and ten-business-day refund-initiation standards.
+- Pre-printer-commitment full refunds, artwork rejection/remedies, delay/print-error remedies and governing-law language.
+- Clarify reservation policy section 3's supplied phrase “ten confirmed paid placements”: reservations are not paid at checkout. The proposed supplied text is preserved for review, not silently reinterpreted as prior payment.
+- An implementable retention/deletion schedule and request/incident handling procedures.
+- Promotional email address, disclosures and opt-out/suppression configuration.
+- Separate approval and implementation of deadline-renewal authorization. Its wording is archived only; no misleading renewal button exists.
+
+VERIFICATION / RELEASE BOUNDARY
+Verification uses scripts/verify-local-mvp.mjs, which overrides the local environment with localhost Supabase, clears Stripe/Resend API keys and forces collection disabled. Database fixtures are isolated, synthetic local records. No Stripe/Resend calls or production records are used. The sandbox initially blocked loopback connections; the database suite was rerun with permission to reach localhost.
+
+This branch explicitly disables its Vercel Git deployment in vercel.json. Only a feature-branch push and review PR are authorized. No merge, deployment, migration, production environment edit, customer email, Stripe write, artwork replacement or mailing order is included.
+
+FINAL LOCAL RESULTS (2026-10-24)
+Typecheck: PASS. Lint: PASS. Unit: 450 passed. Integration: 169 passed, 3 Stripe-dependent skipped because no test credentials are supplied. E2E: 29 passed. Local production build: PASS, including all three statically rendered legal routes.
+
+The browser suite verifies each policy at 375px and 1440px without horizontal overflow, resolves footer links, checks review status/contact links, and validates complete multi-area checkout with exact displayed consent persisted on all three $399 reservations ($1,197 combined, $0.00 today). Unit tests compare every supplied policy paragraph/list item and all 47 numbered sections against the archived proposal. Database tests preserve prior consent bytes/amounts and exercise cancellation/recovery checks. Existing final-proof, print/export, authorization, RLS and idempotency coverage remains passing.
+
+Visual inspection: reviewed rendered mobile Advertising Terms, desktop Reservation Policy, and full mobile multi-area checkout screenshots. Existing neutral styling, readable paragraph spacing, clear review markers, campaign names, individual amounts and consent links are retained. Screenshots and logs are local artifacts and excluded from Git.
+
+During verification, new test selectors initially included Next.js hidden cached pages, and a new viewport loop left an existing mobile assertion at desktop width. Those test issues were corrected. The first browser run also hit a transient house-editor page error; the clean full rerun passed the existing editor/export tests without any changes to artwork/editor code. The final results above are from successful full suites, with skips reported separately.

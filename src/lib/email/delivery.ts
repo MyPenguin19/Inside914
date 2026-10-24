@@ -1,4 +1,5 @@
 import "server-only";
+import { INVITATION_EMAIL_RELEASED } from "@/lib/invitations/release";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { decryptEnvelope, encryptEnvelope, type EmailEnvelope } from "./envelope";
@@ -27,6 +28,7 @@ export async function processDelivery(db:Db,id:string,send:SendEmail=sendWithRes
   let state:"accepted"|"failed"|"investigation"|"sending"="accepted";
   let providerId:string|null=null, code:string|null=null, retrySafe=false;
   try {
+    if (!INVITATION_EMAIL_RELEASED && row.logical_key.startsWith("invitation:")) throw new Error("promotional_email_on_hold");
     const payload=decryptEnvelope(row.payload_ciphertext,row.logical_key);
     if(payload.expiresAt && Date.parse(payload.expiresAt)<=Date.now()+60_000) throw new Error("email_link_expired");
     const message={...payload,idempotencyKey:`inside914-delivery-${row.id}`,deliveryId:row.id};
@@ -34,7 +36,8 @@ export async function processDelivery(db:Db,id:string,send:SendEmail=sendWithRes
   } catch(error) {
     retrySafe=error instanceof EmailProviderError && error.definitive && !row.ambiguous;
     code=error instanceof EmailProviderError?error.code:"provider_outcome_unknown";
-    if(error instanceof Error && error.message==="email_envelope_unavailable") {code=error.message;state="investigation";}
+    if(error instanceof Error && error.message==="promotional_email_on_hold") {code=error.message;state="failed";retrySafe=false;}
+    else if(error instanceof Error && error.message==="email_envelope_unavailable") {code=error.message;state="investigation";}
     else if(error instanceof Error && error.message==="email_link_expired") {code=error.message;state=row.ambiguous?"investigation":"failed";retrySafe=false;}
     else state=retrySafe?"failed":row.attempts>=8?"investigation":"sending";
   }

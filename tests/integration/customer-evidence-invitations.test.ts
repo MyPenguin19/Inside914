@@ -9,8 +9,8 @@ vi.mock("next/headers",()=>({cookies:async()=>({get:()=>cookieToken?{value:cooki
 vi.mock("@/lib/supabase/admin",()=>({createAdminClient:()=>db}));
 const {placeHold}=await import("@/lib/booking/place-hold");
 const {issueAccessToken}=await import("@/lib/access/tokens");
-const {invitationOffer,invitationFingerprint,queueInvitation}=await import("@/lib/invitations/service");
-const {decryptEnvelope}=await import("@/lib/email/envelope");
+const {invitationOffer,invitationFingerprint,invitationMessage,queueInvitation}=await import("@/lib/invitations/service");
+const {queueDelivery,processDelivery}=await import("@/lib/email/delivery");
 const {GET}=await import("@/app/reservation/evidence/[id]/route");
 const db=createClient<Database>(process.env.SUPABASE_URL!,process.env.SUPABASE_SECRET_KEY!,{auth:{persistSession:false}});
 const admin=createClient<Database>(process.env.SUPABASE_URL!,process.env.SUPABASE_ANON_KEY!,{auth:{persistSession:false}});
@@ -70,12 +70,14 @@ test("admin invitations preserve $1 price and do not hold inventory; occupied an
  await confirmed();expect(await invitationOffer(db,id)).toBeNull();expect((await admin.rpc("admin_create_invitation",{p_edition:edition,p_slot:slot})).error?.message).toBe("position_unavailable");
  ok(await db.from("advertiser_invitations").update({expires_at:new Date(0).toISOString()}).eq("id",id));expect(await invitationOffer(db,id)).toBeNull();
 });
-test("explicit invitation queuing is idempotent and refuses stale preview; no provider calls",async()=>{
+test("commercial invitation email stays blocked without a verified address and opt-out; preview does not queue",async()=>{
  const id=ok(await admin.rpc("admin_create_invitation",{p_edition:edition,p_slot:slot,p_email:"interested@example.com",p_name:"<Business>"}));const offer=(await invitationOffer(db,id))!;
- await expect(queueInvitation(db,id,"bad-preview")).rejects.toThrow();
- const results=await Promise.all([queueInvitation(db,id,invitationFingerprint(offer)),queueInvitation(db,id,invitationFingerprint(offer))]);expect(results[0]).toBe(results[1]);deliveries.push(results[0]);
- const row=ok(await db.from("email_deliveries").select("*").eq("id",results[0]).single());expect(row.status).toBe("pending");
- const message=decryptEnvelope(row.payload_ciphertext,row.logical_key);expect(message.text).toContain("$1");expect(message.text).toContain("does not reserve or guarantee");expect(message.html).toContain("&lt;Business&gt;");
+ await expect(queueInvitation(db,id,"bad-preview")).rejects.toThrow("changed");
+ await expect(queueInvitation(db,id,invitationFingerprint(offer))).rejects.toThrow("mailing address and opt-out");
+ const message=invitationMessage(offer,"<Business>");expect(message.text).toContain("$1");expect(message.text).toContain("does not reserve or guarantee");expect(message.html).toContain("&lt;Business&gt;");
+ expect(message.text).toContain("Inside Diagnostics LLC");
+ expect(ok(await db.from("email_deliveries").select("id").eq("logical_key",`invitation:${id}`))).toEqual([]);
+ expect(ok(await db.from("advertiser_invitations").select("delivery_id").eq("id",id).single()).delivery_id).toBeNull();
  expect(ok(await db.from("bookings").select("id").eq("edition_id",edition))).toEqual([]);
 });
 
@@ -88,4 +90,13 @@ test("a price change invalidates the preview and a pause or closure cannot be by
  ok(await admin.rpc("admin_set_campaign_status",{p_id:edition,p_action:"close"}));expect(await invitationOffer(db,id)).toBeNull();
  ok(await admin.rpc("admin_set_campaign_status",{p_id:edition,p_action:"open"}));
  ok(await admin.rpc("admin_update_campaign",{p_id:edition,p:{name:"Evidence fixture",unit_price_cents:100,target_quantity:5000}}));
+});
+
+test("already queued promotional invitations cannot bypass the release blocker",async()=>{
+ const key=`invitation:${randomUUID()}`;
+ const id=await queueDelivery(db,key,{from:"Inside914 <no-reply@inside914.com>",to:"fixture@example.com",subject:"Fixture invitation",text:"Local fixture only",html:"<p>Local fixture only</p>"});deliveries.push(id);
+ const send=vi.fn(async()=>({id:"must-not-send"}));
+ expect(await processDelivery(db,id,send)).toBe("failed");expect(send).not.toHaveBeenCalled();
+ const row=ok(await db.from("email_deliveries").select("last_error,retry_safe").eq("id",id).single());
+ expect(row).toEqual({last_error:"promotional_email_on_hold",retry_safe:false});
 });

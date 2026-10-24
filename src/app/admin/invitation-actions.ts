@@ -1,4 +1,5 @@
 "use server";
+import { INVITATION_EMAIL_RELEASED, INVITATION_EMAIL_BLOCKER } from "@/lib/invitations/release";
 import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 import { after } from "next/server";
 import { z } from "zod";
@@ -20,6 +21,7 @@ export async function createInvitation(_prev:InvitationState,form:FormData):Prom
 }
 export async function sendInvitation(_prev:InvitationState,form:FormData):Promise<InvitationState> {
  await requireAdmin();
+ if (!INVITATION_EMAIL_RELEASED) return {message:INVITATION_EMAIL_BLOCKER};
  const parsed=z.object({id:z.uuid(),fingerprint:z.string().regex(/^[a-f0-9]{64}$/),confirm:z.literal("yes")}).safeParse(Object.fromEntries(form));
  if(!parsed.success)return {message:"Review the invitation and confirm this individual email."};
  try {
