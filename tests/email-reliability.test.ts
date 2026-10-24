@@ -28,3 +28,16 @@ test("provider errors classify definitive rejection separately from unknown acce
  fetch.mockResolvedValue(new Response("",{status:503}));await expect(sendWithResend(message)).rejects.toMatchObject({definitive:false});
  fetch.mockRejectedValue(new Error("private-token"));await expect(sendWithResend(message)).rejects.toMatchObject({message:"provider_outcome_unknown",definitive:false});
 });
+
+test("current documented outbound payload shape supports tags and unknown signed events are ignored",()=>{
+ const key=Buffer.alloc(32,7),secret=`whsec_${key.toString("base64")}`,now=Date.now(),timestamp=String(Math.floor(now/1000));
+ const verify=(data:unknown)=>{const body=JSON.stringify(data);const signature=createHmac("sha256",key).update(`msg_fixture.${timestamp}.${body}`).digest("base64");return verifyEmailWebhook(body,new Headers({"svix-id":"msg_fixture","svix-timestamp":timestamp,"svix-signature":`v1,${signature}`}),secret,now);};
+ const result=verify({type:"email.delivered",created_at:new Date().toISOString(),data:{email_id:"provider-fixture",created_at:new Date().toISOString(),from:"sender@example.com",to:["recipient@example.com"],subject:"Example",tags:{delivery_id:"00000000-0000-4000-8000-000000000001"},headers:[{name:"X-Example",value:"fixture"}]}});
+ expect(result.event?.data.tags?.delivery_id).toBe("00000000-0000-4000-8000-000000000001");
+ expect(verify({type:"contact.created",data:{id:"ignored"}}).event).toBeNull();
+});
+test("expired messages are rejected before any provider HTTP call",async()=>{
+ const fetch=vi.fn();vi.stubGlobal("fetch",fetch);
+ await expect(sendWithResend({to:"client@example.com",subject:"Example",html:"private",text:"private",idempotencyKey:"fixed",expiresAt:new Date(Date.now()-1).toISOString()})).rejects.toMatchObject({code:"email_link_expired",definitive:true});
+ expect(fetch).not.toHaveBeenCalled();
+});

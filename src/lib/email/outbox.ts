@@ -159,6 +159,9 @@ export async function processDueOutbox(admin: Admin, limit = 20, send?: SendEmai
     .order("next_attempt_at")
     .limit(limit);
   const results = [];
-  for (const r of data ?? []) results.push(await processOutboxRow(admin, r.id, send));
+  for (const r of data ?? []) {
+    try { results.push(await processOutboxRow(admin, r.id, send)); }
+    catch { results.push("failed" as const); }
+  }
   return results;
 }

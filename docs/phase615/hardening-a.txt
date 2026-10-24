@@ -1,0 +1,19 @@
+PHASE 6.15D / STAGE A — October 24, 2026
+
+Confirmed defects corrected:
+- Expired-link support belonged only to a later stacked stage. It now lives with the email infrastructure; messages need at least 60 seconds of remaining validity before dispatch. Provider calls have a 10-second timeout. Delivery already accepted by the provider cannot be recalled; delivery latency is not guaranteed.
+- A later sent/delayed event could regress delivered status. Signed events now preserve delivery success and adverse outcomes, including duplicate and late-worker reconciliation.
+- One infrastructure exception could abort a due-message batch. Rows are independently isolated; durable state remains recoverable.
+- Webhook bodies were bounded only after reading. Streaming now stops at 256 KB. Authenticated unsupported event types are acknowledged without executing database work.
+- Historical consent had no deadline snapshot or immutable-record guard. An additive migration captures the authoritative deadline for new consent only; existing rows deliberately remain unknown and blocked for collection review. Amounts, versions and exact accepted language cannot be updated. No production records changed.
+- Draft/unrecognized terms and extended deadlines block ledger creation, server-side collection, and payment-recovery access. Existing payment outcomes may still reconcile; no historical payment is discarded. Admin pages expose the reason. There is intentionally no bypass button or fabricated reconsent.
+
+Migration policy:
+The three original Phase 6.15 migrations have already been exercised locally and are published in draft PRs. They remain byte-for-byte unchanged. Stage A adds 20261024121000_email_consent_hardening.sql immediately after A's original migration. Later stages must merge A, not cherry-pick duplicate migrations.
+
+PUBLIC COMMERCIAL LAUNCH BLOCKED:
+New draft checkout terms have not received owner/counsel approval. The collection safeguard is not legal approval and does not make publication of unresolved terms acceptable. Phase 6.16 must either wait for approved policy/wording and a separately reviewed authorization path, or explicitly keep checkout unavailable during a limited admin-only rollout. Do not silently publish the proposal or enable collection.
+
+Original accepted language remains archived in legacy-consent-sources.txt. Original amounts, including intentional $1 reservations, must remain unchanged. Unknown historic deadlines are never backfilled from today's campaign dates.
+
+Email semantics: accepted is not guaranteed inbox delivery; exactly-once delivery is not claimed. Retry identity and encrypted content remain stable. Unknown outcomes stop before the 24-hour provider retention boundary. Encryption loss requires restoring the original owner-controlled key, never generating a replacement for existing envelopes.

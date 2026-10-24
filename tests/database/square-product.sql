@@ -92,11 +92,14 @@ insert into booking_artwork(booking_id,storage_path,status,crop_x,crop_y,crop_wi
 select public.share_square_cart_artwork(c.token_hash,a.id,a.updated_at,'[]'::jsonb) from booking_artwork a join bookings b on b.id=a.booking_id join reservation_carts c on c.id=b.cart_id where b.edition_id=(select id from fixture where k='campaign1') and b.status='pending';
 insert into booking_contacts(booking_id,business_name,contact_name,email,phone)
  select id,'Square fixture','Test','square@example.com','+19145550123' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
+savepoint wrong_amount_fixture;
 insert into payment_consents(booking_id,edition_id,stripe_setup_intent_id,amount_cents,pricing_mode,terms_version)
- select id,edition_id,stripe_setup_intent_id,100,pricing_mode,'square-fixture' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
+ select id,edition_id,stripe_setup_intent_id,100,pricing_mode,'square-zones-v1' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
 select pg_temp.assert((select public.confirm_cart(cart_id,stripe_setup_intent_id,'pm_square_fixture',jsonb_build_object(id,'IN914-'||translate(upper(substr(md5(id::text),1,6)),'01','GH')))='consent_missing'
  from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending' limit 1),'wrong consent amount cannot confirm a $399 booking');
-update payment_consents set amount_cents=39900 where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign1'));
+rollback to wrong_amount_fixture;
+insert into payment_consents(booking_id,edition_id,stripe_setup_intent_id,amount_cents,pricing_mode,terms_version)
+ select id,edition_id,stripe_setup_intent_id,39900,pricing_mode,'square-zones-v1' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
 do $$ declare b record; result text;
 begin
  for b in select * from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending' loop

@@ -92,11 +92,14 @@ insert into booking_artwork(booking_id,storage_path,status,crop_x,crop_y,crop_wi
 select public.share_square_cart_artwork(c.token_hash,a.id,a.updated_at,'[]'::jsonb) from booking_artwork a join bookings b on b.id=a.booking_id join reservation_carts c on c.id=b.cart_id where b.edition_id=(select id from fixture where k='campaign1') and b.status='pending';
 insert into booking_contacts(booking_id,business_name,contact_name,email,phone)
  select id,'Square fixture','Test','square@example.com','+19145550123' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
+savepoint wrong_amount_fixture;
 insert into payment_consents(booking_id,edition_id,stripe_setup_intent_id,amount_cents,pricing_mode,terms_version)
- select id,edition_id,stripe_setup_intent_id,100,pricing_mode,'square-fixture' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
+ select id,edition_id,stripe_setup_intent_id,100,pricing_mode,'square-zones-v1' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
 select pg_temp.assert((select public.confirm_cart(cart_id,stripe_setup_intent_id,'pm_square_fixture',jsonb_build_object(id,'IN914-'||translate(upper(substr(md5(id::text),1,6)),'01','GH')))='consent_missing'
  from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending' limit 1),'wrong consent amount cannot confirm a $399 booking');
-update payment_consents set amount_cents=39900 where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign1'));
+rollback to wrong_amount_fixture;
+insert into payment_consents(booking_id,edition_id,stripe_setup_intent_id,amount_cents,pricing_mode,terms_version)
+ select id,edition_id,stripe_setup_intent_id,39900,pricing_mode,'square-zones-v1' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
 do $$ declare b record; result text;
 begin
  for b in select * from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending' loop
@@ -111,7 +114,7 @@ select pg_temp.assert(not (public.admin_collection_preview((select id from fixtu
 insert into mailing_evidence(edition_id,kind,title,storage_path,uploaded_by,published_at,published_by)
 select id,'final_proof','Synthetic approved final proof including both house ads',id||'/'||gen_random_uuid()||'.pdf',(select id from fixture where k='admin'),now(),(select id from fixture where k='admin') from fixture where k='campaign1';
 select pg_temp.assert(not (public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'wrong consent terms or unapproved artwork block collection');
-update payment_consents set terms_version='square-zones-v1' where edition_id=(select id from fixture where k='campaign1');
+-- Valid authorization was inserted once; historical consent is never rewritten.
 update booking_artwork set review_status='approved' where booking_id in(select id from bookings where edition_id=(select id from fixture where k='campaign1'));
 -- Synthetic house metadata exists only in the isolated local test transaction.
 insert into storage.objects(bucket_id,name) select 'house-artwork','house/'||id||'.png' from fixture where k='admin';
@@ -119,6 +122,15 @@ insert into public.house_artwork(singleton,storage_path,width_px,height_px,updat
 select true,'house/'||id||'.png',1495,1043,id from fixture where k='admin' on conflict(singleton) do nothing;
 update mailing_evidence set uploaded_at=clock_timestamp(),published_at=clock_timestamp() where edition_id=(select id from fixture where k='campaign1');
 select pg_temp.assert((public.admin_collection_preview((select id from fixture where k='campaign1'))->>'ready')::boolean,'ten confirmed approved reservations eligible');
+-- Phase 6.15D: accepted records are immutable and extensions are not renewed authorization.
+select pg_temp.reject(format('update payment_consents set amount_cents=1 where edition_id=%L',(select id from fixture where k='campaign1')),'P0001','historical amounts cannot be rewritten');
+select pg_temp.reject(format('update payment_consents set terms_version=''new-policy'' where edition_id=%L',(select id from fixture where k='campaign1')),'P0001','historical versions cannot be rewritten');
+savepoint extended_consent;
+select public.admin_extend_deadline((select id from fixture where k='campaign1'),'{"reservation_deadline":"2097-12-17T04:59:00Z"}');
+update editions set status='closed' where id=(select id from fixture where k='campaign1');
+select pg_temp.assert((select count(*)=10 from public.admin_consent_review(array(select id from bookings where edition_id=(select id from fixture where k='campaign1') and status='reserved')) where reason like 'Campaign deadline extended:%'),'extended reservations visibly require renewed authorization');
+select pg_temp.reject(format('select public.admin_prepare_zone_collection(%L)',(select id from fixture where k='campaign1')),'P0001','extension cannot authorize new payment ledger');
+rollback to extended_consent;
 -- Exercise the real guarded mutation, including its audit event.
 savepoint house_mutation;
 set local role authenticated;

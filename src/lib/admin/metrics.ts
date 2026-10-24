@@ -237,13 +237,14 @@ export type ReadinessCheck = { ready: boolean; blockers: string[] };
 
 // Payment-ready = could be charged when the owner approves collection (a later task). Every rule
 // must hold; each failing one is listed. Nothing here charges anything.
-export function paymentReadinessDetail(b: AdminBooking, consent: { amountCents: number } | undefined): ReadinessCheck {
+export function paymentReadinessDetail(b: AdminBooking, consent: { amountCents: number; reviewReason?:string|null } | undefined): ReadinessCheck {
   const blockers: string[] = [];
   if (!isConfirmed(b)) blockers.push("Not a confirmed reservation");
   const live = b.claims.filter((c) => !c.released).length;
   if (live !== (b.claimedSlotCount ?? (b.size === "double" ? 2 : b.size === "standard" ? 1 : Infinity))) blockers.push("Its spaces aren't all allocated");
   if (!consent) blockers.push("No future-charge consent on record");
   else if (consent.amountCents !== b.priceCents) blockers.push("Consent amount differs from the reservation amount");
+  if (consent?.reviewReason) blockers.push(consent.reviewReason);
   if (!b.stripePaymentMethodId) blockers.push(b.stripeSetupStatus === "failed" ? "Card setup failed" : "No saved card");
   if (!(b.priceCents > 0)) blockers.push("Invalid amount");
   if (b.status === "charge_failed") blockers.push("A previous charge failed");

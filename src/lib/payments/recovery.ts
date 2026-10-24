@@ -13,5 +13,6 @@ export async function resolveRecovery(db:SupabaseClient<Database>,token:string|u
   if(!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const {data,error}=await db.from("zone_charges").select("*").eq("recovery_hash",hashHoldToken(token)).gt("recovery_expires_at",new Date().toISOString()).in("status",["requires_action","requires_payment_method","processing"]).maybeSingle();
   if(error) throw new Error("Recovery lookup unavailable");
+  if(data) {const consent=await db.rpc("assert_charge_consent",{p_charge:data.id});if(consent.error)return null;}
   return data;
 }
