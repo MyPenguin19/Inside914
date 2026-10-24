@@ -102,6 +102,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
             )}
           </div>
           <p className="mt-2"><Link className="underline" href={`/admin/campaigns/${sel.id}`}>Open campaign to review artwork and payments</Link></p>
+          {selConfirmed.some(b=>data.consents.get(b.id)?.reviewReason)&&<p role="alert" className="mt-3 text-sm">Consent review required. Legacy deadlines and draft terms must be resolved before collection. Extending a campaign does not renew authorization.</p>}
           <details className="mt-4"><summary className="cursor-pointer">Advanced details</summary>
             <DetailList
               rows={[

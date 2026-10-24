@@ -1,3 +1,4 @@
+import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { HOLD_COOKIE } from "@/lib/booking/place-hold";
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
     if (!booking) return go("/book/payment?outcome=no_hold");
     const outcome = await completeReservation(admin, getStripe(), booking.id);
     if (outcome === "confirmed" || outcome === "already_confirmed") {
+      notifyOwnerAfterResponse();
       await processOutboxForBooking(admin, booking.id).catch(() => {});
       return go("/book/confirmed");
     }

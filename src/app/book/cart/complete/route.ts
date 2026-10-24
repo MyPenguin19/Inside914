@@ -1,3 +1,4 @@
+import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CART_COOKIE, ownedCart, completeCart } from "@/lib/booking/cart";
@@ -10,6 +11,7 @@ export async function GET(request: Request) {
   const cart = await ownedCart(admin, token);
   if (cart) {
     const outcome = await completeCart(admin, getStripe(), cart.id);
+    if(outcome==="confirmed"||outcome==="already_confirmed")notifyOwnerAfterResponse();
     if (outcome === "confirmed" || outcome === "already_confirmed")
       return NextResponse.redirect(new URL("/book/cart", request.url));
   }

@@ -126,6 +126,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
                   ["Stripe setup status", b.stripeSetupStatus ? `${b.stripeSetupStatus} · ${formatTimestamp(b.stripeSetupStatusAt)}` : b.stripeSetupIntentId ? "Started (no webhook result recorded)" : "Not started"],
                   ["Consent recorded", consent ? `${formatPrice(consent.amount_cents)} · ${formatTimestamp(consent.consented_at)}` : "No"],
                   ["Terms version", consent?.terms_version ?? "—"],
+                  ["Consent review",consent?.reviewReason??"No deadline change recorded; collection remains separately gated"],
                   ["Collected", "$0 (payment collection isn't built yet)"],
                 ]}
               />

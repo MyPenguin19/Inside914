@@ -1,3 +1,4 @@
+import { notifyOwnerAfterResponse } from "@/lib/operations/notify-after";
 import { getCollectionStripe, handlePaymentEvent } from "@/lib/payments/charge";
 import Stripe from "stripe";
 import { handleStripeEvent } from "@/lib/checkout/webhook";
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
       return Response.json({received:true,result});
     }
     const result = await handleStripeEvent(createAdminClient(), getStripe(), event);
+    notifyOwnerAfterResponse();
     return Response.json({ received: true, result });
   } catch (error) {
     console.error("stripe webhook failed", event.type, error instanceof Error ? error.message : "unknown");

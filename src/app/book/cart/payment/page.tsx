@@ -58,7 +58,7 @@ async function Payment() {
   const testMode = isDevTestModeActive();
   return (
     <div className="space-y-6">
-      {cart.members.every(b=>b.status==="pending")&&<CartHoldTimer expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/>}
+      {cart.members.every(b=>b.status==="pending")&&<CartHoldTimer extensionUsed={cart.members.some(b=>b.holdExtensions>0)} expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/>}
       <BookingSteps current={4} />
       <Link className="underline" href="/book/cart/details">
         ← Back to business details

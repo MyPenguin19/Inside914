@@ -57,7 +57,7 @@ async function Cart() {
   const gate = cartGate(cart.members);
   return (
     <div className="space-y-6">
-      {cart.members.every(b=>b.status==="pending")&&<CartHoldTimer expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/>}
+      {cart.members.every(b=>b.status==="pending")&&<CartHoldTimer extensionUsed={cart.members.some(b=>b.holdExtensions>0)} expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/>}
       {!confirmed && <BookingSteps current={2} />}
       <h1 className="text-3xl font-semibold">
         {confirmed ? "Your areas are reserved" : "Your area reservation"}
