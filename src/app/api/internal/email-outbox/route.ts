@@ -1,3 +1,4 @@
+import { queueOwnerNotifications } from "@/lib/operations/notifications";
 import { processDueDeliveries } from "@/lib/email/delivery";
 import { timingSafeEqual } from "node:crypto";
 import { processDueCardRemovals } from "@/lib/checkout/card-removal";
@@ -26,6 +27,8 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("card removal job failed", error instanceof Error ? error.message.slice(0, 80) : "unknown");
   }
+  await admin.rpc("refresh_operational_alerts");
+  await queueOwnerNotifications(admin);
   const results = await processDueOutbox(admin);
   const deliveries = await processDueDeliveries(admin);
   return Response.json({ deliveries, campaignsClosed: campaignsClosed ?? 0, processed: results.length, results, cardRemovals });

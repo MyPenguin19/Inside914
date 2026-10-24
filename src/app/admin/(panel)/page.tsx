@@ -1,3 +1,4 @@
+import { ActionCenter } from "@/components/admin/action-center";
 import { Suspense } from "react";
 import { requireAdmin } from "@/lib/admin/auth";
 import { ButtonLink } from "@/components/ui/button";
@@ -7,6 +8,7 @@ export default function Page() { return <Suspense fallback={<p>Loading…</p>}><
 async function Home() {
   await requireAdmin();
   return <div className="space-y-6"><PageHeader title="Manage Inside914" description="Four simple steps to run your mailing." />
+      <ActionCenter />
     <div className="grid gap-4 sm:grid-cols-2">{[
       ["1. Campaigns", "Create a campaign, choose its area and dates, then open reservations.", "/admin/campaigns"],
       ["2. Advertisers", "Find contact details and manage reservations.", "/admin/advertisers"],

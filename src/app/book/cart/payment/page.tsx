@@ -1,3 +1,4 @@
+import { CartHoldTimer } from "@/components/booking/cart-hold-timer";
 import { cartConsentText } from "@/lib/checkout/terms";
 import { BookingSteps } from "@/components/booking/booking-steps";
 import { Suspense } from "react";
@@ -57,6 +58,7 @@ async function Payment() {
   const testMode = isDevTestModeActive();
   return (
     <div className="space-y-6">
+      {cart.members.every(b=>b.status==="pending")&&<CartHoldTimer expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/>}
       <BookingSteps current={4} />
       <Link className="underline" href="/book/cart/details">
         ← Back to business details

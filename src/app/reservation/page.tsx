@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ReservationRequests } from "@/components/checkout/reservation-requests";
 import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { Panel } from "@/components/booking/hold-state-panel";
@@ -41,11 +43,16 @@ async function Reservation() {
       <Panel title="This link isn't valid">
         <p className="text-muted">
           Reservation links are private and can expire or be replaced. Please use the newest link from your confirmation
-          email, or contact us at {getEmailEnv().supportEmail}.
+          email, <Link href="/reservation/recover" className="underline">request another private link</Link>, or contact us at {getEmailEnv().supportEmail}.
         </p>
       </Panel>
     );
   }
+  const edition=await admin.from("editions").select("status,artwork_due_at,artwork_deadline").eq("id",view.editionId).single();
+  const requests=await admin.from("customer_requests").select("id,kind,status,response").eq("booking_id",view.bookingId).order("created_at",{ascending:false});
+  // Request-scoped server time after cookies() has made this page dynamic.
+  // eslint-disable-next-line react-hooks/purity
+  const locked=!edition.data || !["open","closed"].includes(edition.data.status) || Date.parse(edition.data.artwork_due_at??edition.data.artwork_deadline)<=Date.now();
   return (
     <div className="flex flex-col gap-6">
       {view.isTest && <TestReservationBanner />}
@@ -54,13 +61,14 @@ async function Reservation() {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{view.businessName}</h1>
         <p className="mt-3 font-medium">{view.isTest ? "TEST reservation: nothing saved or authorized." : (STATUS_TEXT[view.status] ?? "In progress.")}</p>
       </section>
+      {view.status!=="cancelled"&&<ReservationRequests artworkLocked={locked}/>}
+      {!!requests.data?.length&&<section className="rounded-2xl border border-line p-5"><h2 className="font-semibold">Your requests</h2>{requests.data.map(r=><p className="mt-3" key={r.id}>{r.kind.replaceAll("_"," ")} · {r.status}{r.response?` — ${r.response}`:""}</p>)}</section>}
       <ReservationSummary view={view} amountLabel="Authorized future charge" />
       <section className="rounded-2xl border border-dashed border-line p-6 text-sm text-muted">
         <h2 className="text-base font-semibold text-foreground">Inside914 Verified Mail</h2>
         <p className="mt-2">
           Campaign progress and documented mailing evidence will appear here once your edition moves into production.
-          Nothing to show yet. Changing your artwork after confirming isn&apos;t available online yet; contact us if you
-          need a change.
+          Only published, verified documents will be shown.
         </p>
       </section>
     </div>

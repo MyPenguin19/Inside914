@@ -28,17 +28,19 @@ export async function processDelivery(db:Db,id:string,send:SendEmail=sendWithRes
   let providerId:string|null=null, code:string|null=null, retrySafe=false;
   try {
     const payload=decryptEnvelope(row.payload_ciphertext,row.logical_key);
+    if(payload.expiresAt && Date.parse(payload.expiresAt)<=Date.now()) throw new Error("email_link_expired");
     const message={...payload,idempotencyKey:`inside914-delivery-${row.id}`,deliveryId:row.id};
     providerId=row.is_test?TEST_NOT_DELIVERED:(await send(message)).id;
   } catch(error) {
     retrySafe=error instanceof EmailProviderError && error.definitive && !row.ambiguous;
     code=error instanceof EmailProviderError?error.code:"provider_outcome_unknown";
     if(error instanceof Error && error.message==="email_envelope_unavailable") {code=error.message;state="investigation";}
-    else state=retrySafe?"failed":"sending";
+    else if(error instanceof Error && error.message==="email_link_expired") {code=error.message;state="failed";retrySafe=false;}
+    else state=retrySafe?"failed":row.attempts>=8?"investigation":"sending";
   }
   // Lease fencing: late workers cannot overwrite a newer worker or a signed webhook outcome.
   const updated=await db.from("email_deliveries").update({status:state,provider_message_id:providerId,
-    ambiguous:row.ambiguous || state==="sending",
+    ambiguous:row.ambiguous || state==="sending" || state==="investigation",
     accepted_at:state==="accepted"?new Date().toISOString():null,last_error:code,retry_safe:retrySafe,
     next_attempt_at:new Date(Date.now()+Math.min(2**row.attempts,360)*60_000).toISOString(),lease_id:null,lease_until:null})
     .eq("id",id).eq("lease_id",row.lease_id!).select("id").maybeSingle();
@@ -51,8 +53,8 @@ export async function processDelivery(db:Db,id:string,send:SendEmail=sendWithRes
   return state==="accepted"?"sent" as const:state==="investigation"?"investigation" as const:"failed" as const;
 }
 export async function processDueDeliveries(db:Db,limit=20,send?:SendEmail) {
-  const {data,error}=await db.from("email_deliveries").select("id").in("status",["pending","sending","failed"])
-    .lte("next_attempt_at",new Date().toISOString()).lt("attempts",8).order("next_attempt_at").limit(limit);
+  const {data,error}=await db.from("email_deliveries").select("id").or("and(status.eq.sending,attempts.lte.8),and(status.eq.pending,attempts.lt.8),and(status.eq.failed,retry_safe.eq.true,attempts.lt.8)")
+    .lte("next_attempt_at",new Date().toISOString()).order("next_attempt_at").limit(limit);
   if(error) throw new Error("email_due_query_failed");
   const results=[];
   for(const row of data??[]) results.push(await processDelivery(db,row.id,send));

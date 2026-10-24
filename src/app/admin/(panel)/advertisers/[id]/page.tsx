@@ -1,3 +1,4 @@
+import { CustomerRequestList } from "@/components/admin/customer-request-list";
 import { EmailDeliveryStatus } from "@/components/admin/email-delivery-status";
 
 import { bookingSizeLabel } from "@/lib/booking/products";
@@ -75,6 +76,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
         </Notice>
       )}
 
+      <CustomerRequestList bookingId={b.id}/>
       <EmailDeliveryStatus bookingId={b.id} />
       <ReservationActions booking={b} spaces={own.map((s) => s.label)} now={now} />
 

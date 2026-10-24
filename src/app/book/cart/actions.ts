@@ -224,3 +224,12 @@ export async function simulateCartSetup() {
     ? { ok: true }
     : { ok: false, reason: "payment_not_started" };
 }
+
+export async function extendAreaCheckout() {
+ const current=await token();
+ if(!current)return {ok:false,message:"Your hold is unavailable."};
+ const {hashHoldToken}=await import("@/lib/booking/hold-token");
+ const result=await createAdminClient().rpc("extend_cart_hold",{p_hash:hashHoldToken(current)});
+ if(result.error)return {ok:false,message:"The extension is unavailable. It can be used once, in the last five minutes, before the campaign deadline."};
+ return {ok:true,expiresAt:result.data,message:"All selected areas now share the extended deadline."};
+}

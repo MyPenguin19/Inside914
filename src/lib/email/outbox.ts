@@ -117,7 +117,7 @@ export async function processOutboxRow(admin: Admin, rowId: string, send: SendEm
       positions: view.positions.map((p) => p.label),
       size: view.size,
       priceCents: view.priceCents,
-      reservationUrl: `${getAppUrl()}/r/${access.token}`,
+      reservationUrl: `${getAppUrl()}/reservation/access#${access.token}`,
       supportEmail,
       test: view.isTest,
       testPricing: view.pricingMode === "test",

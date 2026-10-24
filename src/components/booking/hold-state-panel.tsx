@@ -23,7 +23,7 @@ export function HoldStatePanel({ state, editionId }: { state: "none" | "expired"
     return (
       <Panel title="Your hold has expired">
         <p className="text-muted">
-          Holds last 15 minutes, so your position may have been released. Go back to the postcard to check and hold it
+          Your checkout window has ended, so your position may have been released. Go back to the postcard to check and hold it
           again. You&apos;ll need to upload your image again too.
         </p>
         <Link

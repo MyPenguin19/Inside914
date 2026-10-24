@@ -1,3 +1,5 @@
+export type CustomerRequestRow={id:string;booking_id:string;kind:string;message:string;status:string;created_at:string;resolved_at:string|null;resolved_by:string|null;response:string|null};
+export type OperationalAlertRow={id:string;logical_key:string;kind:string;title:string;href:string;created_at:string;resolved_at:string|null;delivery_id:string|null};
 export type EmailDeliveryRow = { id:string; logical_key:string; outbox_id:string|null; payload_ciphertext:string; status:string; is_test:boolean; attempts:number; first_attempt_at:string|null; next_attempt_at:string; lease_id:string|null; lease_until:string|null; retry_safe:boolean; ambiguous:boolean; provider_message_id:string|null; provider_outcome:string|null; provider_event_at:string|null; last_error:string|null; created_at:string; accepted_at:string|null };
 export type ZoneChargeRow = { stripe_mode: "test" | "live"; stripe_account_id: string | null; id: string; booking_id: string; edition_id: string; consent_id: string; amount_cents: number; customer_id: string; payment_method_id: string; payment_intent_id: string | null; status: string; created_at: string; updated_at: string; created_by: string; recovery_hash: string | null; recovery_expires_at: string | null; last_event_at: number; failure_code: string | null };
 export type Json =
@@ -16,11 +18,16 @@ export type Database = {
   }
   public: {
     Tables: {
+      reservation_recoveries:{Row:{id:string;booking_id:string;token_hash:string;expires_at:string;used_at:string|null;created_at:string};Insert:{id?:string;booking_id:string;token_hash:string;expires_at:string;used_at?:string|null};Update:{used_at?:string|null};Relationships:[]}
+      customer_requests:{Row:CustomerRequestRow;Insert:Partial<CustomerRequestRow>&Pick<CustomerRequestRow,"booking_id"|"kind"|"message">;Update:Partial<CustomerRequestRow>;Relationships:[]}
+      operational_alerts:{Row:OperationalAlertRow;Insert:Partial<OperationalAlertRow>&Pick<OperationalAlertRow,"logical_key"|"kind"|"title"|"href">;Update:Partial<OperationalAlertRow>;Relationships:[]}
+
       email_deliveries: { Row:EmailDeliveryRow; Insert:Partial<EmailDeliveryRow>&Pick<EmailDeliveryRow,"logical_key"|"payload_ciphertext">; Update:Partial<EmailDeliveryRow>; Relationships:[] }
       email_delivery_events: { Row:{id:string;delivery_id:string;provider_message_id:string;kind:string;occurred_at:string;received_at:string}; Insert:{id:string;delivery_id:string;provider_message_id:string;kind:string;occurred_at:string;received_at?:string}; Update:{kind?:string}; Relationships:[] }
 
       artwork_uploads: {
         Row: {
+          cleanup_failures:number
           id: string
           booking_id: string | null
           bucket: string
@@ -36,6 +43,7 @@ export type Database = {
           created_at: string
         }
         Insert: {
+          cleanup_failures?:number
           id?: string
           booking_id?: string | null
           bucket: string
@@ -51,6 +59,7 @@ export type Database = {
           created_at?: string
         }
         Update: {
+          cleanup_failures?:number
           id?: string
           booking_id?: string | null
           bucket?: string
@@ -110,9 +119,9 @@ export type Database = {
         Relationships: []
       }
       reservation_carts: {
-        Row: { id: string; token_hash: string; created_at: string }
-        Insert: { id?: string; token_hash: string; created_at?: string }
-        Update: { id?: string; token_hash?: string; created_at?: string }
+        Row: { id: string; token_hash: string; created_at: string; hold_extensions:number }
+        Insert: { id?: string; token_hash: string; created_at?: string; hold_extensions?:number }
+        Update: { id?: string; token_hash?: string; created_at?: string; hold_extensions?:number }
         Relationships: []
       }
       admin_events: {
@@ -985,6 +994,14 @@ export type Database = {
       }
     }
     Functions: {
+      consume_reservation_recovery:{Args:{p_hash:string;p_session_hash:string};Returns:string|null}
+      submit_customer_request:{Args:{p_hash:string;p_kind:string;p_message:string};Returns:string}
+      admin_resolve_customer_request:{Args:{p_id:string;p_status:string;p_response:string};Returns:undefined}
+      admin_acknowledge_alert:{Args:{p_id:string};Returns:undefined}
+      refresh_operational_alerts:{Args:Record<PropertyKey,never>;Returns:undefined}
+      note_artwork_cleanup_failure:{Args:{p_id:string};Returns:undefined}
+      extend_cart_hold:{Args:{p_hash:string};Returns:string}
+
       claim_email_delivery: {Args:{p_id:string};Returns:EmailDeliveryRow[]}
       sync_email_delivery: {Args:{p_id:string};Returns:undefined}
       admin_retry_email_delivery: {Args:{p_id:string};Returns:undefined}
