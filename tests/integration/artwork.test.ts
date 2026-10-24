@@ -37,7 +37,9 @@ describe.skipIf(!secretKey)("artwork storage", () => {
     const ticket = await artwork.requestUpload(admin, token, { byteSize: bytes.length });
     if (!ticket.ok) return ticket;
     expect((await put(ticket.uploadUrl, bytes, type)).ok).toBe(true);
-    return artwork.finalizeUpload(admin, token, { artworkId: ticket.artworkId });
+    const result = await artwork.finalizeUpload(admin, token, { artworkId: ticket.artworkId });
+    if (result.ok) expect(await artwork.saveLayout(admin,token,{artworkId:result.artwork.id,crop:{x:0,y:0,width:result.artwork.width,height:result.artwork.height},zoom:1})).toEqual({ok:true});
+    return result;
   }
 
   async function objectsFor(token: string) {
@@ -54,9 +56,13 @@ describe.skipIf(!secretKey)("artwork storage", () => {
   });
 
   afterEach(async () => {
-    const { data: rows } = await admin.from("booking_artwork").select("storage_path");
-    if (rows?.length) await admin.storage.from("artwork").remove(rows.map((r) => r.storage_path));
+    const bookings = await admin.from("bookings").select("id").eq("edition_id", OPEN_EDITION);
+    const ids = (bookings.data ?? []).map(b => b.id);
+    if (!ids.length) return;
     await admin.from("bookings").delete().eq("edition_id", OPEN_EDITION);
+    const { data: rows } = await admin.from("artwork_uploads").select("storage_path").in("booking_id", ids);
+    if (rows?.length) await admin.storage.from("artwork").remove(rows.map(r => r.storage_path));
+    await admin.from("artwork_uploads").delete().in("booking_id", ids);
   });
 
   afterAll(async () => {
@@ -71,7 +77,7 @@ describe.skipIf(!secretKey)("artwork storage", () => {
     expect((await fetch(result.artwork.viewUrl)).status).toBe(200);
   });
 
-  test("valid JPG, then replacing it deletes the old file", async () => {
+  test("valid JPG, then replacing it retains both original files", async () => {
     const token = await hold("F6");
     const first = await uploadAndFinalize(token, await makeImage("jpeg", 1000, 900), "image/jpeg");
     expect(first.ok).toBe(true);
@@ -80,8 +86,8 @@ describe.skipIf(!secretKey)("artwork storage", () => {
     const second = await uploadAndFinalize(token, await makeImage("png", 1000, 900));
     expect(second.ok).toBe(true);
     const names = (await objectsFor(token)).map((o) => o.name);
-    expect(names).toHaveLength(1);
-    expect(names).not.toContain(oldObject.name);
+    expect(names).toHaveLength(2);
+    expect(names).toContain(oldObject.name);
   });
 
   test("quality assessment of a saved private crop leaves bytes and review decisions unchanged", async () => {
@@ -100,13 +106,13 @@ describe.skipIf(!secretKey)("artwork storage", () => {
     expect(after.data).toEqual(before.data);
   });
 
-  test("disguised or broken files are rejected and deleted", async () => {
+  test("disguised or broken files stay uncommitted until safe cleanup", async () => {
     const token = await hold("F7");
     expect(await uploadAndFinalize(token, Buffer.from("not an image at all"), "image/png")).toEqual({ ok: false, reason: "unsupported_type" });
     expect(await uploadAndFinalize(token, await makeImage("gif"), "image/png")).toEqual({ ok: false, reason: "unsupported_type" });
     const jpeg = await makeImage("jpeg", 1200, 900);
     expect(await uploadAndFinalize(token, jpeg.subarray(0, jpeg.length / 2), "image/jpeg")).toEqual({ ok: false, reason: "corrupt" });
-    expect(await objectsFor(token)).toEqual([]);
+    expect((await admin.from("booking_artwork").select("id")).data).toEqual([]);
   });
 
   test("oversized files are refused before upload, and the bucket refuses them too", async () => {

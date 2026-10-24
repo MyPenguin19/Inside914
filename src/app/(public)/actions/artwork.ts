@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import {
   extendHold,
   finalizeUpload,
-  removeArtwork as removeArtworkFor,
   requestUpload,
   saveLayout,
   type ArtworkFailure,
@@ -56,6 +55,7 @@ export async function saveArtworkLayout(input: {
   artworkId: string;
   crop: { x: number; y: number; width: number; height: number };
   zoom: number;
+  cropApproved?: boolean;
 }): Promise<SimpleResult> {
   return guarded("saveArtworkLayout", async () => {
     const admin = createAdminClient();
@@ -63,10 +63,6 @@ export async function saveArtworkLayout(input: {
     const result = await saveLayout(admin,token,input);
     return result;
   });
-}
-
-export async function removeArtwork(): Promise<SimpleResult> {
-  return guarded("removeArtwork", async () => removeArtworkFor(createAdminClient(), await holdToken()));
 }
 
 export async function extendCurrentHold(): Promise<ExtendResult> {

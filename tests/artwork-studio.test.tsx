@@ -40,7 +40,6 @@ function actionsWith(overrides: Partial<ArtworkActions> = {}): ArtworkActions {
     requestUpload: vi.fn(async () => ({ ok: true as const, artworkId: READY.id, uploadUrl: "https://storage.example/upload" })),
     finalizeUpload: vi.fn(async () => ({ ok: true as const, artwork: READY })),
     saveLayout: vi.fn(async () => ({ ok: true as const })),
-    removeArtwork: vi.fn(async () => ({ ok: true as const })),
     extendHold: vi.fn(async () => ({ ok: true as const, expiresAt: new Date(Date.now() + 15 * 60_000).toISOString() })),
     ...overrides,
   };
@@ -122,11 +121,10 @@ describe("ArtworkStudio upload", () => {
     expect(screen.queryByTestId("cropper")).toBeNull();
   });
 
-  test("an interrupted upload is reported honestly and its record is cleaned up", async () => {
+  test("an interrupted upload is reported without changing active artwork", async () => {
     const { actions, chooseFile } = setup({ upload: async () => Promise.reject(new Error("network")) });
     chooseFile();
     expect((await screen.findByRole("alert")).textContent).toMatch(/interrupted, so nothing was saved/);
-    expect(actions.removeArtwork).toHaveBeenCalled();
     expect(actions.finalizeUpload).not.toHaveBeenCalled();
   });
 
@@ -138,17 +136,13 @@ describe("ArtworkStudio upload", () => {
 });
 
 describe("ArtworkStudio editing", () => {
-  test("replace and remove work on an existing image", async () => {
-    const { actions, chooseFile } = setup({ initialArtwork: READY });
+  test("a failed replacement preserves the existing preview", async () => {
+    const { actions, chooseFile } = setup({ initialArtwork: READY, upload: async () => { throw new Error("offline"); } });
+    chooseFile("new.png");
+    await screen.findByRole("alert");
     expect(screen.getByTestId("cropper")).toBeTruthy();
-
-    chooseFile("new.png"); // what "Replace image" triggers
-    await waitFor(() => expect(actions.requestUpload).toHaveBeenCalledTimes(1));
-    await screen.findByText(/Image uploaded/);
-
-    fireEvent.click(screen.getByRole("button", { name: "Remove image" }));
-    await screen.findByRole("button", { name: "Choose an image" });
-    expect(actions.removeArtwork).toHaveBeenCalled();
+    expect(actions.saveLayout).not.toHaveBeenCalled();
+    expect(actions.finalizeUpload).not.toHaveBeenCalled();
   });
 
   test("zoom slider and Reset change the zoom", async () => {
@@ -156,7 +150,7 @@ describe("ArtworkStudio editing", () => {
     const slider = screen.getByRole("slider");
     fireEvent.change(slider, { target: { value: "2.5" } });
     expect(screen.getByTestId("cropper").dataset.zoom).toBe("2.5");
-    fireEvent.click(screen.getByRole("button", { name: "Reset position" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     expect(screen.getByTestId("cropper").dataset.zoom).toBe("1");
   });
 
@@ -167,12 +161,13 @@ describe("ArtworkStudio editing", () => {
 
   test("Continue saves the rounded crop and zoom, then moves to review", async () => {
     const { actions } = setup({ initialArtwork: READY });
-    fireEvent.click(screen.getByRole("button", { name: "Continue to review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save artwork and continue" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/book/review"));
     expect(actions.saveLayout).toHaveBeenCalledWith({
       artworkId: READY.id,
       crop: { x: 10, y: 21, width: 975, height: 899 },
       zoom: 1,
+      cropApproved: false,
     });
   });
 });
@@ -211,20 +206,20 @@ test("V2 defaults to full source preservation without requiring a destructive cr
  const {actions}=setup({initialArtwork:READY,layoutKey:"amazingmail-9x6-v2"});
  expect(screen.queryByTestId("cropper")).toBeNull();
  expect(screen.getByAltText("Full artwork fitted without stretching")).toBeTruthy();
- fireEvent.click(screen.getByRole("button",{name:"Continue to review"}));
- await waitFor(()=>expect(actions.saveLayout).toHaveBeenCalledWith({artworkId:READY.id,crop:{x:0,y:0,width:2000,height:1800},zoom:1}));
+ fireEvent.click(screen.getByRole("button",{name:"Save artwork and continue"}));
+ await waitFor(()=>expect(actions.saveLayout).toHaveBeenCalledWith({artworkId:READY.id,crop:{x:0,y:0,width:2000,height:1800},zoom:1,cropApproved:false}));
 });
 
 test("V2 cropping needs explicit approval after preview; returning to full image restores every source pixel", async()=>{
  const {actions}=setup({initialArtwork:READY,layoutKey:"amazingmail-9x6-v2"});
- fireEvent.click(screen.getByRole("button",{name:"Preview a crop"}));
+ fireEvent.click(screen.getByRole("button",{name:"Fill space"}));
  expect(screen.getByTestId("cropper")).toBeTruthy();
- expect(screen.getByRole("button",{name:"Continue to review"})).toHaveProperty("disabled",true);
+ expect(screen.getByRole("button",{name:"Save artwork and continue"})).toHaveProperty("disabled",true);
  fireEvent.click(screen.getByRole("checkbox",{name:/I approve this crop/}));
- expect(screen.getByRole("button",{name:"Continue to review"})).toHaveProperty("disabled",false);
- fireEvent.click(screen.getByRole("button",{name:"Keep full image"}));
- fireEvent.click(screen.getByRole("button",{name:"Continue to review"}));
- await waitFor(()=>expect(actions.saveLayout).toHaveBeenCalledWith({artworkId:READY.id,crop:{x:0,y:0,width:2000,height:1800},zoom:1}));
+ expect(screen.getByRole("button",{name:"Save artwork and continue"})).toHaveProperty("disabled",false);
+ fireEvent.click(screen.getByRole("button",{name:"Fit entire image"}));
+ fireEvent.click(screen.getByRole("button",{name:"Save artwork and continue"}));
+ await waitFor(()=>expect(actions.saveLayout).toHaveBeenCalledWith({artworkId:READY.id,crop:{x:0,y:0,width:2000,height:1800},zoom:1,cropApproved:false}));
 });
 
 test("contained browser preview uses a square inner image inside a portrait physical slot",()=>{
@@ -235,4 +230,29 @@ test("contained browser preview uses a square inner image inside a portrait phys
  expect(parseFloat(box.style.height)).toBeCloseTo(2.2925/2.815*100);
  expect(parseFloat(box.style.top)).toBeCloseTo((2.815-2.2925)/2/2.815*100);
  expect(img.style.width).toBe("100%");expect(img.style.height).toBe("100%");
+});
+
+test("a rejected save leaves the selected crop available for a retry", async () => {
+ const save = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValue({ok:true});
+ setup({initialArtwork:READY,layoutKey:"amazingmail-9x6-v2",actions:actionsWith({saveLayout:save})});
+ fireEvent.click(screen.getByRole("button",{name:"Save artwork and continue"}));
+ await screen.findByRole("alert");
+ expect(screen.getByAltText("Full artwork fitted without stretching")).toBeTruthy();
+ fireEvent.click(screen.getByRole("button",{name:"Save artwork and continue"}));
+ await waitFor(()=>expect(push).toHaveBeenCalled());
+ expect(save).toHaveBeenCalledTimes(2);
+});
+
+test("duplicate crop callbacks preserve acknowledgement; an actual crop change requires it again", async () => {
+ const {actions}=setup({initialArtwork:READY,layoutKey:"amazingmail-9x6-v2"});
+ fireEvent.click(screen.getByRole("button",{name:"Fill space"}));
+ fireEvent.click(screen.getByRole("checkbox"));
+ // Remount after Fit/Fill: the cropper reports exactly the same source pixels again.
+ fireEvent.click(screen.getByRole("button",{name:"Fit entire image"}));
+ fireEvent.click(screen.getByRole("button",{name:"Fill space"}));
+ expect(screen.getByRole("checkbox")).toHaveProperty("checked",true);
+ fireEvent.click(screen.getByRole("button",{name:"Save artwork and continue"}));
+ await waitFor(()=>expect(actions.saveLayout).toHaveBeenCalledWith(expect.objectContaining({cropApproved:true})));
+ fireEvent.click(screen.getByRole("button",{name:"Reset"}));
+ expect(screen.getByRole("checkbox")).toHaveProperty("checked",false);
 });

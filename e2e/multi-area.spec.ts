@@ -98,7 +98,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
     const buffer = await sharp({ create: { width: 1200, height: 1200, channels: 3, background: { r: 30+i*70, g: 100, b: 160 } } }).png().toBuffer();
     images.push(buffer);
     await page.getByLabel("Ad image file").setInputFiles({ name: `area-${i}.png`, mimeType: "image/png", buffer });
-    await page.getByRole("button", { name: "Save artwork and return to areas" }).click();
+    await page.getByRole("button", { name: "Save artwork and continue" }).click();
     await expect(page).toHaveURL(/\/book\/cart$/);
   }
   await page.getByRole("link", { name: "Continue to business details" }).click();
@@ -183,7 +183,7 @@ test("another advertiser can reserve another square in the same area without a c
     const buffer = await sharp({ create: { width: 900, height: 900, channels: 3, background: { r: shade, g: 40, b: 50 } } }).png().toBuffer();
     await page.getByLabel("Ad image file").filter({visible:true}).setInputFiles({ name: "single.png", mimeType: "image/png", buffer });
     await expect(page.getByText(/Image uploaded|Full image preserved/)).toBeVisible();
-    await page.getByRole("button", { name: "Save artwork and return to areas" }).click();
+    await page.getByRole("button", { name: "Save artwork and continue" }).click();
     await expect(page.getByRole("link", { name: "Continue to business details" })).toBeVisible();
   }
   await page.getByRole("button", { name: "Release all areas and change selection" }).click();
@@ -201,21 +201,21 @@ test("copied artwork can be edited independently in another area", async ({ page
   await page.getByRole("button", { name: `Edit artwork for ${names[1]}`, exact: true }).click();
   const buffer = await sharp({ create: { width: 900, height: 900, channels: 3, background: "purple" } }).png().toBuffer();
   await page.getByLabel("Ad image file").setInputFiles({ name: "copy.png", mimeType: "image/png", buffer });
-  await page.getByRole("button", { name: "Save artwork and return to areas" }).click();
+  await page.getByRole("button", { name: "Save artwork and continue" }).click();
   await expect(page).toHaveURL(/\/book\/cart$/);
   await page.getByRole("button", { name: "Copy image and position for this area" }).click();
   await expect(page.getByTestId("artwork-area")).toHaveText(names[2]);
   await expect(page.getByAltText("Full artwork fitted without stretching")).toBeVisible();
-  await page.getByRole("button", {name:"Preview a crop",exact:true}).click();
-  await expect(page.getByRole("button", {name:"Save artwork and return to areas"})).toBeDisabled();
+  await page.getByRole("button", {name:"Fill space",exact:true}).click();
+  await expect(page.getByRole("button", {name:"Save artwork and continue"})).toBeDisabled();
   await page.getByRole("checkbox", {name:/I approve this crop/}).check();
-  await page.getByRole("button", { name: "Save artwork and return to areas" }).click();
+  await page.getByRole("button", { name: "Save artwork and continue" }).click();
   await expect(page.getByRole("link", { name: "Continue to business details" })).toBeVisible();
   await page.getByRole("button", { name: `Edit artwork for ${names[2]}`, exact: true }).click();
   const changed = await sharp({ create: { width: 900, height: 900, channels: 3, background: "orange" } }).png().toBuffer();
   await page.getByLabel("Ad image file").filter({visible:true}).setInputFiles({ name: "changed.png", mimeType: "image/png", buffer: changed });
   await expect(page.getByText(/Image uploaded|Full image preserved/)).toBeVisible();
-  await page.getByRole("button", { name: "Save artwork and return to areas" }).click();
+  await page.getByRole("button", { name: "Save artwork and continue" }).click();
   await expect(page).toHaveURL(/\/book\/cart$/);
   const bookings = ok(await db.from("bookings").select("id,edition_id").in("edition_id", [ids[1],ids[2]]).eq("status", "pending"))!;
   expect(bookings).toHaveLength(2);

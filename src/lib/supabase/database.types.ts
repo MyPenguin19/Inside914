@@ -15,6 +15,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      artwork_uploads: {
+        Row: {
+          id: string
+          booking_id: string | null
+          bucket: string
+          storage_path: string
+          original_path: string | null
+          status: string
+          base_updated_at: string | null
+          content_type: string | null
+          byte_size: number | null
+          width_px: number | null
+          height_px: number | null
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          booking_id?: string | null
+          bucket: string
+          storage_path: string
+          original_path?: string | null
+          status?: string
+          base_updated_at?: string | null
+          content_type?: string | null
+          byte_size?: number | null
+          width_px?: number | null
+          height_px?: number | null
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          booking_id?: string | null
+          bucket?: string
+          storage_path?: string
+          original_path?: string | null
+          status?: string
+          base_updated_at?: string | null
+          content_type?: string | null
+          byte_size?: number | null
+          width_px?: number | null
+          height_px?: number | null
+          metadata?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
       house_artwork: { Row: {singleton:boolean;storage_path:string;width_px:number;height_px:number;updated_at:string;updated_by:string|null}; Insert: {singleton?:boolean;storage_path:string;width_px:number;height_px:number;updated_at?:string;updated_by?:string|null}; Update: {storage_path?:string;width_px?:number;height_px?:number;updated_at?:string;updated_by?:string|null}; Relationships: [] };
 
       zone_charges: { Row: ZoneChargeRow; Insert: Partial<ZoneChargeRow>; Update: Partial<ZoneChargeRow>; Relationships: [] };
@@ -930,6 +978,10 @@ export type Database = {
       }
     }
     Functions: {
+      save_staged_artwork: { Args: { p_token_hash: string; p_upload_id: string; p_crop: Json; p_zoom: number; p_crop_approved?: boolean }; Returns: undefined }
+      admin_activate_house_artwork: { Args: { p_upload_id: string }; Returns: string }
+      claim_abandoned_artwork: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Tables"]["artwork_uploads"]["Row"][] }
+
       admin_campaign_management: { Args: {p_id:string}; Returns: Json };
       admin_delete_campaign: { Args: {p_id:string;p_confirmation:string}; Returns: string };
       admin_archive_campaign: { Args: {p_id:string;p_confirmation:string}; Returns: string };

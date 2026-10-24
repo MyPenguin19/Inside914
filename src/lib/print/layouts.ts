@@ -35,4 +35,4 @@ export function postcardZones(key: string | null | undefined) {
   ] : [];
 }
 
-export const placementDimensions = (r: Pick<PrintRectangle, "width" | "height">) => `${r.width}″ × ${r.height}″`;
+export const placementDimensions = (r: Pick<PrintRectangle, "width" | "height">) => `${+r.width.toFixed(6)}″ × ${+r.height.toFixed(6)}″`;

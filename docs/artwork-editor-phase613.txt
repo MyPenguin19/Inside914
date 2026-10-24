@@ -1,0 +1,204 @@
+Inside914 Phase 6.13 — artwork editor changes for review
+
+Scope and release state
+Prepared on feature/artwork-editor-ux-fix, based on main e31b08a.
+Local implementation and verification only. This branch requires the new migration before
+its application code is deployed. No production migration, deployment, live artwork
+replacement, campaign change, reservation change, Stripe call or Resend send was made.
+LIVE_COLLECTION_RELEASED remains false. Production collection mode was not changed.
+Automatic Vercel deployment is disabled for this feature branch in vercel.json.
+
+Confirmed diagnosis
+With the owner's read-only permission, the already-open production Settings page showed:
+- Selected source: 495 × 619 pixels.
+- Zoom: about 1.16; selected crop: approximately 426 × 283 source pixels.
+- Required V2 house crop: at least 1122 × 745 pixels (300 effective PPI).
+This image genuinely cannot satisfy the minimum, even at minimum zoom. The previous
+"zoom out" message did not distinguish a small original from an over-zoomed crop.
+The production page and selected file were not edited, reloaded or submitted.
+
+Local boundary testing also caught a border-box measurement problem in the revised
+cropper container: a 1122 × 745 image was reported as 1120 × 744. The editor uses an
+inset visual ring instead of a dimension-changing border. The exact minimum now saves
+successfully; neither client nor server quality requirements were reduced.
+
+Other confirmed save/preservation defects
+- Customer requestUpload deleted the current booking_artwork row and original object
+  before the replacement finished uploading. Copying between areas also deleted the
+  target's previous original immediately.
+- Crop acknowledgement reset on every duplicate crop callback, including harmless
+  cropper renders. A saved V2 crop could initially be labelled as full-image mode.
+- The house route saved only a normalized PNG and discarded the source. Its error path
+  removed a new file even when a lost RPC response might hide a committed activation.
+- The house UI treated HTTP success plus router.refresh as proof of a successful save.
+
+House editor
+Current saved artwork stays at the top. Replace image opens file selection. A bounded,
+neutral V2 preview supports drag/arrow keys, zoom and Reset. Save house artwork is the
+single save action. The primary interface has no V1/V2 selector. Historical V1 rendering
+and the V1-capable server normalization endpoint are retained.
+The editor states original and crop dimensions, and distinguishes insufficient original
+resolution from excessive zoom. Feedback covers uploading/saving, verification and
+failure. PNG/JPEG and the 3 MB limit remain; server magic-byte/decode, pixel limits,
+integer bounds, fixed ratio and minimum-resolution checks remain authoritative.
+
+House save sequence
+1. Validate original bytes and crop; generate the existing 800-DPI derivative.
+2. Register a new private staged version with its original source dimensions/hash,
+   crop, immutable layout key, and the previously displayed version timestamp.
+3. Upload the untouched original and derivative to fresh, non-overwriting paths.
+4. Read both objects back and compare exact bytes before activation.
+5. An admin-only RPC locks the current version and rejects stale replacement attempts.
+6. Verify the active database pointer. Return its version timestamp.
+7. The browser fetches authenticated GET for exactly that version and decodes/checks its
+   dimensions before showing success. The current image URL changes and Settings refreshes.
+The existing house updated_at/proof-readiness relationship remains: a replacement affects
+future downloads across campaigns and requires a new final proof before printing.
+An ambiguous activation response never triggers destructive file cleanup.
+
+Customer editor
+V2 uses Upload → Adjust → Save artwork and continue.
+Fit entire image is the default: the full source is centered, with neutral margins when
+source and placement proportions differ. It never stretches or silently crops.
+Fill space is optional: drag/arrow keys, zoom or touch pinch to adjust the crop. Explicit
+acknowledgement is required only when source pixels are removed, and is tied to the rounded
+source rectangle, not repeated callbacks. Changing Fit/Fill retains the working crop.
+Reset and Replace image are the only secondary editing actions. A failed save leaves the
+selected source and crop in place for retry. Existing V1 square-crop behavior is retained.
+Quality feedback is plain language; exact source dimensions are secondary. Existing
+customer warning thresholds and administrator PPI/readiness checks were not changed.
+
+Replacement and retention guarantees
+- Uploads are staged separately. The active booking source and crop remain unchanged until
+  an explicit Save passes server validation and an atomic database operation.
+- Save rechecks the hold capability, pending state, all cart siblings' expiry, crop bounds,
+  V1 geometry rules, V2 crop consent, object existence, and concurrent replacement state.
+- Crop changes store coordinates only. Customer originals are never resampled or overwritten.
+- Copying to another area stages its own byte-identical object and requires that area's Save.
+- Database triggers retain current/historical source references when artwork is replaced or
+  removed. Previously saved originals and normalized house versions are never cleanup targets.
+- Original house uploads go to the new private house-artwork-originals bucket; normalized
+  print PNGs remain in the existing private house-artwork bucket.
+- Admins can read the private version ledger. Ordinary signed-in users and anonymous users
+  cannot read it or the source bucket. Activation still requires the existing admin check.
+- Cleanup runs separately from email and payments, using CRON_SECRET. It atomically claims
+  never-committed uploads older than 24 hours, excludes active references, prevents activation
+  of claimed paths, and retries failed Storage removals without discarding tracking records.
+  Signed upload URLs have expired by cleanup time. The daily job processes up to 100 records.
+
+Retention limits and operations
+This cannot reconstruct originals discarded before this change, or recover previously deleted
+customer uploads. Existing normalized house files remain usable. Untracked legacy Storage
+objects are not guessed to be garbage and are not automatically deleted. Recovery of retained
+versions is an authenticated operational task; a history/restore UI is intentionally not added.
+Unsaved replacements are temporary stages, not a cross-session draft product. Leaving the
+editor keeps the prior saved image; never-saved stages become cleanup-eligible after 24 hours.
+Retained originals consume storage intentionally. Monitor cleanup claimed/removed counts and
+backlog; increase job capacity if sustained abandoned uploads exceed its batch size. An outage
+may delay deletion; it must not result in deletion of a valid source. Rolling back to the old
+application would reintroduce its destructive replacement behavior, so do not use that as a
+casual rollback while artwork uploads are active.
+
+Geometry and renderer consistency
+No approved geometry, crop/contain renderer, postal exclusion or 800-DPI export values changed:
+V2 front 2.78 × 2.78 in; back 2.2925 × 2.815 in; house 3.7375 × 2.4825 in.
+V1 historical geometry remains. Final output remains 7300 × 4900 PNG with 800-DPI metadata.
+The customer preview uses integer source crop coordinates, as Sharp does, and the existing
+shared containImage calculation. A browser raster comparison checks the V2 Fit preview against
+an actual Sharp B1 panel, with a small tolerance for browser rasterization. House preview exports
+are checked against exact renderer pixel hashes. Existing V1/V2 rendering tests also pass.
+A text-formatting fix rounds displayed placement dimensions to avoid floating-point tails;
+it does not change stored or rendered dimensions.
+
+Read-only $1 pricing investigation
+The current Southern campaign unit price and its pending hold both store 100 cents. The hold
+uses launch pricing, and Vercel Production INSIDE914_PRICING_MODE is launch. This is explicit
+campaign-specific pricing, not an observed test-mode leak or stale UI value. Northern also has
+an explicitly configured $1 campaign. Existing amounts and consents were preserved. This audit
+establishes configuration, not the owner's business intent. A local $1 campaign test verifies
+that the artwork page displays the accepted hold amount and makes no Stripe requests.
+
+Additive migration proposal — LOCAL ONLY
+supabase/migrations/20261024010708_artwork_editor_safe_replacements.sql
+Creates:
+- public.artwork_uploads: staged/retained/deleting ledger, RLS and admin-read policy.
+- Private house-artwork-originals bucket (PNG/JPEG, 3 MB).
+- Retention triggers on booking_artwork and house_artwork; backfill of existing references.
+- save_staged_artwork: service-only atomic hold-authorized artwork save.
+- admin_activate_house_artwork: authenticated admin-only atomic house replacement.
+- claim_abandoned_artwork: service-only cleanup claim.
+No historical migration is edited; no campaign, reservation or payment data is repriced or
+reconfigured. The migration was applied only to localhost:54322 for verification.
+Database types were updated for the new objects and typechecked. The native local stack's
+CLI type generator requires Docker, so no unverified generator output replaced the types.
+
+Release review prerequisites
+1. Obtain separate owner approval for the production migration and application release.
+2. Take/verify the production backup and run the fresh mapping-aware migration/schema audit.
+3. Apply only the approved additive migration and verify ledger backfill, RLS, grants,
+   private bucket, retention triggers and RPCs, preserving all existing records and files.
+4. Release the reviewed app commit through the established controlled workflow; keep collection
+   disabled. Verify the cleanup job's CRON_SECRET and schedule without invoking payment/email jobs.
+5. Verify Settings and customer editing with approved non-customer fixtures/staging. Any change
+   to permanent production artwork still needs owner authorization and a fresh final proof.
+6. Obtain AmazingMail/printer confirmation of physical print readiness and final proof. This
+   feature work does not approve a mailing or remove any printer/payment readiness safeguards.
+
+Verification
+All commands use scripts/verify-local-mvp.mjs to pin local Supabase, blank live Stripe/Resend
+credentials, and keep collection disabled. No live Stripe test credentials were requested.
+Latest verified baseline: 405 unit; 120 integration + 3 Stripe-dependent skips; 20 E2E.
+Current results: typecheck PASS; lint PASS; 412 unit PASS;
+132 integration PASS + 3 Stripe-dependent SKIPPED; 22 E2E PASS; production build PASS.
+Only the credential-dependent Stripe tests are skipped, not counted as passed.
+An initial full E2E run had one intermittent client error/timeout before the legacy campaign
+test clicked Save house artwork (21 passed, 1 failed). Its original exception was not captured.
+The isolated test with tracing passed, then the complete traced suite passed all 22 tests.
+No assertion was removed or weakened to pass. The cause of that initial intermittent error
+remains unconfirmed; keep the traces/logs and watch this path during release review.
+Coverage includes 320, 375, 390, 768 and 1440 px, mouse/keyboard and touch/pinch; minimum and
+high-resolution square, portrait, landscape, transparency, vector text and a real QR fixture;
+failed/interrupted uploads, expiry, concurrency, crop consent, independent areas, exact original
+bytes, authenticated house GET/reopen/export, cleanup retry and anonymous/non-admin denial.
+Test images, screenshots and logs stay outside the commit. Only synthetic evidence is suitable
+for sharing; the original read-only production screenshot remains private on the owner's Mac.
+
+Browser evidence (generated locally; not committed)
+- test-results/artwork-editors/house-small-source.png
+- test-results/artwork-editors/house-input-1122.png
+- test-results/artwork-editors/house-editor-{320,375,390,768,1440}.png
+- test-results/artwork-editors/house-save-verified.png
+- test-results/artwork-editors/customer-fit-{320,375,390,768,1440}.png
+- test-results/artwork-editors/customer-fill-{320,375,390,768,1440}.png
+- test-results/artwork-editors/customer-touch.png
+Final copies and command logs: ../../outputs/inside914-phase613/ (outside the repository).
+
+Exact files included in this review (28)
+- docs/artwork-editor-phase613.txt
+- e2e/artwork-editors.spec.ts
+- e2e/multi-area.spec.ts
+- e2e/square-campaign.spec.ts
+- src/app/(public)/actions/artwork.ts
+- src/app/(public)/actions/booking.ts
+- src/app/admin/house-artwork/route.ts
+- src/app/api/internal/artwork-cleanup/route.ts
+- src/app/book/artwork/page.tsx
+- src/app/book/cart/actions.ts
+- src/components/admin/house-artwork-form.tsx
+- src/components/artwork/artwork-studio.tsx
+- src/lib/artwork/cleanup.ts
+- src/lib/artwork/rules.ts
+- src/lib/artwork/service.ts
+- src/lib/booking/cart.ts
+- src/lib/print/house-artwork.ts
+- src/lib/print/layouts.ts
+- src/lib/supabase/database.types.ts
+- supabase/migrations/20261024010708_artwork_editor_safe_replacements.sql
+- tests/artwork-cleanup-route.test.ts
+- tests/artwork-studio.test.tsx
+- tests/fixtures/editor-images.ts
+- tests/integration/artwork-replacements.test.ts
+- tests/integration/artwork.test.ts
+- tests/integration/multi-area.test.ts
+- tests/integration/postcard-v2.test.ts
+- vercel.json
