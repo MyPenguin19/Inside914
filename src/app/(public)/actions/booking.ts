@@ -3,7 +3,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { removeArtwork } from "@/lib/artwork/service";
 import { getHeldBooking, releaseHold } from "@/lib/booking/held-booking";
 import { HOLD_COOKIE, type HoldFailure } from "@/lib/booking/place-hold";
 import type { Availability } from "@/lib/booking/selection";
@@ -27,7 +26,6 @@ export async function releaseCurrentHold(formData: FormData) {
     if ((await getHeldBooking(createAdminClient(), token))?.cartId) redirect("/book/cart");
     try {
       const admin = createAdminClient();
-      await removeArtwork(admin, token);
       await releaseHold(admin, token);
     } catch (error) {
       // The hold still expires on its own within 15 minutes.

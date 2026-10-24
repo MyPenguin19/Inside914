@@ -53,8 +53,9 @@ test("V2 back accepts portrait and contained square crops, keeps source bytes an
   const body=new FormData();body.append("cacheControl","3600");body.append("",new Blob([new Uint8Array(original)],{type:"image/png"}));
   expect((await fetch(ticket.uploadUrl,{method:"PUT",headers:{"x-upsert":"false"},body})).ok).toBe(true);
   expect((await artwork.finalizeUpload(db,hold.token,{artworkId:ticket.artworkId})).ok).toBe(true);
-  const row=ok(await db.from("booking_artwork").select("storage_path").eq("id",ticket.artworkId).single())!;storage.push(row.storage_path);
+
   expect((await artwork.saveLayout(db,hold.token,{artworkId:ticket.artworkId,crop:{x:0,y:0,width:w,height:h},zoom:1})).ok).toBe(true);
+  const row=ok(await db.from("booking_artwork").select("storage_path").eq("id",ticket.artworkId).single())!;storage.push(row.storage_path);
   expect(await getBookingByHoldToken(db,hold.token)).toMatchObject({artworkReady:true,priceCents:39900,stripeSetupIntentId:null,stripeCustomerId:null});
   const view=await getReservationView(db,hold.bookingId);expect(view?.layoutTemplate).toBe(V2_TEMPLATE.key);
   expect(view?.area).toMatchObject(label.startsWith("B")?{width:2.2925,height:2.815}:{width:2.78,height:2.78});

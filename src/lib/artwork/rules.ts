@@ -73,3 +73,13 @@ export function adAreas(slots: SlotGeometry[]): SlotGeometry[] {
     return own.length ? [adArea(own)] : [];
   });
 }
+
+// The preview, consent fingerprint and Sharp all use the same integer source pixels.
+export function roundCrop(crop: CropPixels): CropPixels {
+  return { x: Math.round(crop.x), y: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height) };
+}
+export function cropRemovesContent(crop: CropPixels, image: { width: number; height: number }) {
+  const c = roundCrop(crop);
+  return c.x > 0 || c.y > 0 || c.width < image.width || c.height < image.height;
+}
+export const cropKey = (crop: CropPixels) => JSON.stringify(roundCrop(crop));

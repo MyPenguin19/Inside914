@@ -5,8 +5,18 @@
       "main": false,
       "revision/shared-postcard-mvp": false,
       "feature/campaign-management-pricing": false,
-      "feature/artwork-quality-review": false
+      "feature/artwork-quality-review": false,
+      "feature/artwork-editor-ux-fix": false
     }
   },
-  "crons": [{ "path": "/api/internal/email-outbox", "schedule": "0 14 * * *" }]
+  "crons": [
+    {
+      "path": "/api/internal/email-outbox",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/internal/artwork-cleanup",
+      "schedule": "30 14 * * *"
+    }
+  ]
 }

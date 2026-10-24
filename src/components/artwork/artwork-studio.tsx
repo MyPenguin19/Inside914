@@ -6,7 +6,7 @@ import { bookingSizeLabel, positionLabel } from "@/lib/booking/products";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import type { ExtendResult, FinalizeResult, SimpleResult, UploadTicket } from "@/app/(public)/actions/artwork";
 import { CroppedImage } from "@/components/artwork/cropped-image";
@@ -14,6 +14,9 @@ import { PostcardPreview } from "@/components/artwork/postcard-preview";
 import { formatCountdown, useHoldSecondsLeft } from "@/components/booking/hold-countdown";
 import { inspectFile, uploadToSignedUrl } from "@/lib/artwork/browser-file";
 import {
+  cropKey,
+  cropRemovesContent,
+  roundCrop,
   formatMegabytes,
   MAX_UPLOAD_BYTES,
   MIN_IMAGE_PIXELS,
@@ -31,8 +34,7 @@ import { Notice } from "@/components/ui/primitives";
 export type ArtworkActions = {
   requestUpload: (input: { byteSize: number }) => Promise<UploadTicket>;
   finalizeUpload: (input: { artworkId: string }) => Promise<FinalizeResult>;
-  saveLayout: (input: { artworkId: string; crop: CropPixels; zoom: number }) => Promise<SimpleResult>;
-  removeArtwork: () => Promise<SimpleResult>;
+  saveLayout: (input: { artworkId: string; crop: CropPixels; zoom: number; cropApproved?: boolean }) => Promise<SimpleResult>;
   extendHold: () => Promise<ExtendResult>;
 };
 
@@ -46,7 +48,6 @@ type Props = {
   initialArtwork: ArtworkView | null;
   actions: ArtworkActions;
   nextHref?: string; // where the continue button goes
-  continueLabel?: string;
   restartHref?: string; // where to choose a position again after the hold ends
   zones?: PostcardZone[]; // printed non-ad areas for the preview
   upload?: typeof uploadToSignedUrl; // injectable for tests
@@ -61,6 +62,8 @@ const MAX_ZOOM = 4;
 const EXTEND_WINDOW_SECONDS = 5 * 60;
 
 const PROBLEM_TEXT: Record<ArtworkFailure | "interrupted", string> = {
+  artwork_changed: "This area’s artwork changed in another window. Reload this page before replacing it. Your previous image is still saved.",
+  crop_approval_required: "Please confirm the crop before saving, or choose Fit entire image.",
   empty: "That file is empty. Please choose another image.",
   too_large: `That file is larger than ${formatMegabytes(MAX_UPLOAD_BYTES)}. Please choose a smaller image.`,
   unsupported_type: "Please choose a JPG or PNG image. Other formats (like PDF or HEIC) aren't supported yet.",
@@ -86,7 +89,6 @@ export function ArtworkStudio({
   initialArtwork,
   actions,
   nextHref = "/book/review",
-  continueLabel = "Continue to review",
   restartHref = "/areas",
   zones,
   upload = uploadToSignedUrl,
@@ -94,8 +96,9 @@ export function ArtworkStudio({
 }: Props) {
   const router = useRouter();
   const canContain = isLayoutV2(layoutKey);
-  const [cropping, setCropping] = useState(!canContain);
-  const [cropApproved, setCropApproved] = useState(false);
+  const [cropping, setCropping] = useState(!canContain || !!(initialArtwork?.crop && cropRemovesContent(initialArtwork.crop, initialArtwork)));
+  const [approvedCropKey, setApprovedCropKey] = useState<string | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<StudioImage | null>(
     initialArtwork
@@ -104,7 +107,12 @@ export function ArtworkStudio({
   );
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(initialArtwork?.zoom ?? 1);
-  const [area, setArea] = useState<CropPixels | null>(initialArtwork?.crop ?? (canContain && initialArtwork ? {x:0,y:0,width:initialArtwork.width,height:initialArtwork.height} : null));
+  const [fillArea, setFillArea] = useState<CropPixels | null>(initialArtwork?.crop ?? null);
+  const area = image && canContain && !cropping ? { x: 0, y: 0, width: image.width, height: image.height } : fillArea;
+  const needsApproval = !!(canContain && image && area && cropRemovesContent(area, image));
+  const cropApproved = !!area && approvedCropKey === cropKey(area);
+  // Revoke only our temporary local preview; never alter the stored original.
+  useEffect(() => () => { if (image?.src.startsWith("blob:")) URL.revokeObjectURL(image.src); }, [image?.src]);
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState<Message | null>(null);
@@ -127,22 +135,23 @@ export function ArtworkStudio({
   }
 
   async function handleFile(file: File) {
+    if (busy) return;
     setMessage(null);
     setPhase("checking");
+    let previewUrl: string | undefined;
     try {
       const inspected = await inspect(file);
       if (!inspected.ok) return fail(inspected.problem);
 
+      previewUrl = inspected.previewUrl;
       const ticket = await actions.requestUpload({ byteSize: file.size });
       if (!ticket.ok) return fail(ticket.reason);
-      setImage(null); // the previous image (if any) was replaced on the server
 
       setPhase("uploading");
       setProgress(0);
       try {
         await upload(ticket.uploadUrl, file, inspected.type, { onProgress: setProgress });
       } catch {
-        await actions.removeArtwork(); // drop the half-finished upload record
         return fail("interrupted");
       }
 
@@ -151,28 +160,21 @@ export function ArtworkStudio({
       if (!result.ok) return fail(result.reason);
 
       setImage({ id: result.artwork.id, src: inspected.previewUrl, width: result.artwork.width, height: result.artwork.height });
+      previewUrl = undefined; // the image-state cleanup now owns this object URL
       setCrop({ x: 0, y: 0 });
       setZoom(1);
-      setArea(canContain ? {x:0,y:0,width:result.artwork.width,height:result.artwork.height} : null);
+      setFillArea(null);
       setCropping(!canContain);
-      setCropApproved(false);
-      setMessage({ tone: "info", text: canContain ? "Full image preserved. Review its placement or choose a crop." : "Image uploaded. Drag it and zoom until it looks right." });
+      setApprovedCropKey(null);
+      setEditorKey(k => k + 1);
+      setMessage({ tone: "info", text: "Image uploaded. Review it, then save to continue." });
     } catch {
       fail("error");
     } finally {
       setPhase("idle");
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       if (fileInput.current) fileInput.current.value = "";
     }
-  }
-
-  async function remove() {
-    setPhase("saving");
-    const result = await actions.removeArtwork();
-    setPhase("idle");
-    if (!result.ok) return fail(result.reason);
-    setImage(null);
-    setArea(null);
-    setMessage({ tone: "info", text: "Image removed." });
   }
 
   async function extend() {
@@ -197,22 +199,28 @@ export function ArtworkStudio({
   }
 
   async function continueToReview() {
-    if (!image || !area || (canContain && cropping && !cropApproved)) return;
+    if (!image || !area || busy || (needsApproval && !cropApproved)) return;
     setPhase("saving");
-    const rounded = {
-      x: Math.round(area.x),
-      y: Math.round(area.y),
-      width: Math.round(area.width),
-      height: Math.round(area.height),
-    };
-    const result = await actions.saveLayout({ artworkId: image.id, crop: rounded, zoom });
-    // Next keeps this page's state for back-navigation, so leave it idle (not "saving").
-    setPhase("idle");
-    if (!result.ok) return fail(result.reason);
-    router.push(nextHref);
+    setMessage(null);
+    try {
+      const result = await actions.saveLayout({ artworkId: image.id, crop: roundCrop(area), zoom: cropping ? zoom : 1, cropApproved: needsApproval && cropApproved });
+      if (!result.ok) return fail(result.reason);
+      router.push(nextHref);
+    } catch { fail("error"); }
+    finally { setPhase("idle"); }
   }
 
-  const onAreaChange = useCallback((_: Area, pixels: Area) => { setArea(pixels); setCropApproved(false); }, []);
+  const onAreaChange = useCallback((_: Area, pixels: Area) => {
+    const rounded = roundCrop(pixels);
+    setFillArea(previous => previous && cropKey(previous) === cropKey(rounded) ? previous : rounded);
+  }, []);
+  function reset() {
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setFillArea(null);
+    setApprovedCropKey(null);
+    setEditorKey(k => k + 1);
+  }
 
   function onDrop(event: DragEvent) {
     event.preventDefault();
@@ -255,30 +263,27 @@ export function ArtworkStudio({
           </Notice>
         ) : image ? (
           <div className="flex flex-col gap-3">
-            {canContain && <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => { setCropping(false); setZoom(1); setArea({x:0,y:0,width:image.width,height:image.height}); }}>Keep full image</Button>
-              <Button variant="secondary" onClick={() => { setCropping(true); setCropApproved(false); }}>Preview a crop</Button>
-            </div>}
-            {!cropping && area ? <div className="mx-auto w-full max-w-sm overflow-hidden border border-line" style={{aspectRatio:aspect}}>
+            {!cropping && area ? <div className="mx-auto w-full max-w-[520px] overflow-hidden rounded-xl ring-1 ring-inset ring-line" style={{aspectRatio:aspect}}>
               <CroppedImage src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} target={ad.area} alt="Full artwork fitted without stretching" />
             </div> : <>
             <div
-              className="relative w-full overflow-hidden rounded-xl bg-ink"
-              style={{ aspectRatio: aspect >= 1 ? `${aspect} / 1` : "1 / 1", maxHeight: 480 }}
+              className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-xl ring-1 ring-inset ring-line bg-[#f4f2ec]"
+              style={{ aspectRatio: aspect }}
             >
               <Cropper
+                key={`${image.id}:${editorKey}`}
                 image={image.src}
                 crop={crop}
                 zoom={zoom}
                 aspect={aspect}
                 maxZoom={MAX_ZOOM}
-                objectFit="contain" // start from the largest crop the image allows
+                objectFit="cover"
                 showGrid={false}
-                onCropChange={setCrop}
-                onZoomChange={setZoom}
+                onCropChange={value => { if (!busy) setCrop(value); }}
+                onZoomChange={value => { if (!busy) setZoom(value); }}
                 onCropAreaChange={onAreaChange}
                 onCropComplete={onAreaChange}
-                initialCroppedAreaPixels={initialArtwork?.id === image.id ? (initialArtwork.crop ?? undefined) : undefined}
+                initialCroppedAreaPixels={fillArea ?? undefined}
                 cropperProps={{ "aria-label": "Your ad. Drag to move it, or use the arrow keys." }}
                 // Dashed inner line = the safe area: keep words and logos inside it.
                 classes={{
@@ -289,39 +294,29 @@ export function ArtworkStudio({
                 keyboardStep={10}
               />
             </div>
-            <p className="text-xs text-muted">Drag the image to move it. Keep important words inside the dashed line.</p>
-            <div className="flex items-center gap-2">
-              <ZoomButton label="Zoom out" onClick={() => setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))} disabled={zoom <= 1}>
-                −
-              </ZoomButton>
-              <label className="flex flex-1 items-center gap-3 text-sm">
-                <span className="sr-only">Zoom</span>
-                <input
-                  type="range"
-                  min={1}
-                  max={MAX_ZOOM}
-                  step={0.01}
-                  value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
-                  className="h-11 flex-1 accent-[var(--accent)]"
-                  aria-valuetext={`${Math.round(zoom * 100)} percent`}
-                />
-              </label>
-              <ZoomButton label="Zoom in" onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.25).toFixed(2)))} disabled={zoom >= MAX_ZOOM}>
-                +
-              </ZoomButton>
-            </div>
             </>}
-            {canContain && cropping && <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={cropApproved} onChange={e => setCropApproved(e.target.checked)} />I approve this crop. My text, logo and contact details are visible.</label>}
+            {canContain && <div role="group" aria-label="Image fit" className="flex flex-wrap gap-2">
+              <Button variant={cropping ? "secondary" : "primary"} aria-pressed={!cropping} disabled={busy} onClick={() => setCropping(false)}>Fit entire image</Button>
+              <Button variant={cropping ? "primary" : "secondary"} aria-pressed={cropping} disabled={busy} onClick={() => setCropping(true)}>Fill space</Button>
+            </div>}
+            {cropping ? <>
+              <p className="text-xs text-muted">Drag to reposition. Keep words and logos inside the dashed line.</p>
+              <label className="flex min-w-0 items-center gap-3 text-sm">Zoom
+                <input type="range" min={1} max={MAX_ZOOM} step={0.01} value={zoom} disabled={busy}
+                  onChange={e => setZoom(Number(e.target.value))} className="h-11 min-w-0 flex-1 accent-[var(--accent)]"
+                  aria-valuetext={`${Math.round(zoom * 100)} percent`} />
+              </label>
+            </> : <p className="text-xs text-muted">The whole image is centered. Neutral margins preserve its shape.</p>}
+            {needsApproval && <label className="flex items-start gap-2 text-sm"><input type="checkbox" disabled={busy} checked={cropApproved}
+              onChange={e => setApprovedCropKey(e.target.checked && area ? cropKey(area) : null)} className="mt-1" />
+              I approve this crop. My text, logo and contact details are visible.
+            </label>}
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => { setCrop({ x: 0, y: 0 }); setZoom(1); }} disabled={busy}>
-                Reset position
+              <Button variant="secondary" onClick={reset} disabled={busy}>
+                Reset
               </Button>
               <Button variant="secondary" onClick={() => fileInput.current?.click()} disabled={busy}>
                 Replace image
-              </Button>
-              <Button variant="quiet" onClick={remove} disabled={busy} className="px-3">
-                Remove image
               </Button>
             </div>
           </div>
@@ -357,6 +352,7 @@ export function ArtworkStudio({
           accept="image/jpeg,image/png"
           className="sr-only"
           tabIndex={-1}
+          disabled={busy}
           aria-label="Ad image file"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -372,7 +368,7 @@ export function ArtworkStudio({
               <span className="w-12 tabular-nums">{Math.round(progress * 100)}%</span>
             </div>
           )}
-          {phase === "verifying" && <p>Almost done: making sure your image is print-ready…</p>}
+          {phase === "verifying" && <p>Almost done: checking your image…</p>}
           {phase === "saving" && <p>Saving…</p>}
           {message && phase === "idle" && (
             <Notice tone={message.tone === "error" ? "danger" : "success"} role={message.tone === "error" ? "alert" : undefined}>
@@ -387,7 +383,7 @@ export function ArtworkStudio({
           Preview
         </h2>
         {/* Sized so the whole card, the quality note and Continue fit on screen together. */}
-        <div className="mx-auto w-full max-w-[260px] sm:max-w-[300px] lg:max-w-[min(100%,calc((100svh-24rem)*6.5/12))]">
+        <div className="mx-auto w-full max-w-[260px] sm:max-w-[300px] lg:max-w-[300px]">
           <PostcardPreview layoutKey={layoutKey} dimensions={dimensions} side={ad.side} otherSlots={otherSlots} area={ad.area} zones={zones}>
             {image && area ? (
               <CroppedImage target={ad.area} src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} alt="Your ad as it will sit on the postcard" />
@@ -396,8 +392,9 @@ export function ArtworkStudio({
             )}
           </PostcardPreview>
         </div>
-        <p className="text-sm">Printed size: {placementDimensions(ad.area)}. Aim for 300 DPI.</p>
+        <p className="text-sm">Printed size: {placementDimensions(ad.area)}.</p>
         <QualityNote ppi={ppi} level={quality} />
+        {image && <p className="text-xs text-muted">Original image: {image.width} × {image.height} pixels.</p>}
         <p className="text-xs text-muted">
           Keep important words and logos inside the dashed line. This is a{" "}
           <strong className="font-medium text-foreground">provisional preview</strong>, not a print proof: final sizes
@@ -410,8 +407,8 @@ export function ArtworkStudio({
             </p>
             <p className="font-display text-2xl font-medium">{formatPrice(ad.priceCents)}</p>
           </div>
-          <Button size="lg" onClick={continueToReview} disabled={!image || !area || busy || expiredNow || (canContain && cropping && !cropApproved)} className="mt-3 w-full">
-            {continueLabel}
+          <Button size="lg" onClick={continueToReview} disabled={!image || !area || busy || expiredNow || (needsApproval && !cropApproved)} className="mt-3 w-full">
+            Save artwork and continue
           </Button>
           {!image && <p className="mt-2 text-center text-xs text-muted">Add an image to continue.</p>}
         </div>
@@ -420,32 +417,16 @@ export function ArtworkStudio({
   );
 }
 
-function ZoomButton({ label, children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      {...props}
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-xl leading-none hover:border-foreground disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
-  );
-}
-
 export function QualityNote({ ppi, level }: { ppi: number | null; level: ReturnType<typeof resolutionLevel> | null }) {
   if (ppi === null || level === null) return null;
   if (level === "good") {
-    return <p className="rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent">✓ Image quality looks good for print.</p>;
+    return <p className="rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent">Good quality — Your image looks sharp enough for printing.</p>;
   }
   return (
     <p role="status" className="rounded-xl bg-warning-soft px-3 py-2 text-sm text-warning">
       {level === "poor"
-        ? "This image may look blurry or blocky when printed. A larger, sharper image will look much better."
-        : "This image may look slightly soft when printed. If you have a larger version, use that."}{" "}
-      <span className="text-xs">
-        ({ppi} pixels per inch at this size; we suggest {PRINT_SPEC.recommendedPpi}+.)
-      </span>
+        ? "Low quality — This image may print blurry. Please upload a higher-resolution version."
+        : "Moderate quality — This image may look slightly soft in print. A larger version is recommended."}
     </p>
   );
 }

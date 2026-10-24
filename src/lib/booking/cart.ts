@@ -1,5 +1,5 @@
 import "server-only";
-import { createHmac, randomUUID } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
@@ -13,7 +13,7 @@ import {
   type ConfirmOutcome,
 } from "@/lib/checkout/service";
 import type { StripeClient } from "@/lib/checkout/stripe";
-import { ARTWORK_BUCKET } from "@/lib/artwork/service";
+import { ARTWORK_BUCKET, requestUpload, finalizeUpload } from "@/lib/artwork/service";
 import { processOutboxForBooking } from "@/lib/email/outbox";
 
 type Admin = SupabaseClient<Database>;
@@ -267,43 +267,15 @@ export async function copyCartArtwork(
     .eq("status", "ready")
     .single();
   if (error || !source) throw new Error("Upload the source artwork first.");
-  const path = `${targetId}/${randomUUID()}`;
-  const copied = await admin.storage
-    .from(ARTWORK_BUCKET)
-    .copy(source.storage_path, path);
-  if (copied.error) throw new Error("Could not copy artwork.");
-  const { data: old, error: oldError } = await admin
-    .from("booking_artwork")
-    .select("storage_path")
-    .eq("booking_id", targetId)
-    .maybeSingle();
-  if (oldError) {
-    await admin.storage.from(ARTWORK_BUCKET).remove([path]);
-    throw oldError;
-  }
-  const saved = await admin.from("booking_artwork").upsert(
-    {
-      booking_id: targetId,
-      storage_path: path,
-      status: "ready",
-      content_type: source.content_type,
-      byte_size: source.byte_size,
-      width_px: source.width_px,
-      height_px: source.height_px,
-      crop_x: null,
-      crop_y: null,
-      crop_width: null,
-      crop_height: null,
-      zoom: null,
-      review_status: "pending",
-      shared_source_id: null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "booking_id" },
-  );
-  if (saved.error) {
-    await admin.storage.from(ARTWORK_BUCKET).remove([path]);
-    throw saved.error;
-  }
-  if (old) await admin.storage.from(ARTWORK_BUCKET).remove([old.storage_path]);
+  const target = cart.members.find(b => b.id === targetId)!;
+  const holdToken = cartMemberToken(token!, target.editionId);
+  const ticket = await requestUpload(admin, holdToken, { byteSize: source.byte_size });
+  if (!ticket.ok) throw new Error("This hold is unavailable.");
+  const staged = await admin.from("artwork_uploads").select("storage_path").eq("id", ticket.artworkId).single();
+  if (staged.error) throw staged.error;
+  const copied = await admin.storage.from(ARTWORK_BUCKET).copy(source.storage_path, staged.data.storage_path);
+  if (copied.error) throw new Error("Could not copy artwork. Your saved image is unchanged.");
+  const verified = await finalizeUpload(admin, holdToken, { artworkId: ticket.artworkId });
+  if (!verified.ok) throw new Error("Could not verify the copied image. Your saved image is unchanged.");
+  return verified.artwork.id; // Reposition and Save explicitly in the destination area's editor.
 }

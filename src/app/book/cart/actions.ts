@@ -90,15 +90,17 @@ export async function editAreaArtwork(form: FormData) {
     cartMemberToken(secret, member.editionId),
     options,
   );
-  redirect("/book/artwork");
+  const upload = String(form.get("uploadId") ?? "");
+  redirect(upload ? `/book/artwork?upload=${encodeURIComponent(upload)}` : "/book/artwork");
 }
 export async function reuseArtwork(form: FormData) {
-  await copyCartArtwork(
+  const uploadId = await copyCartArtwork(
     createAdminClient(),
     await token(),
     String(form.get("sourceId")),
     String(form.get("bookingId")),
   );
+  form.set("uploadId", uploadId);
   await editAreaArtwork(form);
 }
 export async function releaseAreas() {

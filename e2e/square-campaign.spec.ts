@@ -50,13 +50,14 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   const image = await sharp({create:{width:2000,height:1600,channels:3,background:"blue"}}).png().toBuffer();
   await expect(page.getByLabel("House artwork (PNG or JPEG, up to 3 MB)")).toBeEnabled();
   await page.getByLabel("House artwork (PNG or JPEG, up to 3 MB)").setInputFiles({name:"house.png",mimeType:"image/png",buffer:image});
+  await page.getByText("Final panel preview",{exact:true}).click();
   await expect(page.getByAltText("Final house crop preview")).toBeVisible();
   await page.getByRole("slider",{name:"House artwork zoom"}).focus();
   await page.getByRole("slider",{name:"House artwork zoom"}).press("ArrowRight");
   await expect(page.getByRole("slider",{name:"House artwork zoom"})).toHaveValue("1.01");
-  await expect(page.getByRole("button",{name:previousHouse ? "Replace artwork" : "Save house artwork"})).toBeEnabled();
+  await expect(page.getByRole("button",{name:"Save house artwork"})).toBeEnabled();
   await page.screenshot({path:"../../outputs/inside914-background-comparison/house-crop-editor.png",fullPage:true});
-  await page.getByRole("button",{name:previousHouse ? "Replace artwork" : "Save house artwork"}).click();
+  await page.getByRole("button",{name:"Save house artwork"}).click();
   await expect(page.getByRole("status")).toContainText("House artwork saved");
   const savedHouse=ok(await db.from("house_artwork").select("storage_path,width_px,height_px").single())!;
   expect([savedHouse.width_px,savedHouse.height_px]).toEqual([2990,1986]);
@@ -155,7 +156,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   const replacement=await sharp({create:{width:2000,height:1600,channels:3,background:"green"}}).png().toBuffer();
   await expect(page.getByLabel("House artwork (PNG or JPEG, up to 3 MB)")).toBeEnabled();
   await page.getByLabel("House artwork (PNG or JPEG, up to 3 MB)").setInputFiles({name:"replacement.png",mimeType:"image/png",buffer:replacement});
-  await page.getByRole("button",{name:"Replace artwork",exact:true}).click();
+  await page.getByRole("button",{name:"Save house artwork",exact:true}).click();
   await expect(page.getByRole("status")).toContainText("House artwork saved");
   housePaths.push(ok(await db.from("house_artwork").select("storage_path").single())!.storage_path);
   const next=await page.request.post(`/admin/print/${campaign!.id}`,{headers:{origin:"http://localhost:3000"},multipart:{side:"back"}});
