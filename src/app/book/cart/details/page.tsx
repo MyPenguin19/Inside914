@@ -14,7 +14,9 @@ export default function Page() {
   return <><SiteHeader /><main className="page-width flex-1 py-8"><BookingSteps current={3} /><Suspense fallback={<p>Loading business details…</p>}><Details /></Suspense></main><SiteFooter /></>;
 }
 async function Details() {
-  const cart = await ownedCart(createAdminClient(), (await cookies()).get(CART_COOKIE)?.value);
+  // Defer database initialization until this request-only boundary (including Preview builds).
+  const token = (await cookies()).get(CART_COOKIE)?.value;
+  const cart = await ownedCart(createAdminClient(), token);
   if (!cart || cartGate(cart.members)) redirect("/book/cart");
   const contact = cart.members[0].contact;
   return <section className="mt-6 max-w-xl space-y-5"><CartHoldTimer extensionUsed={cart.members.some(b=>b.holdExtensions>0)} expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/><h1 className="text-3xl font-semibold">Your business details</h1>

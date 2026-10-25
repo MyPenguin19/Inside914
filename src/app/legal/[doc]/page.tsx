@@ -1,9 +1,21 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { LegalDocument, legalDocuments, LEGAL_VERSION } from "@/components/legal-document";
 
+// Draft policies are public for review, not eligible for search indexing until legally approved.
+export async function generateMetadata({ params }: PageProps<"/legal/[doc]">): Promise<Metadata> {
+  const { doc } = await params;
+  const titles: Record<string, string> = {
+    terms: "Advertising Terms",
+    "reservation-policy": "Reservation and Cancellation Policy",
+    privacy: "Privacy Policy",
+  };
+  if (!Object.hasOwn(titles, doc)) return { robots: { index: false, follow: false } };
+  return { title: titles[doc], robots: { index: false, follow: true }, alternates: { canonical: `/legal/${doc}` } };
+}
 export function generateStaticParams() {
   return Object.keys(legalDocuments).map((doc) => ({ doc }));
 }

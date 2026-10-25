@@ -41,7 +41,9 @@ export function contentSecurityPolicy({ supabaseUrl, dev, preview }: Options) {
     ["frame-ancestors", ["'none'"]],
   ];
   const directives = policy.map(([name, values]) => `${name} ${values.join(" ")}`);
-  if (!dev) directives.push("upgrade-insecure-requests");
+  // Browsers ignore this directive in report-only mode and log a warning on every page.
+  // HTTPS/HSTS remain enforced independently; include the upgrade when CSP is enforced.
+  if (!dev && CSP_ENFORCED) directives.push("upgrade-insecure-requests");
   return directives.join("; ");
 }
 

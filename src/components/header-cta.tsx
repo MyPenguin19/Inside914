@@ -11,7 +11,7 @@ export function HeaderCta() {
   if (FOCUSED.test(pathname)) return null;
   return (
     <div className="hidden sm:block">
-      <ButtonLink href="/areas">Reserve Your Spot</ButtonLink>
+      <ButtonLink href="/areas">Explore Areas</ButtonLink>
     </div>
   );
 }

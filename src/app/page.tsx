@@ -1,11 +1,39 @@
+import Link from "next/link";
+import { SITE_URL, marketingMetadata } from "@/lib/seo";
+import { PUBLIC_CHECKOUT_RELEASED, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
+import { REGIONS } from "@/lib/catalog/regions";
 import { PostcardIllustration, SizeDiagram } from "@/components/marketing/postcard-illustration";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, Eyebrow, SectionHeading } from "@/components/ui/primitives";
 
+export const metadata = marketingMetadata(
+  "/", "Westchester Postcard Advertising",
+  "Explore shared postcard advertising for Westchester County businesses. Compare four local areas, learn how reservations work and plan your next campaign.",
+);
+const organizationData = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": SITE_URL + "/#organization",
+  name: "Inside914",
+  legalName: "Inside Diagnostics LLC",
+  brand: { "@type": "Brand", name: "Inside914" },
+  url: SITE_URL,
+  email: "Info@inside914.com",
+  description: "Inside914 provides shared postcard advertising for local businesses in Westchester County, New York.",
+  areaServed: { "@type": "AdministrativeArea", name: "Westchester County, New York" },
+};
+const websiteData = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": SITE_URL + "/#website",
+  url: SITE_URL,
+  name: "Inside914",
+  publisher: { "@id": SITE_URL + "/#organization" },
+};
 const TRUST = [
-  { title: "Reserve without paying upfront", body: "Save your space today. Nothing is charged at reservation." },
+  { title: "Reserve without paying upfront", body: "A reservation saves a position without an upfront charge." },
   { title: "Preview your advertisement", body: "See your selected position and artwork before the postcard is mailed." },
   { title: "Follow campaign progress", body: "See when your area fills, artwork is approved, and the campaign moves toward mailing." },
   { title: "Receive mailing documentation", body: "After mailing, access the available documentation for your campaign." },
@@ -49,28 +77,30 @@ export default function Home() {
   return (
     <>
       <SiteHeader />
-      <main className="flex-1">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([organizationData, websiteData]).replace(/</g, "\\u003c") }} />
+      <main className="min-w-0 flex-1 break-words">
         {/* Hero */}
         <section className="page-width grid items-center gap-10 overflow-x-clip pb-12 pt-10 md:grid-cols-[1.15fr_1fr] md:gap-12 md:pb-16 md:pt-14">
-          <div>
+          <div className="min-w-0">
             <Eyebrow>WESTCHESTER COUNTY · SHARED DIRECT MAIL</Eyebrow>
             <h1 className="mt-4 font-display text-[2.6rem] font-medium leading-[1.05] tracking-tight sm:text-6xl">
               Your Business.
               <br />
-              Thousands of Local Mailboxes.
+              Westchester Mailboxes.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
               Put your business in Westchester mailboxes. Pick your areas, choose a position, and add your ad. Pay nothing today.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <ButtonLink href="/areas" size="lg">
-                View Available Spaces
+                Explore Advertising Areas
               </ButtonLink>
               <ButtonLink href="#how-it-works" size="lg" variant="secondary">
                 How It Works
               </ButtonLink>
             </div>
-            <p className="mt-4 text-sm text-muted">Prices shown per area · Choose one or multiple areas · $0 today</p>
+            <p className="mt-4 text-sm text-muted">Prices shown per area · Choose one or multiple areas · $0 at reservation</p>
+            {!PUBLIC_CHECKOUT_RELEASED && <p className="mt-3 max-w-xl text-sm text-muted">{CHECKOUT_CLOSED_MESSAGE}</p>}
           </div>
           <PostcardIllustration />
         </section>
@@ -152,6 +182,14 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Crawlable regional links complement the interactive area selector. */}
+        <section className="page-width pb-14" aria-labelledby="area-links-title">
+          <h2 id="area-links-title" className="font-display text-3xl font-medium">Explore Westchester advertising areas</h2>
+          <p className="mt-3 max-w-2xl text-muted">Compare the four proposed regions before exploring campaign positions and prices.</p>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {REGIONS.map(area => <li key={area.slug}><Link className="block rounded-xl border border-line bg-surface p-4 font-medium hover:border-accent hover:text-accent" href={`/areas/${area.slug}`}>{area.name}</Link></li>)}
+          </ul>
+        </section>
         {/* Closing CTA */}
         <section className="page-width pb-14 md:pb-16">
           <Card tone="dark" className="flex flex-col items-start justify-between gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
@@ -160,7 +198,7 @@ export default function Home() {
               <p className="mt-2 text-background/75">See available spaces across our Westchester advertising areas.</p>
             </div>
             <ButtonLink href="/areas" size="lg" variant="inverse">
-              View Available Spaces
+              Explore Advertising Areas
             </ButtonLink>
           </Card>
         </section>
@@ -172,9 +210,9 @@ export default function Home() {
 
 function PriceCard({ name, price, detail, diagram, highlight = false }: { name: string; price: string; detail: string; diagram: React.ReactNode; highlight?: boolean }) {
   return (
-    <Card className={`flex gap-6 ${highlight ? "ring-2 ring-accent" : ""}`}>
+    <Card className={`flex flex-wrap items-start gap-6 ${highlight ? "ring-2 ring-accent" : ""}`}>
       {diagram}
-      <div className="flex flex-col">
+      <div className="flex min-w-0 flex-[1_1_8rem] flex-col">
         <h3 className="font-medium">{name}</h3>
         <p className="mt-1 font-display text-4xl font-medium">{price}</p>
         <p className="mt-3 text-sm leading-relaxed text-muted">{detail}</p>

@@ -1,7 +1,10 @@
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 import Link from "next/link";
 import { checkoutReleased, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+
+export const metadata = { robots: PRIVATE_ROBOTS };
 
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
   if (checkoutReleased()) return children;

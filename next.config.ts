@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { securityHeaders } from "./src/lib/security/headers";
+import { PRIVATE_ROUTE_PREFIXES } from "./src/lib/seo";
 
 const nextConfig: NextConfig = {
   // Project instructions live in CLAUDE.md; stop `next dev` from writing AGENTS.md.
@@ -11,7 +12,10 @@ const nextConfig: NextConfig = {
       dev: process.env.NODE_ENV === "development",
       preview: process.env.VERCEL_ENV === "preview",
     };
-    return [{ source: "/:path*", headers: securityHeaders(options) }];
+    return [
+      { source: "/:path*", headers: [...securityHeaders(options), ...(options.preview ? [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] : [])] },
+      ...PRIVATE_ROUTE_PREFIXES.map(prefix => ({ source: `/${prefix}/:path*`, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] })),
+    ];
   },
   partialPrefetching: true,
   turbopack: {

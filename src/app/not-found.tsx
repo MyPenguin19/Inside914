@@ -3,7 +3,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ButtonLink } from "@/components/ui/button";
 
-export const metadata = { title: "Page not found · Inside914" };
+export const metadata = { title: "Page not found", robots: { index: false, follow: false } };
 
 export default function NotFound() {
   return (
