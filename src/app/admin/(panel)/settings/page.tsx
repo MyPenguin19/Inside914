@@ -6,6 +6,9 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { getEmailEnv, getStripeKeyMode } from "@/lib/env/checkout";
 import { formatPrice } from "@/lib/format";
 import { getPricingMode, TEST_PRICES } from "@/lib/pricing";
+import { ConfirmAction } from "@/components/admin/confirm-action";
+import { verifyOwnerEmail } from "@/app/admin/email-actions";
+import { getOwnerVerificationConfig } from "@/lib/email/owner-verification";
 
 export default function SettingsPage() {
   return (
@@ -35,6 +38,7 @@ async function Settings() {
   const pricing = attempt(() => getPricingMode());
   const stripeMode = attempt(() => getStripeKeyMode());
   const email = getEmailEnv();
+  const verification = attempt(getOwnerVerificationConfig);
   const env = process.env.VERCEL_ENV ?? (process.env.NODE_ENV === "production" ? "production build" : "development");
 
   const rows: Row[] = [
@@ -81,6 +85,12 @@ async function Settings() {
           </li>
         ))}
       </ul>
-    </Card></details></>
+    </Card>
+    {verification && <div className="mt-4">
+      <ConfirmAction label="Verify owner email" action={verifyOwnerEmail} fields={{ confirmed: "send" }}
+        consequence={`Send one verification email to ${verification.to} using this deployed app. Limited to one message per release; customer emails and payments are not processed.`}
+        confirmLabel="Send verification email" />
+    </div>}
+    </details></>
   );
 }

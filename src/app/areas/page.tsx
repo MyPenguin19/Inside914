@@ -3,7 +3,11 @@ import { CategoryCheckout } from "@/components/booking/category-checkout";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
-export const metadata = { title: "Advertising areas · Inside914" };
+export const metadata = {
+  title: "Westchester Advertising Areas",
+  description: "Explore Central, Eastern, Northern and Southern Westchester postcard advertising areas. Compare local campaigns and available positions with Inside914.",
+  alternates: { canonical: "/areas" },
+};
 
 // LIVE areas: campaigns and open-space counts come from Supabase (anon, RLS: published editions only).
 export default function AreasPage() {

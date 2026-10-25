@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "fix/owner-email-verification": false,
       "fix/checkout-release-message": false,
       "feature/final-production-safety": false,
       "revision/shared-postcard-mvp": false,

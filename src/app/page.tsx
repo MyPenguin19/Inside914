@@ -1,9 +1,37 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { SITE_URL } from "@/lib/seo";
+import { REGIONS } from "@/lib/catalog/regions";
 import { PostcardIllustration, SizeDiagram } from "@/components/marketing/postcard-illustration";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, Eyebrow, SectionHeading } from "@/components/ui/primitives";
 
+export const metadata: Metadata = {
+  title: "Westchester Postcard Advertising | Inside914",
+  description: "Reach local audiences with shared postcard advertising across Westchester County. Explore four mailing areas and learn how Inside914 reservations work.",
+  alternates: { canonical: "/" },
+};
+const organizationData = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": SITE_URL + "/#organization",
+  name: "Inside Diagnostics LLC",
+  alternateName: "Inside914",
+  url: SITE_URL,
+  email: "Info@inside914.com",
+  description: "Inside914 provides shared postcard advertising for local businesses in Westchester County, New York.",
+  areaServed: { "@type": "AdministrativeArea", name: "Westchester County, New York" },
+};
+const websiteData = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": SITE_URL + "/#website",
+  url: SITE_URL,
+  name: "Inside914",
+  publisher: { "@id": SITE_URL + "/#organization" },
+};
 const TRUST = [
   { title: "Reserve without paying upfront", body: "Save your space today. Nothing is charged at reservation." },
   { title: "Preview your advertisement", body: "See your selected position and artwork before the postcard is mailed." },
@@ -49,6 +77,7 @@ export default function Home() {
   return (
     <>
       <SiteHeader />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([organizationData, websiteData]).replace(/</g, "\\u003c") }} />
       <main className="flex-1">
         {/* Hero */}
         <section className="page-width grid items-center gap-10 overflow-x-clip pb-12 pt-10 md:grid-cols-[1.15fr_1fr] md:gap-12 md:pb-16 md:pt-14">
@@ -152,6 +181,14 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Crawlable regional links complement the interactive area selector. */}
+        <section className="page-width pb-14" aria-labelledby="area-links-title">
+          <h2 id="area-links-title" className="font-display text-3xl font-medium">Explore Westchester advertising areas</h2>
+          <p className="mt-3 max-w-2xl text-muted">Learn about the available regions before exploring campaign positions and prices.</p>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {REGIONS.map(area => <li key={area.slug}><Link className="block rounded-xl border border-line bg-surface p-4 font-medium hover:border-accent hover:text-accent" href={`/areas/${area.slug}`}>{area.name}</Link></li>)}
+          </ul>
+        </section>
         {/* Closing CTA */}
         <section className="page-width pb-14 md:pb-16">
           <Card tone="dark" className="flex flex-col items-start justify-between gap-6 p-6 sm:flex-row sm:items-center sm:p-8">

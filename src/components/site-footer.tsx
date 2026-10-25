@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SUPPORT_EMAIL } from "@/lib/support";
+import { REGIONS } from "@/lib/catalog/regions";
 import { Logo } from "@/components/site-header";
 
 export function SiteFooter() {
@@ -32,6 +33,12 @@ export function SiteFooter() {
             <li><Link href="/legal/privacy" className="hover:text-foreground">Privacy policy</Link></li>
           </ul>
         </div>
+      </div>
+      <div className="page-width pb-6">
+        <p className="text-sm font-semibold">Westchester advertising areas</p>
+        <nav aria-label="Regional advertising" className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
+          {REGIONS.map(area => <Link key={area.slug} href={`/areas/${area.slug}`} className="hover:text-foreground">{area.name}</Link>)}
+        </nav>
       </div>
       <div className="border-t border-line">
         <p className="page-width py-4 text-xs text-muted">© Inside914. Local advertising you can verify.</p>
