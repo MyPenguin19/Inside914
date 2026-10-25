@@ -1,13 +1,16 @@
-// Read-only crawl of a locally served production build; never visits production or submits forms.
+// GET-only crawl; local by default. The explicit --production flag permits only the
+// owner-authorized canonical host. Never submits forms, checkout or provider API requests.
 // Usage: npm run test:seo -- http://localhost:3100 [--preview]
+// Release: npm run test:seo -- https://inside914.vercel.app --production
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import sharp from "sharp";
 
 const base = new URL(process.argv[2] ?? "http://localhost:3100");
-assert(["localhost", "127.0.0.1"].includes(base.hostname), "SEO verification must target a local server");
 const preview = process.argv.includes("--preview");
 const canonical = "https://inside914.vercel.app";
+const production = process.argv.includes("--production");
+assert(production ? base.href === `${canonical}/` && !preview : ["localhost", "127.0.0.1"].includes(base.hostname), "Use a local server or the explicitly authorized production host");
 const regions = ["central", "southern", "northern", "eastern"].map(region => `/areas/${region}-westchester`);
 const paths = ["/", "/areas", ...regions];
 const cache = new Map();
@@ -18,7 +21,7 @@ async function get(path) {
   let url = new URL(path, base);
   const chain = [];
   for (;;) {
-    assert.equal(url.origin, base.origin, "A public internal route redirected outside the local site");
+    assert.equal(url.origin, base.origin, "A public internal route redirected outside the selected site");
     assert(!chain.includes(url.href), `Redirect loop: ${path}`);
     chain.push(url.href);
     assert(chain.length <= 3, `Repeated redirects: ${path}`);
@@ -132,4 +135,4 @@ for (const path of ["/areas/", "/editions/00000000-0000-4000-8000-000000000999"]
 assert.equal((await get("/AREAS")).status, 404);
 assert.equal((await get("/areas/not-a-region")).status, 404);
 assert.equal((await get("/areas?utm_source=seo-audit")).doc.querySelector('link[rel="canonical"]').href, `${canonical}/areas`);
-console.log(JSON.stringify({ passed: true, mode: preview ? "preview" : "production build", pages, checkedLinksAndAssets: links, externalReferencesForManualReview: [...external], ogImageBytes: image.bytes.length, redirects: "single hop; invalid casing/region 404; query canonical clean" }, null, 2));
+console.log(JSON.stringify({ passed: true, mode: production ? "live production" : preview ? "preview" : "local production build", pages, checkedLinksAndAssets: links, externalReferencesForManualReview: [...external], ogImageBytes: image.bytes.length, redirects: "single hop; invalid casing/region 404; query canonical clean" }, null, 2));

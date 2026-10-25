@@ -1,3 +1,4 @@
+import { OriginalBackupPanel } from "@/components/admin/original-backup-panel";
 import { CustomerRequestList } from "@/components/admin/customer-request-list";
 import { EmailDeliveryStatus } from "@/components/admin/email-delivery-status";
 
@@ -39,7 +40,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
       listEditions(supabase),
       listSlots(supabase, [booking.editionId]),
       getConsent(supabase, id),
-      signArtwork(id),
+      signArtwork(id).catch(() => null),
       booking.contact ? searchBookings(supabase, { filter: "all", q: booking.contact.email, page: 1 }) : null,
       listNotes(supabase, id),
       getAccessStatus(supabase, id),
@@ -190,7 +191,8 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
           )}
         </div>
 
-        <aside className="flex flex-col gap-3">
+        <aside className="flex min-w-0 flex-col gap-3">
+          <OriginalBackupPanel bookingId={id} />
           <h2 className="text-lg font-semibold">Artwork</h2>
           <Badge label={artworkLabel(b)} />
           {artwork && own.length > 0 ? (

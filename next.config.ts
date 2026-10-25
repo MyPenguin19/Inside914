@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: [...securityHeaders(options), ...(options.preview ? [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] : [])] },
       ...PRIVATE_ROUTE_PREFIXES.map(prefix => ({ source: `/${prefix}/:path*`, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] })),
+      ...["/admin/artwork/:id/original", "/admin/campaigns/:id/originals"].map(source => ({ source, headers: [{ key: "Referrer-Policy", value: "no-referrer" }] })),
     ];
   },
   partialPrefetching: true,
