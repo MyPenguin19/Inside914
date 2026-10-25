@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts",
     "dev:clear-test-reservations": "node scripts/dev-clear-test-reservations.mjs",
-    "dev:setup-areas": "node scripts/dev-setup-areas.mjs"
+    "dev:setup-areas": "node scripts/dev-setup-areas.mjs",
+    "test:seo": "node scripts/audit-public-seo.mjs"
   },
   "dependencies": {
     "@stripe/stripe-js": "10.0.0",

@@ -1,0 +1,135 @@
+// Read-only crawl of a locally served production build; never visits production or submits forms.
+// Usage: npm run test:seo -- http://localhost:3100 [--preview]
+import assert from "node:assert/strict";
+import { JSDOM } from "jsdom";
+import sharp from "sharp";
+
+const base = new URL(process.argv[2] ?? "http://localhost:3100");
+assert(["localhost", "127.0.0.1"].includes(base.hostname), "SEO verification must target a local server");
+const preview = process.argv.includes("--preview");
+const canonical = "https://inside914.vercel.app";
+const regions = ["central", "southern", "northern", "eastern"].map(region => `/areas/${region}-westchester`);
+const paths = ["/", "/areas", ...regions];
+const cache = new Map();
+const external = new Set();
+let links = 0;
+async function get(path) {
+  if (cache.has(path)) return cache.get(path);
+  let url = new URL(path, base);
+  const chain = [];
+  for (;;) {
+    assert.equal(url.origin, base.origin, "A public internal route redirected outside the local site");
+    assert(!chain.includes(url.href), `Redirect loop: ${path}`);
+    chain.push(url.href);
+    assert(chain.length <= 3, `Repeated redirects: ${path}`);
+    const response = await fetch(url, { redirect: "manual", headers: { "user-agent": "Googlebot" }, signal: AbortSignal.timeout(20000) });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      url = new URL(response.headers.get("location"), url);
+      continue;
+    }
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const contentType = response.headers.get("content-type") ?? "";
+    const doc = /html/.test(contentType) ? new JSDOM(bytes.toString()).window.document : null;
+    const result = { status: response.status, headers: response.headers, contentType, bytes, doc, chain, url };
+    cache.set(path, result);
+    return result;
+  }
+}
+const titles = new Set(), descriptions = new Set(), pages = [];
+for (const path of paths) {
+  const result = await get(path);
+  assert.equal(result.status, 200, path);
+  assert.equal(result.chain.length, 1, `${path} unexpectedly redirects`);
+  const { doc } = result;
+  const meta = selector => {
+    const nodes = doc.querySelectorAll(selector);
+    assert.equal(nodes.length, 1, `${path}: expected exactly one ${selector}`);
+    return nodes[0].getAttribute("content") ?? nodes[0].getAttribute("href");
+  };
+  const title = doc.title;
+  const description = meta('meta[name="description"]');
+  assert(title.endsWith(" | Inside914") && title.split("Inside914").length === 2, `${path}: title`);
+  assert(description.length >= 100, `${path}: missing useful description`);
+  assert(!titles.has(title), `Duplicate title: ${path}`); titles.add(title);
+  assert(!descriptions.has(description), `Duplicate description: ${path}`); descriptions.add(description);
+  assert.equal(new URL(meta('link[rel="canonical"]')).href, canonical + path);
+  assert.equal(new URL(meta('meta[property="og:url"]')).href, canonical + path);
+  assert.equal(meta('meta[property="og:title"]'), title);
+  assert.equal(meta('meta[property="og:description"]'), description);
+  assert.equal(meta('meta[name="twitter:card"]'), "summary_large_image");
+  const noindex = /noindex/.test(meta('meta[name="robots"]'));
+  assert.equal(noindex, preview, `${path}: indexing policy`);
+  assert.equal(/noindex/.test(result.headers.get("x-robots-tag") ?? ""), preview);
+  assert.equal(doc.querySelectorAll("h1").length, 1, `${path}: H1 count`);
+  let level = 0;
+  for (const h of doc.querySelectorAll("main h1, main h2, main h3, main h4, main h5, main h6")) {
+    const next = Number(h.tagName.slice(1));
+    assert(next <= level + 1, `${path}: skipped heading level`); level = next;
+    assert(h.textContent.trim(), `${path}: empty heading`);
+  }
+  for (const img of doc.querySelectorAll("img")) {
+    assert(img.hasAttribute("alt"), `${path}: image missing alt`);
+    assert(img.getAttribute("width") && img.getAttribute("height") || img.getAttribute("style")?.includes("aspect-ratio"), `${path}: image needs reserved dimensions`);
+  }
+  for (const img of doc.querySelectorAll('[role="img"], svg:not([aria-hidden="true"])')) {
+    assert(img.getAttribute("aria-label") || img.getAttribute("aria-labelledby") || img.querySelector("title"), `${path}: graphic without accessible name`);
+  }
+  const schema = [...doc.querySelectorAll('script[type="application/ld+json"]')].flatMap(script => JSON.parse(script.textContent));
+  if (path === "/") {
+    assert(schema.some(item => item["@type"] === "WebSite"));
+    assert(schema.some(item => item["@type"] === "Organization" && item.name === "Inside914" && item.legalName === "Inside Diagnostics LLC"));
+  } else if (regions.includes(path)) {
+    assert(schema.some(item => item["@type"] === "WebPage" && item.url === canonical + path));
+    const crumb = schema.find(item => item["@type"] === "BreadcrumbList");
+    assert.deepEqual(crumb.itemListElement.map(item => item.position), [1, 2, 3]);
+    assert.equal(crumb.itemListElement[2].item, canonical + path);
+  }
+  // Check actual server HTML hyperlinks and assets, including off-page fragments and policies.
+  const refs = [...doc.querySelectorAll("a[href], img[src]")].map(el => el.getAttribute("href") ?? el.getAttribute("src"));
+  refs.push(meta('meta[property="og:image"]'), meta('meta[name="twitter:image"]'));
+  for (const ref of refs) {
+    if (/^(mailto:|tel:|data:)/.test(ref)) continue;
+    const target = new URL(ref, new URL(path, base));
+    if (![base.origin, canonical].includes(target.origin)) { external.add(target.href); continue; }
+    const targetPath = target.pathname + target.search;
+    assert(!/[?&](token|access|invite|secret)=/i.test(targetPath), "Public page exposed a private access link");
+    const linked = await get(targetPath);
+    assert.equal(linked.status, 200, `${path} links to broken ${targetPath}`);
+    if (target.hash) assert(linked.doc?.getElementById(decodeURIComponent(target.hash.slice(1))), `Missing fragment: ${ref}`);
+    links++;
+  }
+  pages.push({ path, title, description, titleLength: title.length, descriptionLength: description.length, schema: schema.map(item => item["@type"]) });
+}
+const sitemap = await get("/sitemap.xml");
+assert.equal(sitemap.status, 200); assert.match(sitemap.contentType, /xml/);
+const xml = new JSDOM(sitemap.bytes.toString(), { contentType: "text/xml" }).window.document;
+assert.equal(xml.querySelector("parsererror"), null);
+assert.deepEqual([...xml.querySelectorAll("loc")].map(node => node.textContent), preview ? [] : paths.map(path => canonical + path));
+assert.equal(xml.querySelectorAll("lastmod").length, 0);
+const robots = await get("/robots.txt");
+assert.equal(robots.status, 200); assert.match(robots.contentType, /text\/plain/);
+assert.match(robots.bytes.toString(), preview ? /^Disallow: \/$/m : /^Allow: \/$/m);
+if (!preview) assert(robots.bytes.toString().includes(`Sitemap: ${canonical}/sitemap.xml`));
+for (const policy of ["terms", "privacy", "reservation-policy"]) {
+  const { doc } = await get(`/legal/${policy}`);
+  assert.match(doc.querySelector('meta[name="robots"]').content, /noindex/);
+}
+for (const path of ["/admin/login", "/book/cart", "/reservation/access", "/reservation/recover", "/pay"]) {
+  const response = await fetch(new URL(path, base), { redirect: "manual" });
+  assert(response.status < 500, path);
+  assert.match(response.headers.get("x-robots-tag") ?? "", /noindex/, path);
+}
+const closedCheckout = await get("/book/cart");
+assert.match(closedCheckout.doc.querySelector("main").textContent, /Reservations are not open yet/);
+const image = await get("/opengraph-image");
+assert.equal(image.contentType, "image/png");
+const pixels = await sharp(image.bytes).metadata();
+assert.equal(pixels.width, 1200); assert.equal(pixels.height, 630);
+for (const path of ["/areas/", "/editions/00000000-0000-4000-8000-000000000999"]) {
+  const result = await get(path);
+  assert.equal(result.status, 200); assert.equal(result.url.pathname, "/areas"); assert.equal(result.chain.length, 2);
+}
+assert.equal((await get("/AREAS")).status, 404);
+assert.equal((await get("/areas/not-a-region")).status, 404);
+assert.equal((await get("/areas?utm_source=seo-audit")).doc.querySelector('link[rel="canonical"]').href, `${canonical}/areas`);
+console.log(JSON.stringify({ passed: true, mode: preview ? "preview" : "production build", pages, checkedLinksAndAssets: links, externalReferencesForManualReview: [...external], ogImageBytes: image.bytes.length, redirects: "single hop; invalid casing/region 404; query canonical clean" }, null, 2));

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { contentSecurityPolicy, securityHeaders } from "@/lib/security/headers";
+import { CSP_ENFORCED, contentSecurityPolicy, securityHeaders } from "@/lib/security/headers";
 
 const SUPABASE = "https://abcdefghijklmnopqrst.supabase.co";
 const directives = (csp: string) => new Map(csp.split(";").map((d) => d.trim().split(/\s+/)).filter((d) => d[0]).map(([k, ...v]) => [k, v]));
@@ -12,7 +12,7 @@ describe("content security policy", () => {
     expect(csp.get("object-src")).toEqual(["'none'"]);
     expect(csp.get("base-uri")).toEqual(["'self'"]);
     expect(csp.get("form-action")).toEqual(["'self'"]);
-    expect(csp.has("upgrade-insecure-requests")).toBe(true);
+    expect(csp.has("upgrade-insecure-requests")).toBe(CSP_ENFORCED);
   });
 
   test("allows Stripe's card form and Supabase uploads and images", () => {

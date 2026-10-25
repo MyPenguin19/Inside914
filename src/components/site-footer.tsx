@@ -35,7 +35,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="page-width pb-6">
-        <p className="text-sm font-semibold">Westchester advertising areas</p>
+        <h2 className="text-sm font-semibold">Westchester advertising areas</h2>
         <nav aria-label="Regional advertising" className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
           {REGIONS.map(area => <Link key={area.slug} href={`/areas/${area.slug}`} className="hover:text-foreground">{area.name}</Link>)}
         </nav>

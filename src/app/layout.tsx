@@ -11,6 +11,7 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false, // Used in admin/data views; don't compete with marketing headline fonts.
 });
 
 // Display serif for headlines: warm and print-like, used sparingly.
@@ -25,8 +26,6 @@ export const metadata: Metadata = {
   title: { default: "Westchester Postcard Advertising | Inside914", template: "%s | Inside914" },
   description: "Shared postcard advertising for Westchester County businesses. Explore local mailing areas, see how the campaigns work and view available ad positions.",
   applicationName: SITE_NAME,
-  alternates: { canonical: "/" },
-  openGraph: { type: "website", siteName: SITE_NAME, locale: "en_US", url: "/", title: "Westchester Postcard Advertising | Inside914", description: "Shared postcard advertising for local businesses in Westchester County, New York." },
   twitter: { card: "summary_large_image" },
   robots: process.env.VERCEL_ENV === "preview" ? { index: false, follow: false } : { index: true, follow: true },
 };

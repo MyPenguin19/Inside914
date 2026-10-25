@@ -1,0 +1,168 @@
+{
+  "method": "Lighthouse 13.5.0 mobile, isolated localhost production builds, single navigation per page/version; not field CWV",
+  "fieldData": "Unavailable: Search Console access missing; PageSpeed API 429",
+  "results": [
+    {
+      "page": "home",
+      "phase": "before",
+      "scores": {
+        "performance": 94,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 100
+      },
+      "metrics": {
+        "largest-contentful-paint": 3122.683,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 12,
+        "server-response-time": 58
+      },
+      "transferBytes": {
+        "total": 345844,
+        "script": 176403,
+        "font": 123148,
+        "other": 23094,
+        "document": 12522,
+        "stylesheet": 10677,
+        "image": 0,
+        "media": 0,
+        "third-party": 0
+      }
+    },
+    {
+      "page": "home",
+      "phase": "after",
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "largest-contentful-paint": 2627.004,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 10,
+        "server-response-time": 2
+      },
+      "transferBytes": {
+        "total": 321168,
+        "script": 176172,
+        "font": 98865,
+        "other": 22964,
+        "document": 12419,
+        "stylesheet": 10748,
+        "image": 0,
+        "media": 0,
+        "third-party": 0
+      }
+    },
+    {
+      "page": "areas",
+      "phase": "before",
+      "scores": {
+        "performance": 95,
+        "accessibility": 100,
+        "best-practices": 96,
+        "seo": 100
+      },
+      "metrics": {
+        "largest-contentful-paint": 2857.832,
+        "cumulative-layout-shift": 0.041,
+        "total-blocking-time": 7,
+        "server-response-time": 16
+      },
+      "transferBytes": {
+        "total": 354025,
+        "script": 176403,
+        "font": 123148,
+        "other": 24796,
+        "document": 19001,
+        "stylesheet": 10677,
+        "image": 0,
+        "media": 0,
+        "third-party": 0
+      }
+    },
+    {
+      "page": "areas",
+      "phase": "after",
+      "scores": {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "largest-contentful-paint": 2773.241,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 8,
+        "server-response-time": 2
+      },
+      "transferBytes": {
+        "total": 329479,
+        "script": 176172,
+        "font": 98865,
+        "other": 24737,
+        "document": 18957,
+        "stylesheet": 10748,
+        "image": 0,
+        "media": 0,
+        "third-party": 0
+      }
+    },
+    {
+      "page": "region",
+      "phase": "before",
+      "scores": {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 96,
+        "seo": 100
+      },
+      "metrics": {
+        "largest-contentful-paint": 2769.581,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 6,
+        "server-response-time": 2
+      },
+      "transferBytes": {
+        "total": 347633,
+        "script": 176403,
+        "font": 123148,
+        "other": 30133,
+        "stylesheet": 10677,
+        "document": 7272,
+        "image": 0,
+        "media": 0,
+        "third-party": 0
+      }
+    },
+    {
+      "page": "region",
+      "phase": "after",
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "largest-contentful-paint": 2619.557,
+        "cumulative-layout-shift": 0,
+        "total-blocking-time": 7,
+        "server-response-time": 3
+      },
+      "transferBytes": {
+        "total": 324433,
+        "script": 176172,
+        "font": 98865,
+        "other": 30019,
+        "stylesheet": 10748,
+        "document": 8629,
+        "image": 0,
+        "media": 0,
+        "third-party": 0
+      }
+    }
+  ]
+}
