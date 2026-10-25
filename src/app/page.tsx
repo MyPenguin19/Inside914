@@ -9,7 +9,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, Eyebrow, SectionHeading } from "@/components/ui/primitives";
 
 export const metadata: Metadata = {
-  title: "Westchester Postcard Advertising | Inside914",
+  title: "Westchester Postcard Advertising",
   description: "Reach local audiences with shared postcard advertising across Westchester County. Explore four mailing areas and learn how Inside914 reservations work.",
   alternates: { canonical: "/" },
 };
