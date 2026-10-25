@@ -4,7 +4,7 @@ vi.mock("server-only",()=>({}));
 const notify=vi.hoisted(()=>vi.fn());
 vi.mock("@/lib/operations/notify-after",()=>({notifyOwnerAfterResponse:notify}));
 const rpc=vi.fn(async()=>({data:"recorded",error:null}));
-const lookup=vi.fn(async()=>({data:{id:"00000000-0000-4000-8000-000000000001"},error:null}));
+const lookup=vi.fn(async()=>({data:{id:"00000000-0000-4000-8000-000000000001",logical_key:"reservation:fixture"},error:null}));
 const client=vi.fn(()=>({rpc,from:()=>({select:()=>({eq:()=>({maybeSingle:lookup})})})}));
 vi.mock("@/lib/supabase/admin",()=>({createAdminClient:client}));
 const {POST}=await import("@/app/api/resend/webhook/route");
@@ -34,4 +34,9 @@ test("successful and duplicate delivery callbacks do not drain unrelated owner a
  await POST(request());expect(notify).not.toHaveBeenCalled();
  rpc.mockResolvedValueOnce({data:"duplicate",error:null});await POST(request(JSON.stringify({...payload,type:"email.failed"})));expect(notify).not.toHaveBeenCalled();
  await POST(request(JSON.stringify({...payload,type:"email.failed"})));expect(notify).toHaveBeenCalledTimes(1);
+});
+test("a failed owner verification is reconciled without triggering any other email",async()=>{
+ lookup.mockResolvedValueOnce({data:{id:payload.data.tags.delivery_id,logical_key:"owner-verification:fixture"},error:null});
+ expect((await POST(request(JSON.stringify({...payload,type:"email.failed"})))).status).toBe(200);
+ expect(rpc).toHaveBeenCalledTimes(1);expect(notify).not.toHaveBeenCalled();
 });

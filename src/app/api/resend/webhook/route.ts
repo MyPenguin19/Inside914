@@ -27,9 +27,13 @@ export async function POST(request:Request) {
   if(existing?.error) return new Response("Retry later",{status:503});
   const deliveryId=tagged.success?tagged.data:existing?.data?.id;
   if(!deliveryId) return Response.json({received:true,matched:false});
+  const adverse=["email.bounced","email.complained","email.failed","email.suppressed"].includes(event.type);
+  const delivery=adverse?await db.from("email_deliveries").select("logical_key").eq("id",deliveryId).maybeSingle():null;
+  if(delivery?.error) return new Response("Retry later",{status:503});
   const result=await db.rpc("record_email_event",{p_event_id:id,p_delivery_id:deliveryId,p_provider_id:event.data.email_id,p_kind:event.type,p_at:event.created_at});
   if(result.error) return new Response("Retry later",{status:503});
   // Delivery success/deduplication must not drain unrelated owner notifications.
-  if(result.data==="recorded" && ["email.bounced","email.complained","email.failed","email.suppressed"].includes(event.type)) notifyOwnerAfterResponse();
+  // A one-message owner verification must not trigger other sends, even if it fails.
+  if(result.data==="recorded" && adverse && !delivery?.data?.logical_key.startsWith("owner-verification:")) notifyOwnerAfterResponse();
   return Response.json({received:true});
 }

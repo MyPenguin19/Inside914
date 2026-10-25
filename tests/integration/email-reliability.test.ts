@@ -2,14 +2,31 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { afterEach, expect, test, vi } from "vitest";
 import type { Database } from "@/lib/supabase/database.types";
+import type { SendEmail } from "@/lib/email/provider";
 vi.mock("server-only",()=>({}));
 const {queueDelivery,processDelivery}=await import("@/lib/email/delivery");
 const {EmailProviderError}=await import("@/lib/email/provider");
+const {sendOwnerVerification}=await import("@/lib/email/owner-verification");
 const db=createClient<Database>(process.env.SUPABASE_URL!,process.env.SUPABASE_SECRET_KEY!,{auth:{persistSession:false}});
 const ids:string[]=[];
 afterEach(async()=>{vi.unstubAllEnvs();if(ids.length)await db.from("email_deliveries").delete().in("id",ids.splice(0));});
 async function queued(){const id=await queueDelivery(db,`fixture:${randomUUID()}`,{from:"Inside914 <sender@example.com>",to:"client@example.com",subject:"Fixture",html:"<p>private link</p>",text:"private link"});ids.push(id);return id;}
 const due=async(id:string)=>{const r=await db.from("email_deliveries").update({next_attempt_at:new Date(0).toISOString()}).eq("id",id);expect(r.error).toBeNull();};
+test("owner verification is one durable message per release and never drains another delivery",async()=>{
+ vi.stubEnv("VERCEL_ENV","production");vi.stubEnv("VERCEL_GIT_COMMIT_SHA",randomUUID().replaceAll("-","")+"12345678");
+ vi.stubEnv("ADMIN_NOTIFICATION_EMAIL","owner@example.com");vi.stubEnv("RESEND_API_KEY","re_fixture");
+ const unrelated=await queued();
+ const send=vi.fn<SendEmail>(async()=>{await new Promise(r=>setTimeout(r,80));return{id:randomUUID()};});
+ await Promise.all([sendOwnerVerification(db,send),sendOwnerVerification(db,send)]);
+ await sendOwnerVerification(db,send);
+ const row=(await db.from("email_deliveries").select("id,outbox_id,status,is_test,provider_message_id").eq("logical_key",`owner-verification:${process.env.VERCEL_GIT_COMMIT_SHA}`).single()).data!;ids.push(row.id);
+ expect(send).toHaveBeenCalledTimes(1);expect(send.mock.calls[0]?.[0]).toMatchObject({to:"owner@example.com",deliveryId:row.id,idempotencyKey:`inside914-delivery-${row.id}`});
+ expect(row).toMatchObject({outbox_id:null,status:"accepted",is_test:false});
+ expect((await db.from("email_deliveries").select("status,attempts").eq("id",unrelated).single()).data).toEqual({status:"pending",attempts:0});
+ await db.rpc("record_email_event",{p_event_id:randomUUID(),p_delivery_id:row.id,p_provider_id:row.provider_message_id!,p_kind:"email.delivered",p_at:new Date().toISOString()});
+ expect(await sendOwnerVerification(db,send)).toEqual({status:"accepted",provider_outcome:"email.delivered"});
+ expect(send).toHaveBeenCalledTimes(1);
+});
 test("concurrent workers have one fenced lease and immutable payload",async()=>{
  const id=await queued();const send=vi.fn(async()=>{await new Promise(r=>setTimeout(r,80));return {id:randomUUID()};});
  const outcomes=await Promise.all([processDelivery(db,id,send),processDelivery(db,id,send)]);
