@@ -13,6 +13,7 @@ import { ConfirmAction } from "@/components/admin/confirm-action";
 import { getBooking, listArtworkReviews, listEditions, listSlots, signArtwork } from "@/lib/admin/data";
 import { artworkLabel, positionLabel } from "@/lib/admin/labels";
 import { formatIssueMonth, formatTimestamp } from "@/lib/format-admin";
+import { OriginalBackupPanel } from "@/components/admin/original-backup-panel";
 import { layoutVersion } from "@/lib/print/layouts";
 
 export default function ArtworkDetailPage({ params }: PageProps<"/admin/artwork/[id]">) {
@@ -32,7 +33,7 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
   try {
     const booking = await getBooking(supabase, id);
     if (!booking) notFound();
-    const [editions, slots, artwork, reviews] = await Promise.all([listEditions(supabase), listSlots(supabase, [booking.editionId]), signArtwork(id), listArtworkReviews(supabase, id)]);
+    const [editions, slots, artwork, reviews] = await Promise.all([listEditions(supabase), listSlots(supabase, [booking.editionId]), signArtwork(id).catch(() => null), listArtworkReviews(supabase, id)]);
     data = { booking, edition: editions.find((e) => e.id === booking.editionId) ?? null, slots, artwork, reviews };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error; // notFound()
@@ -58,7 +59,7 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
         </div>
       </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-        <div>{artwork && own.length ? <AdPlacement layoutKey={edition?.layoutTemplate} dimensions={edition?.productModel === "square_v1" ? {width:9,height:6} : undefined} artwork={artwork} own={own} slots={slots} /> : <EmptyState title="No artwork uploaded." />}</div>
+        <div className="grid min-w-0 content-start gap-4"><OriginalBackupPanel bookingId={id} />{artwork && own.length ? <AdPlacement layoutKey={edition?.layoutTemplate} dimensions={edition?.productModel === "square_v1" ? {width:9,height:6} : undefined} artwork={artwork} own={own} slots={slots} /> : <EmptyState title="No artwork uploaded." />}</div>
         <Card>
           <h2 className="text-lg font-semibold">Details</h2>
           <div className="mt-4">

@@ -1,3 +1,4 @@
+import { CampaignArtworkBackup } from "@/components/admin/original-backup-panel";
 import { CampaignInvitations } from "@/components/admin/campaign-invitations";
 import sharp from "sharp";
 import { CampaignManagement } from "@/components/admin/campaign-management";
@@ -128,6 +129,8 @@ async function CampaignDetail({ params }: { params: PageProps<"/admin/campaigns/
         <CollectionPanel editionId={id} />
         {data.mailReady && !["mailed","completed"].includes(edition.status) && <ConfirmAction label="Mark as mailed" action={markCampaignMailed} fields={{id}} confirmLabel="Mark mailed" consequence={<>Confirm you uploaded the final front and back to AmazingMail and submitted the mailing. This records your confirmation and does not order a mailing or charge anyone.</>} />}
       </>}
+
+      <CampaignArtworkBackup campaignId={id} />
 
       <div className="flex flex-wrap gap-3">
         <ButtonLink href={`/admin/artwork?campaign=${edition.id}`} variant="secondary">Approve artwork</ButtonLink>
