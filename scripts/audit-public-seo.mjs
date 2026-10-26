@@ -1,14 +1,14 @@
 // GET-only crawl; local by default. The explicit --production flag permits only the
 // owner-authorized canonical host. Never submits forms, checkout or provider API requests.
 // Usage: npm run test:seo -- http://localhost:3100 [--preview]
-// Release: npm run test:seo -- https://inside914.vercel.app --production
+// Release: npm run test:seo -- https://inside914.com --production
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import sharp from "sharp";
 
 const base = new URL(process.argv[2] ?? "http://localhost:3100");
 const preview = process.argv.includes("--preview");
-const canonical = "https://inside914.vercel.app";
+const canonical = "https://inside914.com";
 const production = process.argv.includes("--production");
 assert(production ? base.href === `${canonical}/` && !preview : ["localhost", "127.0.0.1"].includes(base.hostname), "Use a local server or the explicitly authorized production host");
 const regions = ["central", "southern", "northern", "eastern"].map(region => `/areas/${region}-westchester`);

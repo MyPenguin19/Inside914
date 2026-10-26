@@ -13,7 +13,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("public SEO and indexing boundaries", () => {
   it("uses one HTTPS canonical host", () => {
-    expect(SITE_URL).toBe("https://inside914.vercel.app");
+    expect(SITE_URL).toBe("https://inside914.com");
     expect(absoluteUrl("/areas")).toBe(`${SITE_URL}/areas`);
   });
   it.each(["//outside.example/path", "https://outside.example", "/areas?token=secret", "/areas#private", "/\\outside.example"])("rejects noncanonical or parameterized SEO input %s", path => {

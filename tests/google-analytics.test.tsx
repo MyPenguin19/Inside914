@@ -19,7 +19,7 @@ import { GoogleAnalytics } from "@/components/google-analytics";
 afterEach(() => { vi.unstubAllEnvs(); route.pathname = "/"; });
 
 function bootstrap(path = "/") {
-  const context = createContext({ location: new URL(path, "https://inside914.vercel.app") });
+  const context = createContext({ location: new URL(path, "https://inside914.com") });
   context.window = context;
   runInContext(GOOGLE_ANALYTICS_BOOTSTRAP, context);
   return context;
@@ -56,10 +56,10 @@ test("opt-out follows navigation synchronously, including query and fragment tok
   const context = bootstrap();
   const key = `ga-disable-${GOOGLE_ANALYTICS_ID}`;
   for (const path of ["/admin", "/reservation/access?token=private", "/?token=private", "/#access_token=private"]) {
-    context.location = new URL(path, "https://inside914.vercel.app");
+    context.location = new URL(path, "https://inside914.com");
     expect(context[key], path).toBe(true);
   }
-  context.location = new URL("https://inside914.vercel.app/areas");
+  context.location = new URL("https://inside914.com/areas");
   expect(context[key]).toBe(false);
 });
 

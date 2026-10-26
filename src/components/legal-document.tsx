@@ -1,5 +1,6 @@
 import policies from "@/lib/legal/versions/2026-10-24-review-4.json";
 import { SUPPORT_EMAIL } from "@/lib/support";
+import { SITE_URL } from "@/lib/seo";
 
 // Immutable proposed text is shared by the renderer and the version archive.
 export const legalDocuments = policies.documents;
@@ -7,10 +8,10 @@ export const LEGAL_VERSION = policies.version;
 type Document = (typeof legalDocuments)[keyof typeof legalDocuments];
 
 function InlineText({ text }: { text: string }) {
-  return text.split(/(\*\*[^*]+\*\*|Info@inside914\.com|https:\/\/inside914\.vercel\.app)/g).map((part, i) => {
+  return text.split(/(\*\*[^*]+\*\*|Info@inside914\.com|https:\/\/inside914\.com)/g).map((part, i) => {
     if (part.startsWith("**")) return <strong key={i}>{part.slice(2, -2)}</strong>;
     if (part === SUPPORT_EMAIL) return <a key={i} className="break-words underline" href={`mailto:${SUPPORT_EMAIL}`}>{part}</a>;
-    if (part === "https://inside914.vercel.app") return <a key={i} className="break-words underline" href={part}>{part}</a>;
+    if (part === SITE_URL) return <a key={i} className="break-words underline" href={SITE_URL}>{SITE_URL}</a>;
     return part;
   });
 }
