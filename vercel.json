@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "feature/google-site-verification-analytics": false,
       "feature/admin-original-artwork-downloads": false,
       "feature/seo-foundation-westchester": false,
       "fix/owner-email-verification": false,

@@ -39,5 +39,12 @@ export default function LegalPage({ params }: PageProps<"/legal/[doc]">) {
 async function LegalDoc({ params }: { params: PageProps<"/legal/[doc]">["params"] }) {
   const { doc } = await params;
   if (!Object.hasOwn(legalDocuments, doc)) notFound();
-  return <LegalDocument document={legalDocuments[doc as keyof typeof legalDocuments]} />;
+  return <>
+    {doc === "privacy" && <p className="mt-6 rounded-lg border border-line px-4 py-3 text-sm text-muted">
+      <strong className="text-foreground">Website analytics notice — October 25, 2026.</strong>{" "}
+      Our public marketing pages use Google Analytics to understand website visits. Analytics is disabled on administrator,
+      checkout and private reservation pages. Google advertising features are disabled.
+    </p>}
+    <LegalDocument document={legalDocuments[doc as keyof typeof legalDocuments]} />
+  </>;
 }
