@@ -27,6 +27,13 @@ describe("content security policy", () => {
     for (const values of csp.values()) expect(values).not.toContain("*");
   });
 
+  test("allows Google Analytics without advertising or broader script permissions", () => {
+    expect(csp.get("script-src")).toContain("https://www.googletagmanager.com");
+    expect(csp.get("img-src")).toContain("https://*.google-analytics.com");
+    expect(csp.get("connect-src")).toEqual(expect.arrayContaining(["https://www.googletagmanager.com", "https://*.google-analytics.com", "https://*.google.com"]));
+    expect([...csp.values()].flat().join(" ")).not.toMatch(/doubleclick|googlesyndication/);
+  });
+
   test("dev adds eval (React's debugging needs it) and drops the https upgrade for localhost", () => {
     const dev = directives(contentSecurityPolicy({ supabaseUrl: "http://127.0.0.1:54321", dev: true, preview: false }));
     expect(dev.get("script-src")).toContain("'unsafe-eval'");

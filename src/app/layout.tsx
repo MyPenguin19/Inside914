@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { SITE_NAME, SITE_URL } from "@/lib/seo";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -26,6 +28,7 @@ export const metadata: Metadata = {
   title: { default: "Westchester Postcard Advertising | Inside914", template: "%s | Inside914" },
   description: "Shared postcard advertising for Westchester County businesses. Explore local mailing areas, see how the campaigns work and view available ad positions.",
   applicationName: SITE_NAME,
+  verification: { google: "rMoAZMl3ESy4TOux7nGxSLj2NspSwIkUWYGhamKBcWE" },
   twitter: { card: "summary_large_image" },
   robots: process.env.VERCEL_ENV === "preview" ? { index: false, follow: false } : { index: true, follow: true },
 };
@@ -36,7 +39,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        {children}
+        {process.env.VERCEL_ENV === "production" && <Suspense fallback={null}><GoogleAnalytics /></Suspense>}
+      </body>
     </html>
   );
 }

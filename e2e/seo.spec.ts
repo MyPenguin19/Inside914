@@ -4,6 +4,9 @@ import { PUBLIC_MARKETING_PATHS, SITE_URL } from "../src/lib/seo";
 for (const path of PUBLIC_MARKETING_PATHS) {
   test(`marketing metadata and responsive semantics: ${path}`, async ({ page }) => {
     await page.goto(path);
+    await expect(page.locator('head meta[name="google-site-verification"]')).toHaveAttribute("content", "rMoAZMl3ESy4TOux7nGxSLj2NspSwIkUWYGhamKBcWE");
+    // Local/preview visits must not pollute the live Analytics property.
+    await expect(page.locator('script[src*="googletagmanager.com"]')).toHaveCount(0);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", path === "/" ? SITE_URL : `${SITE_URL}${path}`);
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", path === "/" ? SITE_URL : `${SITE_URL}${path}`);
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
@@ -68,7 +71,9 @@ test("private pages remain noindex and admin content requires authentication", a
   expect(response.headers().location).toContain("/admin/login");
   for (const path of ["terms", "privacy", "reservation-policy"]) {
     const legal = await request.get(`/legal/${path}`);
-    expect(await legal.text()).toMatch(/name="robots" content="noindex/);
+    const html = await legal.text();
+    expect(html).toMatch(/name="robots" content="noindex/);
+    if (path === "privacy") expect(html).toContain("Website analytics notice");
   }
 });
 

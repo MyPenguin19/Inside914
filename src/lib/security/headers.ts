@@ -13,6 +13,8 @@ type Options = { supabaseUrl: string | undefined; dev: boolean; preview: boolean
 const STRIPE_SCRIPTS = ["https://js.stripe.com", "https://*.js.stripe.com"];
 const STRIPE_FRAMES = [...STRIPE_SCRIPTS, "https://hooks.stripe.com"];
 const STRIPE_API = ["https://api.stripe.com"];
+const GOOGLE_TAG = "https://www.googletagmanager.com";
+const GOOGLE_ANALYTICS = "https://*.google-analytics.com";
 const VERCEL_TOOLBAR = ["https://vercel.live"]; // preview deployments' comment toolbar
 
 function origin(url: string | undefined) {
@@ -29,11 +31,11 @@ export function contentSecurityPolicy({ supabaseUrl, dev, preview }: Options) {
   const toolbar = preview ? VERCEL_TOOLBAR : [];
   const policy: [string, string[]][] = [
     ["default-src", ["'self'"]],
-    ["script-src", ["'self'", "'unsafe-inline'", ...(dev ? ["'unsafe-eval'"] : []), ...STRIPE_SCRIPTS, ...toolbar]],
+    ["script-src", ["'self'", "'unsafe-inline'", ...(dev ? ["'unsafe-eval'"] : []), ...STRIPE_SCRIPTS, GOOGLE_TAG, ...toolbar]],
     ["style-src", ["'self'", "'unsafe-inline'"]],
-    ["img-src", ["'self'", "data:", "blob:", ...own, "https://*.stripe.com", ...toolbar]],
+    ["img-src", ["'self'", "data:", "blob:", ...own, "https://*.stripe.com", GOOGLE_TAG, GOOGLE_ANALYTICS, ...toolbar]],
     ["font-src", ["'self'", "data:", ...toolbar]],
-    ["connect-src", ["'self'", ...own, ...STRIPE_API, ...toolbar]],
+    ["connect-src", ["'self'", ...own, ...STRIPE_API, GOOGLE_TAG, GOOGLE_ANALYTICS, "https://*.google.com", ...toolbar]],
     ["frame-src", [...STRIPE_FRAMES, ...toolbar]],
     ["object-src", ["'none'"]],
     ["base-uri", ["'self'"]],
