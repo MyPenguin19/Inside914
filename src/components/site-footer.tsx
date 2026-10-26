@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SUPPORT_EMAIL } from "@/lib/support";
+import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "@/lib/support";
 import { REGIONS } from "@/lib/catalog/regions";
 import { Logo } from "@/components/site-header";
 
@@ -17,11 +17,13 @@ export function SiteFooter() {
         <div>
           <h2 className="text-sm font-semibold">Contact</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted">
+            <li><Link href="/contact" className="hover:text-foreground">Contact us</Link></li>
             <li>
               <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-foreground">
                 {SUPPORT_EMAIL}
               </a>
             </li>
+            <li><a href={SUPPORT_PHONE_HREF} className="hover:text-foreground">{SUPPORT_PHONE}</a></li>
             <li>Westchester County, NY</li>
           </ul>
         </div>

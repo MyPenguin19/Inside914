@@ -12,7 +12,7 @@ const canonical = "https://inside914.com";
 const production = process.argv.includes("--production");
 assert(production ? base.href === `${canonical}/` && !preview : ["localhost", "127.0.0.1"].includes(base.hostname), "Use a local server or the explicitly authorized production host");
 const regions = ["central", "southern", "northern", "eastern"].map(region => `/areas/${region}-westchester`);
-const paths = ["/", "/areas", ...regions];
+const paths = ["/", "/areas", ...regions, "/contact"];
 const cache = new Map();
 const external = new Set();
 let links = 0;

@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "feature/contact-page": false,
       "fix/inside914-canonical-domain": false,
       "feature/google-site-verification-analytics": false,
       "feature/admin-original-artwork-downloads": false,

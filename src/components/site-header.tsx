@@ -7,6 +7,7 @@ const NAV = [
   { href: "/areas", label: "Advertising Areas" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/#verified-mail", label: "Verified Mail" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function Logo() {
