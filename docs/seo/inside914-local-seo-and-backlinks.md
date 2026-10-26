@@ -4,7 +4,7 @@ Researched 2026-10-25. **No outreach, registrations, purchases or acquired links
 
 ## Positioning and publishing rules
 
-Inside914 is a brand operated by Inside Diagnostics LLC, offering shared postcard advertising for Westchester businesses. Use `Info@inside914.com` and the approved website `https://inside914.vercel.app`. Do not invent a storefront, postal address, ratings, campaign results or confirmed delivery quantities. The map's four groupings are proposed; final routes and mailing quantities are campaign-specific. Checkout remains closed. Content may explain the $0-at-reservation model but must not invite customers to complete an unavailable checkout.
+Inside914 is a brand operated by Inside Diagnostics LLC, offering shared postcard advertising for Westchester businesses. Use `Info@inside914.com` and the approved website `https://inside914.com`. Do not invent a storefront, postal address, ratings, campaign results or confirmed delivery quantities. The map's four groupings are proposed; final routes and mailing quantities are campaign-specific. Checkout remains closed. Content may explain the $0-at-reservation model but must not invite customers to complete an unavailable checkout.
 
 Use verified operator details consistently. Do not create a Google Business Profile using a fabricated address or assume an online service qualifies. Owner approval is required for accounts, memberships, spending and outreach. Paid placements must use appropriate sponsored/nofollow link treatment; editorial links are the publisher's decision. Follow [Google's link-spam policy](https://developers.google.com/search/docs/essentials/spam-policies#link-spam).
 
