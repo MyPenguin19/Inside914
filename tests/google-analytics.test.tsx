@@ -2,8 +2,7 @@ import { createContext, runInContext } from "node:vm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, test, vi } from "vitest";
 import type { ScriptProps } from "next/script";
-import { GOOGLE_ANALYTICS_BOOTSTRAP, GOOGLE_ANALYTICS_ID } from "@/lib/analytics";
-import { PUBLIC_MARKETING_PATHS } from "@/lib/seo";
+import { ANALYTICS_PATHS, GOOGLE_ANALYTICS_BOOTSTRAP, GOOGLE_ANALYTICS_ID } from "@/lib/analytics";
 
 const route = vi.hoisted(() => ({ pathname: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
@@ -38,7 +37,7 @@ test("verification token uses Next metadata and Analytics uses the requested pro
   expect(commands).toHaveLength(2);
 });
 
-test.each(PUBLIC_MARKETING_PATHS)("marketing page %s loads the tag and permits measurement", (path) => {
+test.each(ANALYTICS_PATHS)("marketing page %s loads the tag and permits measurement", (path) => {
   route.pathname = path;
   const markup = renderToStaticMarkup(<GoogleAnalytics />);
   expect(markup).toContain(`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`);
@@ -46,7 +45,7 @@ test.each(PUBLIC_MARKETING_PATHS)("marketing page %s loads the tag and permits m
   expect(bootstrap(path)[`ga-disable-${GOOGLE_ANALYTICS_ID}`]).toBe(false);
 });
 
-test.each(["/admin/login", "/admin/campaigns", "/book/cart", "/reservation/private-token", "/pay", "/r/private-token", "/legal/privacy", "/unknown"])("private or nonmarketing page %s never loads the tag", (path) => {
+test.each(["/contact", "/admin/login", "/admin/campaigns", "/book/cart", "/reservation/private-token", "/pay", "/r/private-token", "/legal/privacy", "/unknown"])("private or excluded page %s never loads the tag", (path) => {
   route.pathname = path;
   expect(renderToStaticMarkup(<GoogleAnalytics />)).toBe("");
   expect(bootstrap(path)[`ga-disable-${GOOGLE_ANALYTICS_ID}`]).toBe(true);
@@ -55,7 +54,7 @@ test.each(["/admin/login", "/admin/campaigns", "/book/cart", "/reservation/priva
 test("opt-out follows navigation synchronously, including query and fragment tokens", () => {
   const context = bootstrap();
   const key = `ga-disable-${GOOGLE_ANALYTICS_ID}`;
-  for (const path of ["/admin", "/reservation/access?token=private", "/?token=private", "/#access_token=private"]) {
+  for (const path of ["/contact", "/admin", "/reservation/access?token=private", "/?token=private", "/#access_token=private"]) {
     context.location = new URL(path, "https://inside914.com");
     expect(context[key], path).toBe(true);
   }

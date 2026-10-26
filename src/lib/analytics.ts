@@ -1,6 +1,8 @@
 import { PUBLIC_MARKETING_PATHS } from "@/lib/seo";
 
 export const GOOGLE_ANALYTICS_ID = "G-G93Q0PE5JS";
+// Contact forms contain personal information and do not participate in automatic measurement.
+export const ANALYTICS_PATHS = PUBLIC_MARKETING_PATHS.filter(path => path !== "/contact");
 
 // Google's documented opt-out flag is checked before sending events. Read the current
 // URL each time: the loaded tag survives Next.js navigation to private/tokenized pages.
@@ -9,7 +11,7 @@ export const GOOGLE_ANALYTICS_BOOTSTRAP = `
   Object.defineProperty(window, 'ga-disable-${GOOGLE_ANALYTICS_ID}', {
     configurable: true,
     get: function () {
-      return !${JSON.stringify(PUBLIC_MARKETING_PATHS)}.includes(window.location.pathname)
+      return !${JSON.stringify(ANALYTICS_PATHS)}.includes(window.location.pathname)
         || Boolean(window.location.search || window.location.hash);
     }
   });

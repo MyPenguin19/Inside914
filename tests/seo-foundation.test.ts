@@ -19,10 +19,11 @@ describe("public SEO and indexing boundaries", () => {
   it.each(["//outside.example/path", "https://outside.example", "/areas?token=secret", "/areas#private", "/\\outside.example"])("rejects noncanonical or parameterized SEO input %s", path => {
     expect(() => absoluteUrl(path)).toThrow();
   });
-  it("includes exactly six unique public pages without invented timestamps", () => {
+  it("includes exactly seven unique public pages without invented timestamps", () => {
     vi.stubEnv("VERCEL_ENV", "production");
     expect(sitemap()).toEqual(PUBLIC_MARKETING_PATHS.map(path => ({ url: absoluteUrl(path) })));
-    expect(new Set(sitemap().map(item => item.url)).size).toBe(6);
+    expect(new Set(sitemap().map(item => item.url)).size).toBe(7);
+    expect(sitemap().map(item => item.url)).toContain("https://inside914.com/contact");
     for (const { slug } of REGIONS) expect(sitemap().map(item => item.url)).toContain(absoluteUrl(`/areas/${slug}`));
     expect(sitemap().every(({ url }) => !/\/(admin|api|book|pay|reservation|r|account|legal)(\/|$)/.test(url))).toBe(true);
   });

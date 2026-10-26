@@ -12,7 +12,7 @@ for (const path of PUBLIC_MARKETING_PATHS) {
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
     await expect(page).toHaveTitle(/\| Inside914$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(page.getByRole("main")).toContainText("Reservations are not open yet.");
+    if (path !== "/contact") await expect(page.getByRole("main")).toContainText("Reservations are not open yet.");
     if (path === "/areas") await expect(page.getByRole("heading", { name: "Selected: 0 areas" })).toBeVisible();
     for (const width of [320, 375, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });

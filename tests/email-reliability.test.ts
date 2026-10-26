@@ -41,3 +41,14 @@ test("expired messages are rejected before any provider HTTP call",async()=>{
  await expect(sendWithResend({to:"client@example.com",subject:"Example",html:"private",text:"private",idempotencyKey:"fixed",expiresAt:new Date(Date.now()-1).toISOString()})).rejects.toMatchObject({code:"email_link_expired",definitive:true});
  expect(fetch).not.toHaveBeenCalled();
 });
+
+test("contact Reply-To survives encrypted queuing and maps to the Resend HTTP field", async () => {
+ vi.stubEnv("EMAIL_PAYLOAD_ENCRYPTION_KEY","a".repeat(64));vi.stubEnv("RESEND_API_KEY","re_fixture");
+ const envelope={from:"Inside914 <sender@inside914.com>",to:"info@inside914.com",replyTo:"visitor@example.com",subject:"Contact",html:"<p>Question</p>",text:"Question"};
+ const payload=decryptEnvelope(encryptEnvelope(envelope,"contact-fixture"),"contact-fixture");
+ expect(payload.replyTo).toBe("visitor@example.com");
+ const fetch=vi.fn<typeof globalThis.fetch>(async()=>new Response(JSON.stringify({id:"provider-fixture"}),{status:200}));vi.stubGlobal("fetch",fetch);
+ await sendWithResend({...payload,idempotencyKey:"contact-stable"});
+ expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toMatchObject({from:envelope.from,to:["info@inside914.com"],reply_to:"visitor@example.com"});
+ expect(new Headers(fetch.mock.calls[0][1]?.headers).get("Idempotency-Key")).toBe("contact-stable");
+});

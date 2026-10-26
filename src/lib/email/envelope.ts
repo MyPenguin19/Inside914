@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { z } from "zod";
 
 const Envelope = z.object({
-  from: z.string().min(1), to: z.email(), subject: z.string(), html: z.string(), text: z.string(), expiresAt: z.iso.datetime().optional(),
+  from: z.string().min(1), to: z.email(), subject: z.string(), html: z.string(), text: z.string(), expiresAt: z.iso.datetime().optional(), replyTo: z.email().optional(),
 });
 export type EmailEnvelope = z.infer<typeof Envelope>;
 function key() {
