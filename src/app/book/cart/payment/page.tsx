@@ -1,3 +1,4 @@
+import { BookingLoading } from "@/components/booking/booking-loading";
 import { CartHoldTimer } from "@/components/booking/cart-hold-timer";
 import { cartConsentText } from "@/lib/checkout/terms";
 import { BookingSteps } from "@/components/booking/booking-steps";
@@ -30,7 +31,7 @@ export default function Page() {
     <>
       <SiteHeader />
       <main className="page-width flex-1 py-8">
-        <Suspense fallback={<p>Loading checkout…</p>}>
+        <Suspense fallback={<BookingLoading step={4} title="Save your card. Pay $0 today." message="Preparing your reservation summary…" form />}>
           <Payment />
         </Suspense>
       </main>

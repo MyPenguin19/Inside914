@@ -146,6 +146,21 @@ describe("ArtworkStudio upload", () => {
 });
 
 describe("ArtworkStudio editing", () => {
+  test("a slow save is acknowledged immediately and cannot be submitted twice", async () => {
+    let finish!: (value: { ok: false; reason: "error" }) => void;
+    const save = vi.fn(() => new Promise<{ ok: false; reason: "error" }>(resolve => { finish = resolve; }));
+    setup({ initialArtwork: READY, actions: actionsWith({ saveLayout: save }) });
+    fireEvent.click(screen.getByRole("button", { name: "Save artwork and continue" }));
+    const saving = screen.getByRole("button", { name: "Saving artwork…" });
+    expect(saving).toHaveProperty("disabled", true);
+    fireEvent.click(saving);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+    await act(async () => finish({ ok: false, reason: "error" }));
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save artwork and continue" })).toHaveProperty("disabled", false);
+  });
+
   test("a failed replacement preserves the existing preview", async () => {
     const { actions, chooseFile } = setup({ initialArtwork: READY, upload: async () => { throw new Error("offline"); } });
     chooseFile("new.png");

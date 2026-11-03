@@ -1,3 +1,4 @@
+import { AreasLoading } from "@/components/booking/booking-loading";
 import { marketingMetadata } from "@/lib/seo";
 import { PUBLIC_CHECKOUT_RELEASED, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 import { Suspense } from "react";
@@ -23,20 +24,11 @@ export default function AreasPage() {
           </p>
           {!PUBLIC_CHECKOUT_RELEASED && <p className="mt-3 max-w-2xl text-sm text-muted">{CHECKOUT_CLOSED_MESSAGE}</p>}
         </div>
-        <Suspense fallback={<AreasSkeleton />}>
+        <Suspense fallback={<AreasLoading />}>
           <div className="mt-6"><CategoryCheckout /></div>
         </Suspense>
       </main>
       <SiteFooter />
     </>
-  );
-}
-
-function AreasSkeleton() {
-  return (
-    <div className="mt-6 grid gap-4 md:grid-cols-2" aria-busy="true" aria-label="Loading advertising areas">
-      <div className="h-80 animate-pulse rounded-2xl border border-line bg-surface" />
-      <div className="h-48 animate-pulse rounded-2xl border border-line bg-surface" />
-    </div>
   );
 }

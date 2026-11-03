@@ -118,7 +118,7 @@ export function CategoryZoneSelector({ editions,checkoutOpen,invitation,invitati
             setMessage("");
             try {
               const result = await holdAreas({ selections: chosen.map(e => ({ editionId: e.id, slotId: positions[e.id] })) });
-              if (result.ok) router.push("/book/artwork");
+              if (result.ok) start(() => router.push("/book/artwork"));
               else { setMessage(result.message ?? "Please try again."); setPositions({}); router.refresh(); }
             } catch {
               setMessage("Connection interrupted. Your selection is still here. Check your held areas or try again.");

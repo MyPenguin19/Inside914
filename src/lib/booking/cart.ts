@@ -7,7 +7,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { createHoldToken, hashHoldToken } from "./hold-token";
 import { getPricingMode } from "@/lib/pricing";
 import {
-  getBookingById,
+  getBookingsByCartId,
   checkoutGate,
   newReference,
   stripeModeConflict,
@@ -59,16 +59,7 @@ export async function createCart(admin: Admin, raw: unknown) {
   return { id: data, token };
 }
 export async function cartById(admin: Admin, id: string) {
-  const { data, error } = await admin
-    .from("bookings")
-    .select("id")
-    .eq("cart_id", id)
-    .order("id");
-  if (error) throw error;
-  const members = await Promise.all(
-    (data ?? []).map((b) => getBookingById(admin, b.id)),
-  );
-  return members.filter((b): b is NonNullable<typeof b> => !!b);
+  return getBookingsByCartId(admin, id);
 }
 export async function ownedCart(admin: Admin, token: string | undefined) {
   if (!token) return null;

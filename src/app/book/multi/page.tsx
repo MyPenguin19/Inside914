@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AreasLoading } from "@/components/booking/booking-loading";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CategoryCheckout } from "@/components/booking/category-checkout";
@@ -10,7 +11,7 @@ export default function Page({searchParams}:{searchParams:Promise<{invite?:strin
         <h1 className="mb-6 text-3xl font-semibold">
           Choose your areas
         </h1>
-        <Suspense fallback={<p>Loading available campaigns…</p>}>
+        <Suspense fallback={<AreasLoading />}>
           <CategoryCheckout searchParams={searchParams}/>
         </Suspense>
       </main>

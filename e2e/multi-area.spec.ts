@@ -60,6 +60,32 @@ test("map selection matches cards and works with keyboard and touch-sized layout
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   await page.getByRole("button", { name: /Northern Westchester on map/ }).click();
   await expect(page.getByRole("checkbox", { name: /Northern Westchester/ })).toBeChecked();
+  for (const width of [320, 375, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const map = page.getByRole("group", { name: "Choose areas on the Westchester map" });
+    const label = map.getByText("CONNECTICUT", { exact: true });
+    const bounds = await map.boundingBox(), text = await label.boundingBox();
+    expect(text!.x).toBeGreaterThan(bounds!.x);
+    expect(text!.x + text!.width).toBeLessThan(bounds!.x + bounds!.width);
+    expect(text!.y).toBeGreaterThan(bounds!.y);
+    expect(text!.y + text!.height).toBeLessThan(bounds!.y + bounds!.height);
+    // A visible text node alone is insufficient: the old label was painted under the county.
+    const touchesCounty = await label.evaluate(element => {
+      const text = element as SVGGraphicsElement;
+      const county = text.ownerSVGElement!.querySelector("clipPath path") as SVGGeometryElement;
+      const bounds = text.getBBox(), transform = text.getCTM()!;
+      const toCounty = county.getCTM()!.inverse();
+      for (let x = bounds.x; x <= bounds.x + bounds.width; x += 2) {
+        for (let y = bounds.y; y <= bounds.y + bounds.height; y += 2) {
+          const point = new DOMPoint(x, y).matrixTransform(transform).matrixTransform(toCounty);
+          if (county.isPointInFill(point)) return true;
+        }
+      }
+      return false;
+    });
+    expect(touchesCounty).toBe(false);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
 });
 
 test("invitation preview uses normal area and position selection without holding inventory",async({page,browser})=>{

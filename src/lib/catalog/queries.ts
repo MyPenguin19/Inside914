@@ -42,6 +42,7 @@ type EditionRow = {
 
 const EDITION_COLUMNS =
   "id, issue_month, artwork_deadline, mail_date, status, reservations_paused_at, reservations_open_at, layout_template, product_model, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
+const SLOT_COLUMNS = "slot_id, side, label, x_in, y_in, width_in, height_in, available, occupancy";
 
 // Prices shown are what a hold would cost under the active pricing configuration (lib/pricing).
 // priced=false is ONLY for views that never show these prices (an existing reservation shows its
@@ -119,18 +120,43 @@ export async function getBookableEditions(): Promise<EditionSummary[]> {
   );
 }
 
+// The area chooser needs every position. Load all square campaigns in two reads instead of
+// loading summaries, then fetching each campaign and its positions again. Inventory stays fresh.
+export async function getBookableSquareCatalogs(): Promise<EditionCatalog[]> {
+  const supabase = createPublicClient();
+  const { data: editions, error } = await supabase.from("editions")
+    .select(EDITION_COLUMNS)
+    .eq("product_model", "square_v1")
+    .eq("status", "open")
+    .gt("artwork_deadline", new Date().toISOString())
+    .order("issue_month")
+    .returns<EditionRow[]>();
+  if (error) throw new Error(`Could not load editions: ${error.message}`);
+  if (!editions.length) return [];
+
+  const { data: rows, error: slotError } = await supabase.from("slot_availability")
+    .select(`edition_id, ${SLOT_COLUMNS}`)
+    .in("edition_id", editions.map(e => e.id))
+    .order("side", { ascending: false }).order("y_in").order("x_in");
+  if (slotError) throw new Error(`Could not load availability: ${slotError.message}`);
+  return editions.map(edition => {
+    const slots = toSlots((rows ?? []).filter(row => row.edition_id === edition.id));
+    return { ...toSummary(edition, slots), slots, pairs: [] };
+  }).filter(edition => edition.bookable);
+}
+
 export async function getEditionCatalog(editionId: string, { priced = true } = {}): Promise<EditionCatalog | null> {
   const supabase = createPublicClient();
-  const { data: edition, error } = await supabase
+  // Both reads use the public RLS client and are independent of each other.
+  const [{ data: edition, error }, availability] = await Promise.all([supabase
     .from("editions")
     .select(EDITION_COLUMNS)
     .eq("id", editionId)
     .returns<EditionRow[]>()
-    .maybeSingle();
+    .maybeSingle(), getAvailabilityRows(editionId)]);
   if (error) throw new Error(`Could not load edition: ${error.message}`);
   if (!edition) return null;
 
-  const availability = await getAvailabilityRows(editionId);
   const slots = toSlots(availability.slotRows);
   return { ...toSummary(edition, slots, priced), slots, pairs: toPairs(availability.pairRows) };
 }
@@ -149,7 +175,7 @@ async function getAvailabilityRows(editionId: string) {
   const [slots, pairs] = await Promise.all([
     supabase
       .from("slot_availability")
-      .select("slot_id, side, label, x_in, y_in, width_in, height_in, available, occupancy")
+      .select(SLOT_COLUMNS)
       .eq("edition_id", editionId)
       .order("side", { ascending: false })
       .order("y_in")

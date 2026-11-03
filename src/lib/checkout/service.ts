@@ -89,6 +89,14 @@ export async function getBookingById(admin: Admin, id: string) {
   return data ? toCheckoutBooking(data) : null;
 }
 
+// Caller must authorize access to this cart before displaying its members.
+export async function getBookingsByCartId(admin: Admin, cartId: string) {
+  const { data, error } = await admin.from("bookings").select(COLUMNS)
+    .eq("cart_id", cartId).order("id").returns<Row[]>();
+  if (error) throw new Error(`Could not load cart bookings: ${error.message}`);
+  return (data ?? []).map(toCheckoutBooking);
+}
+
 export type GateFailure = "no_hold" | "hold_expired" | "already_confirmed" | "artwork_missing" | "contact_missing";
 
 // Can this booking still go through checkout?

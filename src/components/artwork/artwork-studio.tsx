@@ -6,7 +6,7 @@ import { bookingSizeLabel, positionLabel } from "@/lib/booking/products";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, type DragEvent } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import type { ExtendResult, FinalizeResult, SimpleResult, UploadTicket } from "@/app/(public)/actions/artwork";
 import { CroppedImage } from "@/components/artwork/cropped-image";
@@ -123,7 +123,8 @@ export function ArtworkStudio({
   const [holdLost, setHoldLost] = useState(false);
   const secondsLeft = useHoldSecondsLeft(expiresAt);
 
-  const busy = phase !== "idle";
+  const [navigating, startNavigation] = useTransition();
+  const busy = phase !== "idle" || navigating;
   const aspect = ad.area.width / ad.area.height;
   const safeX = `${(PRINT_SPEC.safeMarginInches / ad.area.width) * 100}%`;
   const safeY = `${(PRINT_SPEC.safeMarginInches / ad.area.height) * 100}%`;
@@ -206,7 +207,7 @@ export function ArtworkStudio({
     try {
       const result = await actions.saveLayout({ artworkId: image.id, crop: roundCrop(area), zoom: cropping ? zoom : 1, cropApproved: needsApproval && cropApproved });
       if (!result.ok) return fail(result.reason);
-      router.push(nextHref);
+      startNavigation(() => router.push(nextHref));
     } catch { fail("error"); }
     finally { setPhase("idle"); }
   }
@@ -410,7 +411,7 @@ export function ArtworkStudio({
             <p className="font-display text-2xl font-medium">{formatPrice(ad.priceCents)}</p>
           </div>
           <Button size="lg" onClick={continueToReview} disabled={!image || !area || busy || expiredNow || (needsApproval && !cropApproved)} className="mt-3 w-full">
-            Save artwork and continue
+            {phase === "saving" ? "Saving artwork…" : navigating ? "Opening your areas…" : "Save artwork and continue"}
           </Button>
           {!image && <p className="mt-2 text-center text-xs text-muted">Add an image to continue.</p>}
         </div>

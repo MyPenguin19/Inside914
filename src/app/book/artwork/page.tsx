@@ -1,3 +1,4 @@
+import { BookingLoading } from "@/components/booking/booking-loading";
 import { getStagedArtwork } from "@/lib/artwork/service";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isLayoutV2 } from "@/lib/print/layouts";
@@ -26,7 +27,7 @@ export default function ArtworkPage({ searchParams }: { searchParams: Promise<{ 
       <SiteHeader />
       <main className="page-width flex-1 py-6 sm:py-8">
         <BookingSteps current={2} />
-        <Suspense fallback={<div className="mt-8 h-96 animate-pulse rounded-2xl border border-line bg-surface" />}>
+        <Suspense fallback={<BookingLoading step={2} title="Add your artwork" message="Preparing your artwork editor…" showSteps={false} />}>
           <Studio searchParams={searchParams} />
         </Suspense>
       </main>

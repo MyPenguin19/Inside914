@@ -1,3 +1,4 @@
+import { BookingLoading } from "@/components/booking/booking-loading";
 import { CartHoldTimer } from "@/components/booking/cart-hold-timer";
 import { Notice } from "@/components/ui/primitives";
 import { isDevTestModeActive } from "@/lib/dev/test-mode";
@@ -30,7 +31,7 @@ export default function Page() {
     <>
       <SiteHeader />
       <main className="page-width flex-1 py-8">
-        <Suspense fallback={<p>Loading your areas…</p>}>
+        <Suspense fallback={<BookingLoading step={2} title="Add your artwork" message="Loading your selected areas…" />}>
           <Cart />
         </Suspense>
       </main>
