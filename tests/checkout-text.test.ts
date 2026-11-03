@@ -12,7 +12,7 @@ describe("future-payment consent", () => {
     expect(consentText(39900)).toContain("Inside Diagnostics LLC, operating Inside914");
     expect(consentText(39900)).toContain("No payment is collected today.");
     expect(consentText(39900)).toContain("not a subscription");
-    expect(TERMS_VERSION).toBe("2026-10-24-review-4");
+    expect(TERMS_VERSION).toBe("2026-11-02-reservations-1");
   });
 });
 

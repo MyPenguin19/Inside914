@@ -1,0 +1,54 @@
+Inside914 — owner approval for new reservations
+Effective date: November 2, 2026 (America/New_York)
+
+The owner explicitly answered “Approve these policies for reservations” after
+review links were provided for the current Advertising Terms, Reservation /
+Cancellation Policy, Privacy Policy and saved-card consent wording. The question
+specified November 2, 2026 as the effective date, no claim of counsel approval,
+and continued disabled payment collection.
+
+New policy identifier: 2026-11-02-reservations-1
+New cart consent identifier: square-zones-2026-11-02-reservations-1
+Previous source: 2026-10-24-review-4
+
+All 47 policy sections and substantive wording are retained. Only the three
+document approval-status lines change. Existing qualifications in the approved
+wording remain; no counsel review or legal certification is asserted. The single
+and multi-campaign consent JSON is copied byte-for-byte. Historical policy files,
+accepted versions, stored consent text, amounts and timestamps remain unchanged.
+
+The source release now permits new reservations: select areas and positions,
+upload artwork, supply contact details, accept the current consent and save a
+card with $0 due today. Approval does not automatically open, reopen or otherwise
+change a campaign. Availability, deadline, inventory, authorization and pricing
+checks remain. The owner explicitly retained the intentional $1 testing prices.
+
+Payment collection remains separate and disabled:
+- LIVE_COLLECTION_RELEASED=false (unchanged).
+- INSIDE914_COLLECTION_MODE remains disabled; no Vercel environment change.
+- The database payment-consent allowlist is unchanged. This new reservation-only
+  version is not authorized by that allowlist for collection.
+- No PaymentIntent, charge, refund, provider test or Stripe write was performed.
+- Promotional invitation email remains disabled.
+
+Local preparation only. No production database changes, campaign status changes,
+push, merge or deployment are authorized by this policy approval. A subsequent
+approved application release is needed for the live site to use these changes.
+Future collection still needs its own reviewed consent/provider readiness and
+explicit release; do not backfill or rewrite historical customer authorization.
+
+Verification
+Typecheck, lint and the local production build pass. Unit: 565 passed.
+Integration: 195 passed, 3 real-Stripe cases skipped. Browser: 42 passed in the
+final full run; the contact test then passed after isolating its synthetic visitor
+from earlier localhost rate-limit attempts. All 43 browser scenarios are verified.
+The complete multi-area journey stores square-zones-2026-11-02-reservations-1 and
+the exact displayed authorization; mocked card saving charges $0 today.
+
+An additional local production-build check ran with fake reservations OFF and
+all provider credentials absent. Continue to artwork created one synthetic $1
+pending hold, opened the artwork page and survived refresh at 375px and 1440px.
+No document overflow, browser errors, external browser requests or zone charges.
+The temporary records were removed and the local server stopped. No Stripe write
+or email send was used for verification. Historic policy files and consent wording
+passed byte/hash preservation checks; database collection approval was not changed.

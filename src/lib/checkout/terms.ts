@@ -1,10 +1,11 @@
 import { formatPrice } from "@/lib/format";
-import wording from "@/lib/legal/versions/2026-10-24-review-4-consent.json";
+import wording from "@/lib/legal/versions/2026-11-02-reservations-1-consent.json";
+import { RESERVATION_POLICY } from "@/lib/legal/release";
 
-// Proposed draft: owner/counsel approval is required before production publication.
-// Historical versions and accepted records remain unchanged; see docs/phase615.
-export const TERMS_VERSION = "2026-10-24-review-4";
-export const CART_TERMS_VERSION = "square-zones-2026-10-24-review-4";
+// Owner-approved for new reservations. Collection still needs a separate release.
+// Historical versions and accepted records remain unchanged.
+export const TERMS_VERSION = RESERVATION_POLICY.version;
+export const CART_TERMS_VERSION = `square-zones-${TERMS_VERSION}`;
 export const DEADLINE_POLICY = "If the campaign is incomplete at its deadline, new reservations close while Inside914 reviews cancellation or revised dates. No charge occurs while the campaign is incomplete. Material changes to your billing agreement require your explicit agreement.";
 export function consentText(amountCents: number) {
   return wording.single.replace("[ACTUAL AGREED PRICE]", formatPrice(amountCents));

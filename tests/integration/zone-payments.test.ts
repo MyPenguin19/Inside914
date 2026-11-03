@@ -43,8 +43,8 @@ afterAll(async()=>{
  delete from auth.users where id='${fixture.admin}';
  delete from private.approved_layout_templates where template_key='amazingmail-9x6-ten-square-draft' and approval_reference='TRANSACTION-ONLY TEST; rolled back; NOT printer approval';commit;`);
 });
-test("proposed single and cart review versions cannot authorize collection", () => {
- for (const version of [TERMS_VERSION, CART_TERMS_VERSION]) {
+test("old draft and new reservation-only policy versions cannot authorize collection", () => {
+ for (const version of ["2026-10-24-review-4", "square-zones-2026-10-24-review-4", TERMS_VERSION, CART_TERMS_VERSION]) {
   const result=command(`begin;
    insert into payment_consents(booking_id,edition_id,stripe_setup_intent_id,amount_cents,pricing_mode,terms_version)
    select booking_id,edition_id,'seti_proposed_review_fixture',amount_cents,pricing_mode,'${version}'

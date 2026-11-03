@@ -29,7 +29,7 @@ import type { ContactFormState } from "@/app/(public)/actions/checkout";
 import { getStripe } from "@/lib/checkout/stripe";
 import { isDevTestModeActive, isTestStripeId } from "@/lib/dev/test-mode";
 import { fakeStripe } from "@/lib/dev/fake-stripe";
-import { createCategoryCart } from "@/lib/booking/category-checkout";
+import { createCategoryCart, ZoneSelection } from "@/lib/booking/category-checkout";
 const token = async () => (await cookies()).get(CART_COOKIE)?.value;
 const options = {
   httpOnly: true,
@@ -69,8 +69,12 @@ export async function holdAreas(raw: unknown) {
         message:
           "You already have held areas. Return to your area reservation to finish or release them.",
       };
-    const cart = await createCategoryCart(admin, raw);
+    const selection = ZoneSelection.parse(raw);
+    const cart = await createCategoryCart(admin, selection);
     (await cookies()).set(CART_COOKIE, cart.token, options);
+    // Open the first selected area's existing editor directly. This token is derived
+    // from the successfully created cart, never from a browser-supplied credential.
+    (await cookies()).set(HOLD_COOKIE, cartMemberToken(cart.token, selection.selections[0].editionId), options);
     return { ok: true };
   } catch (e) {
     return {

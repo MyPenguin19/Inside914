@@ -8,6 +8,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { BookingSteps } from "@/components/booking/booking-steps";
 import { ReservationSummary } from "@/components/checkout/reservation-summary";
+import { AreaOrderSummary } from "@/components/checkout/area-order-summary";
+import { ArtworkActionButton } from "@/components/booking/artwork-action-button";
 import { buttonClass } from "@/components/ui/button";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -60,7 +62,7 @@ async function Cart() {
       {cart.members.every(b=>b.status==="pending")&&<CartHoldTimer extensionUsed={cart.members.some(b=>b.holdExtensions>0)} expiresAt={cart.members.map(b=>b.holdExpiresAt!).sort()[0]}/>}
       {!confirmed && <BookingSteps current={2} />}
       <h1 className="text-3xl font-semibold">
-        {confirmed ? "Your areas are reserved" : "Your area reservation"}
+        {confirmed ? "Your areas are reserved" : "Add your artwork"}
       </h1>
       {isDevTestModeActive() && (
         <Notice tone="warning">
@@ -71,8 +73,9 @@ async function Cart() {
       <p>
         {confirmed
           ? "Nothing was charged today. Each campaign has its own reservation reference and confirmation."
-          : "Upload artwork for each area, or reuse an image and position it for that area. All areas must be ready before checkout."}
+          : cart.members.length === 1 ? "Add your ad image, check how it looks, then continue." : "Use the same image in every area, or a different one for each."}
       </p>
+      {!confirmed && !expired && <p role="status" className="text-sm font-medium text-accent">{cart.members.filter(b => b.artworkReady).length} of {cart.members.length} {cart.members.length === 1 ? "ad" : "ads"} ready</p>}
       {expired && (
         <p role="alert">
           This group is no longer available. Release the holds and choose your
@@ -81,8 +84,8 @@ async function Cart() {
       )}
       <div className="grid gap-6 md:grid-cols-2">
         {cart.members.map((b, i) => (
-          <section className="min-w-0 space-y-3" key={b.id}>
-            {views[i] && <ReservationSummary provisional view={views[i]!} />}
+          <section aria-label={views[i]?.zoneName} className="min-w-0 space-y-4 rounded-2xl border border-line bg-surface p-5" key={b.id}>
+            {views[i] && (confirmed ? <ReservationSummary provisional view={views[i]!} /> : <AreaOrderSummary view={views[i]!} />)}
             {confirmed && <p>{views[i]?.campaign.taken ?? 0} of {views[i]?.campaign.total ?? 10} advertisers reserved · {formatPrice(b.priceCents)} authorized · Not charged today</p>}
             {b.reference && (
               <p className="font-semibold">Reference: {b.reference}</p>
@@ -90,22 +93,23 @@ async function Cart() {
             {!confirmed && !expired && (
               <>
                 <p>
-                  Artwork:{" "}
-                  {b.artworkReady ? "Ready" : "Upload or position image"}
+                  {b.artworkReady ? "✓ Artwork saved" : "Add an image to continue"}
                 </p>
                 <form action={editAreaArtwork}>
                   <input type="hidden" name="bookingId" value={b.id} />
-                  <button className={buttonClass("secondary")}>
-                    Edit artwork for {views[i]?.zoneName ?? "this area"}
-                  </button>
+                  <ArtworkActionButton secondary={b.artworkReady} ariaLabel={`${b.artworkReady ? "Edit" : "Add"} artwork for ${views[i]?.zoneName ?? "this area"}`}>
+                    {b.artworkReady ? "Edit artwork" : "Add artwork"}
+                  </ArtworkActionButton>
                 </form>
                 {cart.members.some(
                   (other) => other.id !== b.id && other.artworkReady,
                 ) && (
-                  <form action={reuseArtwork} className="space-y-2">
+                  <details open={!b.artworkReady}>
+                  <summary className="cursor-pointer text-sm text-muted">Use artwork from another area</summary>
+                  <form action={reuseArtwork} className="mt-3 space-y-2">
                     <input type="hidden" name="bookingId" value={b.id} />
                     <label className="block">
-                      Reuse artwork from
+                      Use artwork from
                       <select
                         name="sourceId"
                         className="mt-1 block w-full rounded-xl border border-line bg-surface p-3"
@@ -119,21 +123,23 @@ async function Cart() {
                         )}
                       </select>
                     </label>
-                    <button className={buttonClass("secondary")}>
-                      Copy image and position for this area
-                    </button>
+                    <ArtworkActionButton secondary>Use this image</ArtworkActionButton>
                   </form>
+                  </details>
                 )}
               </>
             )}
           </section>
         ))}
       </div>
-      <p className="text-xl font-semibold">
+      <section aria-label="Artwork and next step" className={confirmed || gate ? "space-y-3" : "sticky bottom-0 z-20 space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-lg sm:bottom-3"}>
+      <p className="font-semibold">
         Total if all selected campaigns fill: {formatPrice(cart.members.reduce((n, b) => n + b.priceCents, 0))}
       </p>
       <p>Due today: $0</p>
       {!confirmed && !gate && <Link className={buttonClass("primary")} href="/book/cart/details">Continue to business details</Link>}
+      {!confirmed && !expired && gate === "artwork_missing" && <p className="text-sm text-muted">Save artwork for each area to continue to business details.</p>}
+      </section>
       {!confirmed && (
         <form action={releaseAreas}>
           <button className="underline">

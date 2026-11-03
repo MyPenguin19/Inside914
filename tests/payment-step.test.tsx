@@ -200,3 +200,32 @@ test.each([
   expect(screen.getByText("Due today: $0.00. No payment is collected today.")).toBeTruthy();
   expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(false);
 });
+
+
+test("a connection failure after saving a card can retry confirmation without saving it twice", async () => {
+ const s = setup();
+ await readyAndFilled(s);
+ s.actions.confirmReservation.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+ fireEvent.click(s.submit());
+ expect((await screen.findByRole("alert")).textContent).toContain("Connection interrupted");
+ expect(s.submit().hasAttribute("disabled")).toBe(false);
+ expect((s.consent() as HTMLInputElement).checked).toBe(true);
+ fireEvent.click(s.submit());
+ await waitFor(() => expect(push).toHaveBeenCalledWith("/book/confirmed"));
+ expect(s.stripe.confirmSetup).toHaveBeenCalledTimes(1);
+ expect(s.actions.confirmReservation).toHaveBeenCalledTimes(2);
+});
+
+test("a connection failure recording consent preserves the form and permits retry", async () => {
+ const s = setup();
+ await readyAndFilled(s);
+ s.actions.giveConsent.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+ fireEvent.click(s.submit());
+ expect((await screen.findByRole("alert")).textContent).toContain("Connection interrupted");
+ expect(s.stripe.confirmSetup).not.toHaveBeenCalled();
+ expect(s.submit().hasAttribute("disabled")).toBe(false);
+ fireEvent.click(s.submit());
+ await waitFor(() => expect(push).toHaveBeenCalledWith("/book/confirmed"));
+ expect(s.stripe.confirmSetup).toHaveBeenCalledTimes(1);
+ expect(screen.queryByText(/Pending owner and legal review/)).toBeNull();
+});

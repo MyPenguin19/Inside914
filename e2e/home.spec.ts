@@ -1,11 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-test("homepage: hero, Verified Mail, how it works, pricing, FAQ and footer", async ({ page }) => {
+test("homepage: hero, how it works, pricing, FAQ and footer", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle("Westchester Postcard Advertising | Inside914");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your Business.Westchester Mailboxes.");
   await expect(page.getByText(/Pick your areas, choose a position, and add your ad/)).toBeVisible();
   await expect(page.getByRole("img", { name: /Illustration of the shared Inside914 postcard/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Verified Mail" })).toHaveCount(0);
+  await expect(page.locator("#verified-mail")).toHaveCount(0);
+  await expect(page.getByText("How does mailing verification work?")).toHaveCount(0);
+  await expect(page.getByText(/Reservations are not open yet/)).toHaveCount(0);
 
   for (const heading of ["Four simple steps.", "Simple, clear pricing.", "Good to know."]) {
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
@@ -36,7 +40,7 @@ test("homepage: no sideways scrolling on a phone, and the menu opens", async ({ 
     for (const route of ["/", "/areas"]) {
       await page.goto(route);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      if (route === "/areas") await expect(page.getByRole("heading", { name: "Selected: 0 areas" })).toBeVisible();
+      if (route === "/areas") await expect(page.getByText("Choose an area to get started", { exact: false })).toBeVisible();
       if (route === "/") {
         for (const summary of await page.locator("#faq summary").all()) await summary.click();
       }

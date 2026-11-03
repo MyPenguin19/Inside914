@@ -8,10 +8,12 @@ import type { ArtworkView } from "@/lib/artwork/service";
 // MOCKED: server actions, Storage upload, browser image decoding and the cropper itself (jsdom
 // has no layout). Real Storage and database behavior is covered in tests/integration and e2e/.
 const push = vi.fn();
+const cropper = vi.hoisted(() => ({ change: null as null | ((area: unknown, pixels: unknown) => void) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 vi.mock("react-easy-crop", () => ({
   default: function CropperStub(props: { onCropAreaChange: (a: unknown, px: unknown) => void; zoom: number }) {
     const { onCropAreaChange, zoom } = props;
+    cropper.change = onCropAreaChange;
     useEffect(() => {
       onCropAreaChange({ x: 0, y: 0, width: 100, height: 100 }, { x: 10.4, y: 20.6, width: 974.7, height: 899.2 });
     }, [onCropAreaChange]);
@@ -84,6 +86,14 @@ function setup(opts: {
   };
   return { actions, upload, chooseFile };
 }
+
+test.each([0, Number.NaN, Number.POSITIVE_INFINITY])("customer preview preserves its crop during invalid resize width %s", width => {
+  setup({ initialArtwork: READY });
+  const before = screen.getByRole("button", { name: "Save artwork and continue" }).getAttribute("disabled");
+  act(() => cropper.change!({}, { x: 10, y: 21, width, height: 899 }));
+  expect(screen.getByRole("button", { name: "Save artwork and continue" }).getAttribute("disabled")).toBe(before);
+  expect(screen.getByTestId("cropper")).toBeTruthy();
+});
 
 describe("ArtworkStudio upload", () => {
   test("states the accepted formats and size limit up front", () => {

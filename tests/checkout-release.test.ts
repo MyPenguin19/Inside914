@@ -1,20 +1,28 @@
 import { afterEach, expect, test, vi } from "vitest";
 vi.mock("server-only",()=>({}));
 import { checkoutReleased, PUBLIC_CHECKOUT_RELEASED, assertCheckoutReleased } from "@/lib/checkout/release";
-import { createCart, startCartPayment, completeCart } from "@/lib/booking/cart";
-import { placeHold } from "@/lib/booking/place-hold";
-import { startPayment, recordConsent, completeReservation } from "@/lib/checkout/service";
-afterEach(()=>vi.unstubAllEnvs());
-test("public release is closed regardless of deployment flags, except isolated development fixtures",()=>{
- expect(PUBLIC_CHECKOUT_RELEASED).toBe(false);
- const local={NODE_ENV:"development",INSIDE914_DEV_TEST_RESERVATIONS:"true",NEXT_PUBLIC_SUPABASE_URL:"http://127.0.0.1:54321"};
- expect(checkoutReleased(local)).toBe(true);
- for(const override of [{NODE_ENV:"production"},{VERCEL:"1"},{VERCEL_ENV:"production"},{NEXT_PUBLIC_SUPABASE_URL:"https://production.supabase.co"},{INSIDE914_DEV_TEST_RESERVATIONS:"false"}]) expect(checkoutReleased({...local,...override})).toBe(false);
- expect(checkoutReleased({PUBLIC_CHECKOUT_RELEASED:"true"})).toBe(false);
+import { LIVE_COLLECTION_RELEASED, assertCollectionEnvironment } from "@/lib/payments/environment";
+import { RESERVATION_POLICY } from "@/lib/legal/release";
+afterEach(()=>{vi.unstubAllEnvs();vi.doUnmock("@/lib/legal/release");vi.resetModules();});
+test("owner-approved policies release normal reservations without enabling collection",()=>{
+ expect(RESERVATION_POLICY).toEqual({version:"2026-11-02-reservations-1",effectiveDate:"2026-11-02",approvedForReservations:true});
+ expect(PUBLIC_CHECKOUT_RELEASED).toBe(true);
+ expect(checkoutReleased({NODE_ENV:"production",VERCEL_ENV:"production",INSIDE914_DEV_TEST_RESERVATIONS:"false"})).toBe(true);
+ expect(assertCheckoutReleased).not.toThrow();
+ expect(LIVE_COLLECTION_RELEASED).toBe(false);
+ expect(()=>assertCollectionEnvironment({INSIDE914_COLLECTION_MODE:"disabled"})).toThrow("Payment collection is disabled");
+ expect(()=>assertCollectionEnvironment({INSIDE914_COLLECTION_MODE:"live"})).toThrow("Live collection is not released");
 });
-test("direct hold, consent, setup and confirmation calls fail before DB or Stripe access",async()=>{
+test("with source approval withdrawn, direct hold, consent, setup and confirmation still fail before infrastructure access",async()=>{
+ vi.resetModules();
+ vi.doMock("@/lib/legal/release",()=>({RESERVATION_POLICY:{approvedForReservations:false}}));
+ const release=await import("@/lib/checkout/release");
+ const { createCart, startCartPayment, completeCart }=await import("@/lib/booking/cart");
+ const { placeHold }=await import("@/lib/booking/place-hold");
+ const { startPayment, recordConsent, completeReservation }=await import("@/lib/checkout/service");
  vi.stubEnv("VERCEL_ENV","production");
- expect(assertCheckoutReleased).toThrow("Reservations are not open yet");
+ expect(release.checkoutReleased({PUBLIC_CHECKOUT_RELEASED:"true",NODE_ENV:"production"})).toBe(false);
+ expect(release.assertCheckoutReleased).toThrow("Reservations are not open yet");
  const db=new Proxy({}, {get(){throw new Error("DB must not be touched");}}) as never;
  const stripe=new Proxy({}, {get(){throw new Error("Stripe must not be touched");}}) as never;
  const calls=[()=>createCart(db,[]),()=>placeHold(db,{}),()=>startCartPayment(db,stripe,undefined),()=>completeCart(db,stripe,"fixture"),()=>startPayment(db,stripe,undefined),()=>recordConsent(db,undefined,{}),()=>completeReservation(db,stripe,"fixture")];

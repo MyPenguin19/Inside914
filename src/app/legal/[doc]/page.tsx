@@ -4,8 +4,9 @@ import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { LegalDocument, legalDocuments, LEGAL_VERSION } from "@/components/legal-document";
+import { RESERVATION_POLICY } from "@/lib/legal/release";
 
-// Draft policies are public for review, not eligible for search indexing until legally approved.
+// Keep policy pages accessible without changing the existing marketing SEO scope.
 export async function generateMetadata({ params }: PageProps<"/legal/[doc]">): Promise<Metadata> {
   const { doc } = await params;
   const titles: Record<string, string> = {
@@ -25,8 +26,8 @@ export default function LegalPage({ params }: PageProps<"/legal/[doc]">) {
     <SiteHeader />
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
       <p className="rounded-lg border border-dashed border-line px-4 py-3 text-sm text-muted">
-        <strong className="text-foreground">Proposed policy pending owner and qualified legal-counsel review.</strong>{" "}
-        Version {LEGAL_VERSION}. Effective date: Pending approval.
+        <strong className="text-foreground">Effective date: <time dateTime={RESERVATION_POLICY.effectiveDate}>November 2, 2026</time>.</strong>{" "}
+        Version {LEGAL_VERSION}.
       </p>
       <Suspense fallback={<div className="mt-6 h-64 animate-pulse rounded-2xl bg-surface" />}>
         <LegalDoc params={params} />

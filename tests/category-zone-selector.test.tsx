@@ -6,7 +6,43 @@ const {hold,push,refresh}=vi.hoisted(()=>({hold:vi.fn(),push:vi.fn(),refresh:vi.
 vi.mock("next/navigation",()=>({useRouter:()=>({push,refresh})}));
 vi.mock("@/app/book/cart/actions",()=>({holdAreas:hold}));
 afterEach(()=>{cleanup();vi.clearAllMocks();});
-const props:CategoryCatalog={ editions: REGIONS.map((r,i)=>({id:`e${i}`,productModel:"square_v1",zoneSlug:r.slug,zoneName:r.name,households:5000,issueMonth:"2027-01-01",artworkDeadline:"2026-12-15",mailDate:null,unitPriceCents:39900,doublePriceCents:null,pricingMode:"test",bookable:true,totalUnits:10,availableUnits:10,pairs:[],slots:[{id:`s${i}`,side:"front",label:"F1",x:0.75,y:0.5,width:2.5,height:2.5,available:true}]})) };
+const props:CategoryCatalog & {checkoutOpen:boolean}={ checkoutOpen:true, editions: REGIONS.map((r,i)=>({id:`e${i}`,productModel:"square_v1",zoneSlug:r.slug,zoneName:r.name,households:5000,issueMonth:"2027-01-01",artworkDeadline:"2026-12-15",mailDate:null,unitPriceCents:39900,doublePriceCents:null,pricingMode:"test",bookable:true,totalUnits:10,availableUnits:10,pairs:[],slots:[{id:`s${i}`,side:"front",label:"F1",x:0.75,y:0.5,width:2.5,height:2.5,available:true}]})) };
+test("closed checkout allows previews but never offers an active hold action",()=>{
+ render(<CategoryZoneSelector {...props} checkoutOpen={false}/>);
+ fireEvent.click(screen.getByRole("checkbox",{name:/Central/}));
+ fireEvent.click(screen.getByRole("button",{name:"Preview selected areas"}));
+ fireEvent.click(screen.getByRole("button",{name:/position F1:/}));
+ expect(screen.getByRole("button",{name:"Reservations not open yet"})).toHaveProperty("disabled",true);
+ expect(screen.queryByRole("button",{name:"Continue to artwork"})).toBeNull();
+ expect(screen.getByRole("status").textContent).toContain("Reservations are not open yet");
+ expect(screen.queryByRole("link",{name:"Return to held areas"})).toBeNull();
+ expect(hold).not.toHaveBeenCalled();
+});
+test("a disconnected hold request keeps the chosen square and explains how to retry",async()=>{
+ hold.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+ render(<CategoryZoneSelector {...props} checkoutOpen/>);
+ fireEvent.click(screen.getByRole("checkbox",{name:/Central/}));
+ fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
+ fireEvent.click(screen.getByRole("button",{name:/position F1:/}));
+ fireEvent.click(screen.getByRole("button",{name:"Continue to artwork"}));
+ await waitFor(()=>expect(screen.getByRole("alert").textContent).toContain("Connection interrupted"));
+ expect(screen.getByRole("button",{name:/position F1:/}).getAttribute("aria-pressed")).toBe("true");
+ expect(push).not.toHaveBeenCalled();
+ hold.mockResolvedValueOnce({ok:true});
+ const retry = await screen.findByRole("button",{name:"Continue to artwork"});
+ await waitFor(()=>expect(retry).toHaveProperty("disabled",false));
+ fireEvent.click(retry);
+ await waitFor(()=>expect(push).toHaveBeenCalledWith("/book/artwork"));
+});
+test("a refreshed catalog cannot submit a selected position that became unavailable",()=>{
+ const {rerender}=render(<CategoryZoneSelector {...props}/>);
+ fireEvent.click(screen.getByRole("checkbox",{name:/Central/}));
+ fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
+ fireEvent.click(screen.getByRole("button",{name:/position F1:/}));
+ rerender(<CategoryZoneSelector {...props} editions={props.editions.map(e=>({...e,slots:e.slots.map(s=>({...s,available:false}))}))}/>);
+ expect(screen.getByRole("button",{name:"Continue to artwork"})).toHaveProperty("disabled",true);
+ expect(hold).not.toHaveBeenCalled();
+});
 test("areas need no category and each selected area needs an explicit square", async()=>{
  hold.mockResolvedValue({ok:true});render(<CategoryZoneSelector {...props}/>);
  expect(screen.queryByLabelText("Choose your business category")).toBeNull();
@@ -16,9 +52,9 @@ test("areas need no category and each selected area needs an explicit square", a
  expect(screen.getByText("Due today: $0")).toBeTruthy();
  fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
  expect((screen.getByRole("button",{name:"Continue to artwork"}) as HTMLButtonElement).disabled).toBe(true);
- for(const name of ["Central Westchester","Southern Westchester"])fireEvent.click(within(screen.getByRole("region",{name})).getByRole("button",{name:/position F1:/}));
+ for(const name of ["Central Westchester","Southern Westchester"]) { fireEvent.click(screen.getByRole("button",{name:`Choose position for ${name}`})); fireEvent.click(within(screen.getByRole("region",{name})).getByRole("button",{name:/position F1:/})); }
  fireEvent.click(screen.getByRole("button",{name:"Continue to artwork"}));
- await waitFor(()=>expect(push).toHaveBeenCalledWith("/book/cart"));
+ await waitFor(()=>expect(push).toHaveBeenCalledWith("/book/artwork"));
  expect(hold).toHaveBeenCalledWith({selections:[{editionId:"e0",slotId:"s0"},{editionId:"e1",slotId:"s1"}]});
 });
 test("lost square race refreshes availability without substituting another position",async()=>{
@@ -54,7 +90,7 @@ test("map and area cards share selection, including keyboard controls", () => {
 });
 
 test("the map cannot select a closed or full campaign", () => {
- render(<CategoryZoneSelector editions={[{...props.editions[0], availableUnits: 0}]}/>);
+ render(<CategoryZoneSelector checkoutOpen editions={[{...props.editions[0], availableUnits: 0}]}/>);
  for (const area of ["Central", "Northern"]) {
   const button = screen.getByRole("button", {name: new RegExp(`${area} Westchester on map`)});
   expect(button.getAttribute("aria-disabled")).toBe("true");
@@ -65,7 +101,7 @@ test("the map cannot select a closed or full campaign", () => {
 });
 
 test("different campaign prices produce a correct multi-area authorization",()=>{
- render(<CategoryZoneSelector editions={props.editions.map((e,i)=>({...e,unitPriceCents:[39900,44900,29900,39900][i]}))}/>);
+ render(<CategoryZoneSelector checkoutOpen editions={props.editions.map((e,i)=>({...e,unitPriceCents:[39900,44900,29900,39900][i]}))}/>);
  for(const name of [/Central/,/Southern/,/Northern/])fireEvent.click(screen.getByRole("checkbox",{name}));
  expect(screen.getByText("Total if all selected campaigns fill: $1,147")).toBeTruthy();
  expect(screen.getByText("Due today: $0")).toBeTruthy();
@@ -82,4 +118,23 @@ test("closed checkout displays its neutral server refusal in the area picker",as
  await waitFor(()=>expect(screen.getByRole("alert").textContent).toBe(message));
  expect(push).not.toHaveBeenCalled();
  expect(screen.getByRole("heading",{name:"Choose one position in each area"})).toBeTruthy();
+});
+
+
+test("one position picker at a time keeps previous choices when going back", () => {
+ render(<CategoryZoneSelector {...props}/>);
+ for(const name of [/Central/, /Southern/]) fireEvent.click(screen.getByRole("checkbox",{name}));
+ fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
+ expect(screen.queryByRole("region",{name:"Southern Westchester"})).toBeNull();
+ fireEvent.click(screen.getByRole("button",{name:/position F1:/}));
+ fireEvent.click(screen.getByRole("button",{name:"Next: Southern Westchester"}));
+ expect(screen.queryByRole("region",{name:"Central Westchester"})).toBeNull();
+ fireEvent.click(screen.getByRole("button",{name:/position F1:/}));
+ expect(screen.getByRole("button",{name:"Continue to artwork"})).toHaveProperty("disabled",false);
+ fireEvent.click(screen.getByRole("button",{name:"Change areas"}));
+ fireEvent.click(screen.getByRole("checkbox",{name:/Southern/}));
+ fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
+ expect(screen.getByRole("button",{name:/position F1:/}).getAttribute("aria-pressed")).toBe("true");
+ expect(screen.getByRole("button",{name:"Continue to artwork"})).toHaveProperty("disabled",false);
+ expect(hold).not.toHaveBeenCalled();
 });

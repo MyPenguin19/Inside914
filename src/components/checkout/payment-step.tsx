@@ -36,6 +36,7 @@ export function PaymentStep({ multiple = false, successHref = "/book/confirmed",
   const started = useRef(false);
   const stripeRef = useRef<{ stripe: Stripe; elements: StripeElements } | null>(null);
   const inFlight = useRef(false); // blocks a second submit even within the same frame
+  const cardSaved = useRef(false);
   const [phase, setPhase] = useState<Phase>(publishableKey || testMode ? "loading" : "unavailable");
   const [cardComplete, setCardComplete] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -52,7 +53,7 @@ export function PaymentStep({ multiple = false, successHref = "/book/confirmed",
         setPhase("unavailable");
         return fail(result.reason);
       }
-      if (result.status === "succeeded") return setPhase("saved"); // card already saved earlier
+      if (result.status === "succeeded") { cardSaved.current = true; return setPhase("saved"); }
       if (testMode) {
         setCardComplete(true); // the simulated card needs no input
         return setPhase("ready");
@@ -78,10 +79,11 @@ export function PaymentStep({ multiple = false, successHref = "/book/confirmed",
   }, [publishableKey, testMode, actions, loadStripeJs]);
 
   async function finish() {
+    cardSaved.current = true;
     setPhase("submitting");
     const { outcome } = await actions.confirmReservation();
     if (outcome === "confirmed" || outcome === "already_confirmed") return router.push(successHref);
-    setPhase("ready");
+    setPhase("saved");
     fail(outcome);
   }
 
@@ -92,6 +94,9 @@ export function PaymentStep({ multiple = false, successHref = "/book/confirmed",
     inFlight.current = true;
     try {
       await submitOnce();
+    } catch {
+      setPhase(cardSaved.current ? "saved" : "ready");
+      setError({ text: "Connection interrupted. Please try again to finish your reservation. Nothing is charged today.", startOver: false });
     } finally {
       inFlight.current = false;
     }
@@ -103,11 +108,11 @@ export function PaymentStep({ multiple = false, successHref = "/book/confirmed",
 
     const consentResult = await actions.giveConsent({ accepted: consent, termsVersion, displayedConsent: consentText });
     if (!consentResult.ok) {
-      setPhase(stripeRef.current ? "ready" : "saved");
+      setPhase(cardSaved.current ? "saved" : "ready");
       return fail(consentResult.reason ?? "error");
     }
 
-    if (phase === "saved") return finish();
+    if (cardSaved.current) return finish();
 
     if (testMode) {
       const simulated = await actions.simulateCardSetup?.();
@@ -141,14 +146,15 @@ export function PaymentStep({ multiple = false, successHref = "/book/confirmed",
 
   if (phase === "unavailable") {
     return (
-      <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
+      <div role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
         {error?.text ?? checkoutMessage("payments_unavailable")}{" "}
         {error?.startOver && (
           <Link href="/areas" className="font-medium underline">
             Choose a position
           </Link>
         )}
-      </p>
+        {!error?.startOver && (publishableKey || testMode) && <button type="button" onClick={() => window.location.reload()} className="mt-3 block min-h-11 font-medium underline">Reload secure card form</button>}
+      </div>
     );
   }
 
@@ -180,7 +186,7 @@ export function PaymentStep({ multiple = false, successHref = "/book/confirmed",
         </div>
       )}
 
-      <p className="text-sm text-muted">Proposed authorization {termsVersion} · Pending owner and legal review.</p>
+      <h2 className="font-semibold">Your permission to save a card</h2>
       <label className="flex gap-3 rounded-xl border border-line bg-surface p-4 text-sm leading-6">
         <input
           type="checkbox"

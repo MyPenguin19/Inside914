@@ -18,12 +18,15 @@ type Props = {
   submitLabel?: string;
 };
 
-export function ContactForm({ action, initial, onDone, lockedCategory, hideCategory, submitLabel = "Continue to payment details" }: Props) {
+export function ContactForm({ action, initial, onDone, lockedCategory, hideCategory, submitLabel = "Continue to save card" }: Props) {
   const [state, formAction, pending] = useActionState(action, { values: initial });
   useEffect(() => {
     if (state.done) onDone?.();
   }, [state.done, onDone]);
   const formRef=useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (state.errors) formRef.current?.querySelector<HTMLInputElement>('[aria-invalid="true"]')?.focus();
+  }, [state.errors]);
   useEffect(()=>{
     // Only public business name/website are retained locally; no personal contact or card data.
     try { const saved=JSON.parse(sessionStorage.getItem("inside914-business-draft")??"{}");
@@ -83,7 +86,7 @@ export function ContactFields({ values, errors, lockedCategory, hideCategory }: 
         autoComplete="email"
         inputMode="email"
         required
-        hint="We'll send your confirmation and private reservation link here."
+        hint="Your confirmation and reservation link go here. No account needed."
       />
       <TextField {...field("phone")} label="Phone" type="tel" autoComplete="tel" inputMode="tel" required />
       <TextField {...field("website")} label="Website" autoComplete="url" inputMode="url" optional />

@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { categoryCatalog } from "@/lib/booking/category-checkout";
 import { CategoryZoneSelector } from "./category-zone-selector";
 import { Notice } from "@/components/ui/primitives";
+import { checkoutReleased } from "@/lib/checkout/release";
 export async function CategoryCheckout({searchParams}:{searchParams?:Promise<{invite?:string}>}) {
   await connection();
   let catalog;
@@ -11,5 +12,5 @@ export async function CategoryCheckout({searchParams}:{searchParams?:Promise<{in
   catch { return <Notice tone="danger" role="alert">Area availability could not be loaded. Please refresh; nothing was reserved.</Notice>; }
   const invite=(await searchParams)?.invite;
   const offer=invite?await invitationOffer(createAdminClient(),invite).catch(()=>null):null;
-  return <CategoryZoneSelector {...catalog} invitation={offer?{editionId:offer.editionId,slotId:offer.slotId}:undefined} invitationUnavailable={!!invite&&!offer}/>;
+  return <CategoryZoneSelector {...catalog} checkoutOpen={checkoutReleased()} invitation={offer?{editionId:offer.editionId,slotId:offer.slotId}:undefined} invitationUnavailable={!!invite&&!offer}/>;
 }

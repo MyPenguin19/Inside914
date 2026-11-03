@@ -71,8 +71,8 @@ describe("public SEO and indexing boundaries", () => {
       expect(JSON.stringify([page, breadcrumb])).not.toMatch(/AggregateRating|LocalBusiness|streetAddress|latitude/);
     }
   });
-  it("does not release checkout, collection or invitation emails", () => {
-    expect(PUBLIC_CHECKOUT_RELEASED).toBe(false);
+  it("approved reservations remain separate from collection and invitation emails", () => {
+    expect(PUBLIC_CHECKOUT_RELEASED).toBe(true);
     expect(LIVE_COLLECTION_RELEASED).toBe(false);
     expect(INVITATION_EMAIL_RELEASED).toBe(false);
   });

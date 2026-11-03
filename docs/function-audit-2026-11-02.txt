@@ -1,0 +1,296 @@
+Inside914 functional audit — November 2, 2026
+
+Scope and outcome
+-----------------
+Audited the customer booking path, artwork editors, administrator workflows,
+reservation recovery, payment/collection boundaries, email delivery code,
+private downloads, print rendering, public SEO, and database authorization.
+Ran the complete existing automated suites against the isolated local database.
+Production inspection was read-only. This is functional regression evidence,
+not a guarantee that every possible input or external provider failure is covered.
+
+Base: 28191f7e2abd80e68fb098e7054f38b0a6915382 (main and origin/main at audit).
+Local work: fix/checkout-audit. Changes remain uncommitted and undeployed.
+Observed production: dpl_9RLNQ3dD2QrJ3KuVbopM5nEa3moV, READY, same base SHA.
+
+Reported “Continue to artwork” failure
+-------------------------------------
+At the start of the audit, PUBLIC_CHECKOUT_RELEASED was false in
+src/lib/checkout/release.ts.
+holdAreas() refuses new holds before database or Stripe access when this gate
+is closed. /book/layout.tsx also refuses checkout. The public selector previously
+did not receive the gate's state, so it offered an active Continue button anyway.
+Clicking it returned the exact “Reservations are not open yet” message reported
+by the owner and cleared the selected squares. This happens before artwork upload.
+
+Local correction: pass the server's checkoutReleased() result to the selector.
+Closed checkout allows an area/position preview, labels areas “Preview only,”
+shows the closure before submission, and replaces Continue with a disabled
+“Reservations not open yet” control. It does not create a hold or release checkout.
+Server protections remain in place even if a client has stale UI state.
+
+Owner approval follow-up: the owner approved the linked policies and saved-card
+consent for new reservations, effective November 2, 2026. Current local source
+uses 2026-11-02-reservations-1 and enables normal reservation checkout. Previous
+versions and accepted records remain unchanged. The closed-state UI/guards are
+retained and tested for a future source withdrawal. Collection remains disabled.
+See docs/legal/2026-11-02-reservation-approval.txt for the exact scope.
+
+Additional confirmed failures corrected locally
+---------------------------------------------
+1. A rejected/network-interrupted hold request escaped the React transition and
+   could crash the selector. It now preserves selected positions, explains the
+   interruption, and allows retry or return to held areas. It deliberately does
+   not claim that the server made no hold: a response can be lost after a write.
+2. The selector could submit a stale selected slot after refreshed availability
+   marked it unavailable. Continue now requires a currently available selected
+   slot in every selected campaign. The database still arbitrates booking races.
+3. A cropper event containing zero, NaN, or infinite dimensions crashed image
+   previews with “Image and destination dimensions must be positive.” Both
+   editors now ignore unusable transient crop geometry and retain the last valid
+   crop. The house editor also uses one stable callback and avoids identical
+   state updates. No print dimensions, upload bytes, crop policy, or server
+   validation changed.
+4. Removed the owner-rejected “Verified Mail” promotion: header navigation,
+   homepage section/cards, verification FAQ and related footer slogan. Ordinary
+   campaign progress, printer records and production-proof safety checks remain.
+   Homepage mobile/desktop screenshots were inspected; widths 375 and 1440 match
+   document scroll width, with no browser errors and no Verified Mail links.
+5. Repaired fresh local setup and explicitly separated historical test data;
+   see the bootstrap verification below. No historical migration was edited.
+
+One earlier E2E run entered the house-editor error boundary after a screenshot/
+resize; an isolated rerun passed. Its original exception was not retained.
+The invalid-dimension crash was then reproduced independently in component tests,
+and a real zero-width cropper resize was added to browser coverage. The final
+complete browser run passes. Do not infer that every intermittent browser issue
+has been eliminated from this evidence.
+
+Verification results after fixes
+-------------------------------
+npm run typecheck: PASS.
+npm run lint: PASS.
+npm test: 565 passed, 69 files, no skips.
+npm run test:integration: 195 passed, 3 skipped, 22 passing files / 1 skipped file.
+npm run test:e2e: all 43 scenarios verified, no skips, Chromium, one worker.
+Final full run: 42 passed; contact hit the shared localhost five/hour limit after
+repeated runs. The test now uses a unique documentation-range visitor address;
+its focused rerun passed. Real contact rate limits remain unchanged. Six earlier
+SEO assertions expecting the closed-checkout banner were updated for the approved
+reservation release; all six passed in the final full run. Earlier failures are
+not counted as passing executions.
+npm run build: PASS, 55 routes generated; production build run locally.
+npm audit --omit=dev: 0 reported vulnerabilities in production dependencies.
+git diff --check: PASS.
+
+The 3 skipped cases require actual Stripe TEST credentials: successful card save,
+decline, and bank-authentication-required card save. They were not run against
+live credentials. Local fake-card and mocked-provider cases did run. No Stripe
+API calls or real email deliveries were used as verification.
+
+Earlier runs are not counted as passes: initial database setup was unavailable;
+the first new network test used an ambiguous alert locator; one house-editor
+run failed as described above. Those results prompted environment recovery,
+test correction, or application fixes, followed by complete final runs.
+
+Next development mode logs an instant-render validation warning for the legacy
+/editions/[editionId] redirect. The redirect assertion and production build pass.
+No suppression or production behavior change was made for that development log.
+
+Coverage by workflow
+--------------------
+- Public homepage, four area pages, map/card selection, keyboard navigation,
+  mobile layouts, pricing totals, policies, contact navigation, SEO metadata,
+  canonical URLs, sitemap/robots, and private-route noindex rules.
+- One to four areas, an explicit square per area, atomic holds, occupied-slot
+  conflicts, hold expiry, separate artwork, copied artwork edited independently,
+  contact details, saved-card consent, simulated confirmation and cancellation.
+- Image validation, Fit/Fill, crop consent, low-resolution feedback, interrupted
+  upload, safe replacement, original-byte preservation, touch/zoom, saved previews.
+- Admin sign-in/out, non-admin rejection, geographic zones, campaign validation,
+  draft creation, explicit opening, pause/close, price updates, layout upgrades,
+  guarded deletion/archive, advertiser/artwork/payments/settings pages.
+- RLS and RPC authorization, approval registry/trigger, inventory consistency,
+  private token access, recovery, customer requests, invitations and expiry,
+  independent campaign readiness, payment idempotency/recovery/webhook mocks.
+- Contact queue validation/rate limits, durable email retries/deduplication,
+  webhook signatures, owner notifications and cron authorization using fixtures.
+- V1 and V2 PNGs, empty/partial/full inventory, readable glyph paths, customer
+  artwork, house artwork fallback, postal exclusion, originals and ZIP manifests.
+  Raster tests verify 7300 x 4900 PNG dimensions, 800-DPI metadata and actual
+  pixels. Fresh V1/V2 front/back review images were visually inspected.
+
+Additional local production-build inspection
+-------------------------------------------
+Ran next start against localhost Supabase with Stripe/Resend keys blank,
+fake checkout disabled, and collection disabled. A temporary Northern fixture
+was created through local admin RPCs solely to preview the closed selector.
+The first Central attempt was correctly refused because an open campaign already
+existed. Both temporary audit drafts/admin users were removed afterward; existing
+local campaigns were not changed. The preview server was stopped.
+
+Verified a selected square still cannot submit while checkout is closed.
+Browser errors: 0. Mutation requests: 0. External analytics requests blocked.
+Viewport width -> document scroll width:
+320 -> 320; 375 -> 375; 390 -> 390; 768 -> 768; 1440 -> 1440.
+Screenshots: ../../outputs/inside914-audit-2026-11-02/checkout-closed-375.png
+and checkout-closed-1440.png (outside Git repository).
+Follow-up homepage screenshots: homepage-no-verified-mail-375.png and
+homepage-no-verified-mail-1440.png in the same directory (local development build).
+
+Approved-reservation production-build check
+-----------------------------------------
+After owner approval, ran next start locally with launch pricing, fake-reservation
+mode OFF, provider credentials blank and collection disabled. Created one temporary
+Northern square_v1 V2 campaign at $1 through the local administrator RPC, selected
+F2 in the browser and clicked Continue to artwork. The actual server action made
+one local pending hold and the browser reached /book/cart. The selected amount
+remained 100 cents; refreshing retained access to the held reservation.
+
+No Stripe customer, SetupIntent or payment-method ID was created. Charge rows: 0.
+External browser requests: 0. Page errors: 0. Viewport/document widths: 375/375 and
+1440/1440. Screenshots approved-reservation-artwork-375.png and
+approved-reservation-artwork-1440.png are outside Git in the audit output directory.
+Only this smoke test's campaign, hold, cart and temporary administrator were removed
+afterward. The local preview server was stopped. No production operation occurred.
+Full saved-card confirmation was verified separately through the existing local
+fake-provider E2E flow, including the new stored consent version and exact wording.
+
+Production read-only observations
+--------------------------------
+- Public audit passed: 7 marketing pages and 200 links/assets checked.
+- Production runtime error-log query returned 0 errors in its preceding hour.
+  This is a bounded observation, not proof that no user ever encountered errors.
+- All 45 local migration names are represented in production history. Earlier
+  connector-applied timestamps differ as documented in the migration reports.
+  This was a name/history comparison, not a fresh checksum replay or schema dump.
+  No migration was applied or historical migration file changed.
+- LIVE_COLLECTION_RELEASED=false in the deployed source.
+- INSIDE914_COLLECTION_MODE=disabled verified in Vercel Production.
+- PUBLIC_CHECKOUT_RELEASED=false remains unchanged.
+
+Current non-cancelled campaigns, excluding historical cancelled editions:
+Area                  Status   Price/position   Layout   Paid positions
+Central Westchester   open     $399             V2       10
+Eastern Westchester   open     $399             V2       10
+Northern Westchester  open     $1               V2       10
+Southern Westchester  closed   $1               V2       10
+
+Owner follow-up on November 2: keep the $1 Northern/Southern prices for testing.
+They are intentional and are not a defect to replace with $399. Launch mode uses
+each campaign's stored price. No prices, campaign statuses, customer records, or
+reservations were altered during this audit.
+
+Security advisories remain visible: leaked-password protection is disabled;
+authenticated SECURITY DEFINER RPC warnings; RLS tables without direct policies.
+The inspected public admin SECURITY DEFINER functions all contain require_admin
+checks. Server-only tables/registries intentionally deny direct access. Local
+authorization tests pass; do not remove those RPC grants or weaken RLS to silence
+advisors. Consider enabling leaked-password protection as a separate configuration
+decision. Supabase guidance:
+https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
+
+Remaining development and release limitations
+--------------------------------------------
+1. Fresh local bootstrap initially failed: the old seed created an unapproved
+   16-position open campaign. Fixed in the follow-up by seeding only four zones
+   with household estimates unset. Legacy compatibility fixtures now have an
+   explicit localhost-only test setup and synthetic test approval; the layout
+   trigger remains enabled and unchanged. All 45 migrations, the new seed, and
+   repeated fixture insertion passed in a separate new local database. No reset
+   or deletion of existing local data was performed. That replay database is
+   retained for inspection. The full application suites use the existing stack.
+2. Native stacks are branch-scoped. The verification runner now accepts
+   INSIDE914_LOCAL_STACK_ID to select the already-running stack unambiguously.
+   It still hardcodes localhost, blanks provider credentials and disables collection.
+3. Actual Stripe card saving, real declines/3-D Secure, and live email delivery
+   are not proven by mocked tests. No new live-provider verification was authorized
+   or performed. Commercial invitation email also retains its own release gate.
+4. The deployed site still uses its existing checkout gate until a separately
+   authorized application release. Local source now enables reservations using
+   the owner's approved policies; collection is still a separate release.
+5. Owner approval covers new reservations effective November 2, 2026, $0 due
+   today and preservation of $1 testing prices. No counsel approval is claimed.
+   The unchanged database collection allowlist still rejects both prior draft
+   and current reservation-only versions. Existing authorizations cannot be
+   fabricated or silently upgraded to make a future charge possible.
+6. Print exports preserve both versioned layouts. Reservation geometry approval
+   does not replace AmazingMail/printer approval of the final proof, postal region,
+   source-image quality and mailing specifications. Geometry was not changed here.
+
+How the repository works
+------------------------
+Next.js App Router provides public pages, private customer token routes, admin
+pages, server actions and webhook/download endpoints. React components use the
+existing shared UI primitives. Supabase stores zones, editions, ten-slot square
+inventory, bookings/claims, artwork metadata, operations, email outbox and payment
+ledgers. Public catalog reads use an anonymous client under RLS. Admin access
+requires Supabase Auth plus an admins membership; actions call guarded admin RPCs.
+
+Booking starts with chosen areas and positions. Server actions validate them,
+then database functions atomically create timed holds. Private storage receives
+artwork through authorized upload tickets. Customers can share artwork or edit
+each area separately. Contact/consent precedes a Stripe SetupIntent to save a card;
+it does not charge immediately. Existing reservations use private capability links,
+not advertiser accounts. Per-campaign collection is a separate disabled operation
+behind readiness checks, an idempotent ledger, account binding and webhook handling.
+
+Email payloads enter durable queues; workers retry and signed Resend webhooks
+update delivery state. Contact sends to the fixed owner inbox. Print exports load
+authorized originals, use the campaign's immutable V1/V2 layout, and composite
+customer art, permanent house art and path-based placeholder glyphs with Sharp.
+Postal exclusion and readiness labeling are separate from downloading a preview.
+
+Changed files
+-------------
+README.md
+src/app/page.tsx
+src/app/legal/[doc]/page.tsx
+src/components/legal-document.tsx
+src/lib/checkout/release.ts
+src/lib/checkout/terms.ts
+src/lib/legal/release.ts (new)
+src/lib/legal/versions/2026-11-02-reservations-1.json (new)
+src/lib/legal/versions/2026-11-02-reservations-1-consent.json (new)
+src/components/site-header.tsx
+src/components/site-footer.tsx
+src/components/booking/category-checkout.tsx
+src/components/booking/category-zone-selector.tsx
+src/components/admin/house-artwork-form.tsx
+src/components/artwork/artwork-studio.tsx
+src/lib/artwork/rules.ts
+scripts/verify-local-mvp.mjs
+scripts/replay-local-migrations.py
+supabase/seed.sql (local default data only; not a migration)
+playwright.config.ts
+vitest.integration.config.mts
+tests/category-checkout.test.tsx (new)
+tests/category-zone-selector.test.tsx
+tests/house-artwork-form.test.tsx (new)
+tests/artwork-studio.test.tsx
+tests/setup-local-catalog.test.ts (new)
+tests/booking-layout-release.test.tsx
+tests/checkout-release.test.ts
+tests/checkout-release-actions.test.ts
+tests/checkout-text.test.ts
+tests/legal-policies.test.tsx
+tests/seo-foundation.test.ts
+tests/fixtures/legacy-catalog.sql (new)
+tests/fixtures/setup-local-catalog.ts (new)
+tests/integration/global-setup.ts (new)
+tests/integration/catalog-rls.test.ts
+tests/integration/zone-payments.test.ts
+e2e/home.spec.ts
+e2e/legal-policies.spec.ts
+e2e/seo.spec.ts
+e2e/contact.spec.ts
+e2e/multi-area.spec.ts
+e2e/artwork-editors.spec.ts
+docs/function-audit-2026-11-02.txt (this report)
+docs/legal/2026-11-02-reservation-approval.txt (new)
+
+No new dependencies, schema changes, print geometry changes, payment release,
+GitHub push, deployment, production mutation, Stripe calls, or real email sends.
+Secrets, local runtime state, traces, logs and generated images are not source changes.

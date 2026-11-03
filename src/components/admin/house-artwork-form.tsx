@@ -2,10 +2,10 @@
 /* Private authenticated/blob images must bypass the public image optimizer. */
 /* eslint-disable @next/next/no-img-element */
 import { PRINT_DPI, POSTCARD_LAYOUT_V2, placementDimensions } from "@/lib/print/layouts";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Cropper, { type Area } from "react-easy-crop";
-import { roundCrop } from "@/lib/artwork/rules";
+import { cropKey, isUsableCrop, roundCrop } from "@/lib/artwork/rules";
 import { CroppedImage } from "@/components/artwork/cropped-image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/primitives";
@@ -32,6 +32,11 @@ export function HouseArtworkForm({ updatedAt }: { updatedAt: string | null }) {
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<Area | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const onAreaChange = useCallback((_: Area, pixels: Area) => {
+    const rounded = roundCrop(pixels);
+    if (!isUsableCrop(rounded)) return;
+    setArea(previous => previous && cropKey(previous) === cropKey(rounded) ? previous : rounded);
+  }, []);
   useEffect(() => () => { if (src) URL.revokeObjectURL(src); }, [src]);
   const valid = !!area && area.width >= minimum.width && area.height >= minimum.height;
   const sourceTooSmall = size.width > 0 && (size.width < minimum.width || size.height < minimum.height);
@@ -86,7 +91,7 @@ export function HouseArtworkForm({ updatedAt }: { updatedAt: string | null }) {
         <div className="relative w-full overflow-hidden rounded-xl ring-1 ring-inset ring-line bg-[#f4f2ec]" style={{ aspectRatio: aspect }} aria-label="House artwork crop editor">
           <Cropper key={src} image={src} crop={crop} zoom={zoom} aspect={aspect} minZoom={1} maxZoom={4} objectFit="cover" showGrid={false}
             onCropChange={value => { if (!busy) setCrop(value); }} onZoomChange={value => { if (!busy) setZoom(value); }}
-            onCropAreaChange={(_, pixels) => setArea(roundCrop(pixels))} onCropComplete={(_, pixels) => setArea(roundCrop(pixels))}
+            onCropAreaChange={onAreaChange} onCropComplete={onAreaChange}
             onMediaLoaded={media => setSize({ width: media.naturalWidth, height: media.naturalHeight })}
             cropperProps={{ "aria-label": "House artwork. Drag to reposition, or use arrow keys." }} />
         </div>

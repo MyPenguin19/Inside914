@@ -15,6 +15,7 @@ This guide describes the current source, not a verification of deployed producti
 - Campaigns fill independently. Collection requires an explicit administrator action and all readiness checks; a full campaign never charges automatically.
 - Advertiser accounts, dashboards, recurring plans, and new double/full-side products are retired. Old account/dashboard URLs redirect to `/areas`. Historical database records and product readers remain for compatibility.
 - Live collection remains disabled in source: `LIVE_COLLECTION_RELEASED = false`. The collection mode defaults to `disabled`.
+- Current source enables new reservations under owner-approved policy `2026-11-02-reservations-1`, effective November 2, 2026. This approval is separate from collection and deployment; see `docs/legal/2026-11-02-reservation-approval.txt`. Existing accepted consent and intentional $1 campaign prices remain unchanged.
 
 ## How a reservation moves through the system
 
@@ -128,6 +129,8 @@ node scripts/verify-local-mvp.mjs build
 ```
 
 Run database and browser suites sequentially because they share local fixtures. Do not substitute production credentials. A local build still uses Next's production compilation mode; it is not a deployment. Keep `.env.local`, backups, exports, screenshots, logs, and credentials out of Git.
+
+Fresh local seeding creates only the four zones, with household estimates unset. It creates no open campaigns or reservations; use the administrator workflow for current campaigns. The integration/browser suites separately install their historical catalog compatibility fixtures through a localhost-only setup. Those fixtures are not launch inventory or print approval. To verify migrations and seeding without resetting existing data, `python3 scripts/replay-local-migrations.py` uses a new local database and retains it for inspection.
 
 Vercel Git deployment is currently disabled in the checked-in configuration for `main` and `revision/shared-postcard-mvp`. Deployment behavior outside this repository was not inspected in this audit.
 

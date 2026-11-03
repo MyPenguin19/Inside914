@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 import type { Database } from "../src/lib/supabase/database.types";
@@ -6,6 +6,10 @@ import type { Database } from "../src/lib/supabase/database.types";
 // The Playwright config and wrapper enforce localhost and blank real provider credentials.
 const db = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, { auth: { persistSession: false } });
 test("contact form validates and queues a local-only email", async ({ page }) => {
+  // Local Next accepts this fixture proxy header. Give each run a documentation-
+  // range IPv6 identity instead of exhausting the real five/hour limit for localhost.
+  const address = `2001:db8:${randomBytes(8).toString("hex").match(/.{4}/g)!.join(":")}:0:1`;
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": address });
   const existing = await db.from("email_deliveries").select("id").eq("is_test", true).like("logical_key", "contact:%");
   expect(existing.error).toBeNull();
   const existingIds = new Set(existing.data!.map(row => row.id));

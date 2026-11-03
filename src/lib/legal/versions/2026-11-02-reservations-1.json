@@ -1,0 +1,1085 @@
+{
+  "version": "2026-11-02-reservations-1",
+  "documents": {
+    "terms": {
+      "title": "Advertising Terms and Conditions",
+      "sections": [
+        {
+          "heading": "1. Agreement and Parties",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "These Advertising Terms and Conditions govern the reservation and purchase of advertising placements through Inside914, a shared direct-mail advertising service operated by Inside Diagnostics LLC."
+            },
+            {
+              "type": "paragraph",
+              "text": "“Inside914,” “we,” “us,” and “our” refer to Inside Diagnostics LLC in connection with the Inside914 service."
+            },
+            {
+              "type": "paragraph",
+              "text": "“Advertiser,” “you,” and “your” refer to the business or individual reserving advertising."
+            },
+            {
+              "type": "paragraph",
+              "text": "By completing a reservation, you agree to the applicable Advertising Terms, Reservation and Cancellation/Refund Policy, and campaign-specific conditions presented during checkout."
+            },
+            {
+              "type": "paragraph",
+              "text": "If you act on behalf of a business or organization, you represent that you are authorized to enter the agreement for that business."
+            }
+          ]
+        },
+        {
+          "heading": "2. Advertising Services",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 offers shared postcard advertising distributed to selected geographic areas, initially within Westchester County, New York."
+            },
+            {
+              "type": "paragraph",
+              "text": "A standard campaign contains ten paid advertising positions across the front and back of one shared postcard."
+            },
+            {
+              "type": "paragraph",
+              "text": "Each selected advertising area constitutes a separate campaign and reservation, even when several areas are selected during one checkout."
+            },
+            {
+              "type": "paragraph",
+              "text": "An advertising reservation is for the displayed position and campaign only."
+            },
+            {
+              "type": "paragraph",
+              "text": "No advertiser receives exclusive geographic, business-category or market rights unless separately agreed in writing."
+            }
+          ]
+        },
+        {
+          "heading": "3. Prices and Reservations",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The price of each advertising position is displayed before checkout and recorded with the reservation."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 may change prices for future reservations but will not increase an existing accepted reservation amount without appropriate new authorization."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Amount charged today: $0.00.**"
+            },
+            {
+              "type": "paragraph",
+              "text": "A confirmed reservation means advertising space has been reserved. It does not mean the postcard has been paid for, approved for production, printed or mailed."
+            }
+          ]
+        },
+        {
+          "heading": "4. Saved Payment Method and Future Authorization",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Stripe securely processes and stores the advertiser's payment method."
+            },
+            {
+              "type": "paragraph",
+              "text": "The advertiser authorizes no more than one future charge for each selected campaign, up to that campaign's individually accepted amount."
+            },
+            {
+              "type": "paragraph",
+              "text": "Collection may occur only when:"
+            },
+            {
+              "type": "ordered",
+              "items": [
+                "All ten positions in the campaign are reserved.",
+                "Required artwork has been reviewed and approved.",
+                "Required production and printer-proof checks are completed.",
+                "Inside914 explicitly approves the campaign for collection and production.",
+                "Valid payment authorization remains in effect.",
+                "No unresolved qualifying cancellation request or authorization problem prevents collection."
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "A completed campaign does not authorize charging an unrelated or incomplete campaign."
+            },
+            {
+              "type": "paragraph",
+              "text": "There are no recurring subscriptions or automatic monthly advertising fees."
+            },
+            {
+              "type": "paragraph",
+              "text": "If additional cardholder authentication is required, Inside914 may contact the advertiser through the secure payment-recovery process."
+            }
+          ]
+        },
+        {
+          "heading": "5. Campaign Deadlines",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Every campaign has a displayed reservation deadline."
+            },
+            {
+              "type": "paragraph",
+              "text": "If all ten positions are not reserved by the deadline, new bookings close while Inside914 reviews whether to cancel the campaign or offer a revised date."
+            },
+            {
+              "type": "paragraph",
+              "text": "An incomplete campaign cannot be charged."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Proposed operational standard:** Inside914 will communicate the decision within five business days of the original deadline."
+            },
+            {
+              "type": "paragraph",
+              "text": "A material deadline extension or revised payment condition requires an appropriate new agreement."
+            },
+            {
+              "type": "paragraph",
+              "text": "Existing customers retain the rights provided by the terms originally accepted."
+            },
+            {
+              "type": "paragraph",
+              "text": "If a qualifying extension is not accepted, the affected reservation will be canceled without charge under the applicable policy."
+            }
+          ]
+        },
+        {
+          "heading": "6. Artwork Ownership and Permissions",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The advertiser retains ownership of its submitted artwork."
+            },
+            {
+              "type": "paragraph",
+              "text": "The advertiser grants Inside Diagnostics LLC and its contracted production providers a limited, nonexclusive license to store, review, format, reproduce, print and distribute the artwork for the agreed campaign."
+            },
+            {
+              "type": "paragraph",
+              "text": "This license does not authorize unrelated commercial resale of the artwork."
+            },
+            {
+              "type": "paragraph",
+              "text": "The advertiser represents that it possesses the necessary rights to all submitted photographs, graphics, logos, trademarks, text and promotional content."
+            },
+            {
+              "type": "paragraph",
+              "text": "The advertiser is responsible for ensuring that advertising claims are accurate, lawful and adequately substantiated."
+            },
+            {
+              "type": "paragraph",
+              "text": "QR codes, website addresses, offers and contact details must be accurate and functional."
+            }
+          ]
+        },
+        {
+          "heading": "7. Artwork Review and Rejection",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 may reject or request changes to artwork that is unlawful, misleading, infringing, inappropriate or technically unsuitable for printing."
+            },
+            {
+              "type": "paragraph",
+              "text": "Examples include insufficient image resolution, unusable QR codes, misleading claims and unauthorized copyrighted material."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 will provide a reasonable opportunity to correct rejected artwork before the applicable deadline, subject to production requirements."
+            },
+            {
+              "type": "paragraph",
+              "text": "Automated image-quality checks and administrator review do not constitute legal endorsement of the advertiser's claims."
+            },
+            {
+              "type": "paragraph",
+              "text": "A failure to provide acceptable replacement artwork may result in cancellation under the applicable cancellation policy."
+            }
+          ]
+        },
+        {
+          "heading": "8. Artwork Changes and Production Lock",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Advertisers may request artwork changes using their private reservation link or by contacting Info@inside914.com."
+            },
+            {
+              "type": "paragraph",
+              "text": "Requests are subject to review and applicable deadlines."
+            },
+            {
+              "type": "paragraph",
+              "text": "Submitting a request does not automatically replace approved artwork."
+            },
+            {
+              "type": "paragraph",
+              "text": "Once the final printer order has been committed, artwork changes may no longer be possible."
+            },
+            {
+              "type": "paragraph",
+              "text": "A timely acknowledged artwork-change request must be resolved before committing a conflicting final production version."
+            }
+          ]
+        },
+        {
+          "heading": "9. Printing and Mailing",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 uses third-party providers for printing, mailing and related services."
+            },
+            {
+              "type": "paragraph",
+              "text": "Household counts, delivery-area estimates and mailing dates are planning estimates unless a specific commitment is expressly included in the accepted campaign agreement."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 does not guarantee that every residence or mailbox within an area will receive a postcard."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 does not guarantee a specific number of leads, sales, calls, website visits or responses."
+            },
+            {
+              "type": "paragraph",
+              "text": "Printer acceptance, postal acceptance and individual household delivery are different events."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 will not describe postal acceptance as proof of delivery to every household."
+            }
+          ]
+        },
+        {
+          "heading": "10. Campaign Status and Evidence",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Advertisers may receive access to a private reservation page displaying campaign progress, artwork status, payment status and authorized production or mailing records."
+            },
+            {
+              "type": "paragraph",
+              "text": "Only approved and appropriate records are shared."
+            },
+            {
+              "type": "paragraph",
+              "text": "Published documentation may include printer confirmation, a final approved proof, postal acceptance or a mailing confirmation."
+            },
+            {
+              "type": "paragraph",
+              "text": "Documentation establishes only the milestone actually supported by the record."
+            }
+          ]
+        },
+        {
+          "heading": "11. Cancellation and Refunds",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Advertisers may request cancellation according to the separate Reservation and Cancellation/Refund Policy."
+            },
+            {
+              "type": "paragraph",
+              "text": "A cancellation request does not automatically delete or cancel the reservation."
+            },
+            {
+              "type": "paragraph",
+              "text": "Eligible unresolved cancellation requests must be reviewed before charging the affected reservation."
+            },
+            {
+              "type": "paragraph",
+              "text": "Refund eligibility depends on the payment and production stage, the reason for cancellation, any failure to perform the agreed service and applicable law."
+            }
+          ]
+        },
+        {
+          "heading": "12. Production Delays and Errors",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Printing and mailing may be delayed by printer problems, postal disruptions, severe weather or other operational circumstances."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 will notify affected advertisers of material production or mailing problems."
+            },
+            {
+              "type": "paragraph",
+              "text": "If Inside914 cannot complete the agreed mailing service, it will offer an appropriate full refund for the unfulfilled service or a replacement mailing expressly accepted by the advertiser."
+            },
+            {
+              "type": "paragraph",
+              "text": "Material printing or distribution errors will be reviewed against actual printer records, the accepted agreement and applicable legal rights."
+            }
+          ]
+        },
+        {
+          "heading": "13. Advertiser Responsibilities",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Advertisers must provide accurate contact information and respond reasonably to requests needed to complete the campaign."
+            },
+            {
+              "type": "paragraph",
+              "text": "Advertisers are responsible for the accuracy, legality and fulfillment of their products, services, offers and advertised claims."
+            },
+            {
+              "type": "paragraph",
+              "text": "Promotional deadlines and offers should remain appropriate for the anticipated mailing period."
+            }
+          ]
+        },
+        {
+          "heading": "14. Privacy and Information Security",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 handles business, artwork, contact and payment-related information according to its Privacy Policy."
+            },
+            {
+              "type": "paragraph",
+              "text": "Full card numbers are entered through Stripe and are not stored by Inside914."
+            },
+            {
+              "type": "paragraph",
+              "text": "Private reservation links should be kept confidential."
+            }
+          ]
+        },
+        {
+          "heading": "15. Complaints and Disputes",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Questions or disputes should be sent to:"
+            },
+            {
+              "type": "paragraph",
+              "text": "Info@inside914.com"
+            },
+            {
+              "type": "paragraph",
+              "text": "Include the reservation reference and relevant information."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 will review claims using the accepted agreement, payment records, artwork history and printer/mailing documentation."
+            },
+            {
+              "type": "paragraph",
+              "text": "The proposed governing law is New York, subject to qualified legal review and mandatory applicable law."
+            },
+            {
+              "type": "paragraph",
+              "text": "No provision is intended to eliminate rights that cannot lawfully be waived."
+            }
+          ]
+        },
+        {
+          "heading": "16. Changes to Terms",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "New versions apply prospectively unless an appropriate agreement provides otherwise."
+            },
+            {
+              "type": "paragraph",
+              "text": "Existing accepted payment amounts, deadline rights and material terms must not be silently overwritten."
+            },
+            {
+              "type": "paragraph",
+              "text": "The accepted version and exact checkout authorization wording must remain auditable."
+            }
+          ]
+        },
+        {
+          "heading": "17. Contact Information",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914"
+            },
+            {
+              "type": "paragraph",
+              "text": "Operated by Inside Diagnostics LLC"
+            },
+            {
+              "type": "paragraph",
+              "text": "Westchester County, New York"
+            },
+            {
+              "type": "paragraph",
+              "text": "Email: Info@inside914.com"
+            },
+            {
+              "type": "paragraph",
+              "text": "**Status: Owner-approved for new reservations, effective November 2, 2026.**"
+            }
+          ]
+        }
+      ]
+    },
+    "reservation-policy": {
+      "title": "Reservation, Cancellation and Refund Policy",
+      "sections": [
+        {
+          "heading": "1. Temporary Holds and Confirmed Reservations",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Customers may choose positions in one or multiple Inside914 postcard campaigns."
+            },
+            {
+              "type": "paragraph",
+              "text": "A temporary hold is not a confirmed reservation."
+            },
+            {
+              "type": "paragraph",
+              "text": "For multi-area checkout, the current system provides a 30-minute hold and one optional 15-minute extension near expiration, with a maximum 45-minute window subject to campaign deadlines."
+            },
+            {
+              "type": "paragraph",
+              "text": "Other checkout flows follow their displayed timer."
+            },
+            {
+              "type": "paragraph",
+              "text": "An expired position may become available to another customer."
+            },
+            {
+              "type": "paragraph",
+              "text": "Confirmation requires completion of the required artwork, business information, saved-card setup and authorization process."
+            }
+          ]
+        },
+        {
+          "heading": "2. No Upfront Charge",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Nothing is charged when reserving advertising space."
+            },
+            {
+              "type": "paragraph",
+              "text": "The advertiser authorizes a possible future payment limited to the accepted amount for each selected campaign."
+            },
+            {
+              "type": "paragraph",
+              "text": "No monthly subscription or recurring billing is created."
+            }
+          ]
+        },
+        {
+          "heading": "3. Eligibility for Future Collection",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "A charge may be initiated only when the campaign has ten confirmed reserved advertising positions and all applicable artwork, printer-proof, payment-consent and owner-approval requirements are satisfied."
+            },
+            {
+              "type": "paragraph",
+              "text": "An incomplete campaign cannot be charged."
+            },
+            {
+              "type": "paragraph",
+              "text": "An unresolved qualifying cancellation request or authorization issue must be reviewed before initiating collection."
+            }
+          ]
+        },
+        {
+          "heading": "4. Campaign Not Filled by Deadline",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "At the reservation deadline, an incomplete campaign closes to new reservations and requires owner review."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 proposes to communicate a decision within five business days."
+            },
+            {
+              "type": "paragraph",
+              "text": "The owner may cancel the campaign or offer a revised deadline."
+            },
+            {
+              "type": "paragraph",
+              "text": "A revised deadline does not silently extend an earlier customer's agreement."
+            },
+            {
+              "type": "paragraph",
+              "text": "Existing customers retain their original contractual rights unless they expressly accept applicable new conditions."
+            },
+            {
+              "type": "paragraph",
+              "text": "If the campaign is canceled before payment, no advertising fee is charged."
+            }
+          ]
+        },
+        {
+          "heading": "5. Customer Cancellation Before Payment",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Customers may request cancellation through their private reservation page or by email to Info@inside914.com."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Proposed policy:** A timely cancellation request received before payment collection and irreversible production commitment may be resolved without an advertising fee."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 will review the request, record its outcome and prevent collection if cancellation is approved."
+            },
+            {
+              "type": "paragraph",
+              "text": "A canceled, uncharged reservation cannot later be charged using that canceled authorization."
+            }
+          ]
+        },
+        {
+          "heading": "6. Cancellation After Payment but Before Printer Commitment",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "If payment has been collected but the associated printer order has not been irrevocably committed, an eligible customer-requested cancellation will receive a full refund of the advertising charge for that campaign."
+            },
+            {
+              "type": "paragraph",
+              "text": "The actual payment and printer-order status must be verified before processing."
+            }
+          ]
+        },
+        {
+          "heading": "7. Cancellation After Printer Commitment",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Once the final printer order has been accepted and committed, production or mailing costs may no longer be recoverable."
+            },
+            {
+              "type": "paragraph",
+              "text": "A voluntary customer cancellation at that stage does not automatically guarantee a refund."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 will review actual costs, the service status, the accepted agreement and applicable law."
+            },
+            {
+              "type": "paragraph",
+              "text": "This rule does not eliminate remedies for Inside914's failure to deliver the agreed service or rights that cannot lawfully be waived."
+            }
+          ]
+        },
+        {
+          "heading": "8. Rejected Artwork",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 may request a correction or replacement when advertising material is unsuitable."
+            },
+            {
+              "type": "paragraph",
+              "text": "A reasonable correction opportunity will be provided when feasible before the applicable artwork deadline."
+            },
+            {
+              "type": "paragraph",
+              "text": "If acceptable artwork cannot be obtained and the campaign cannot proceed before payment, the affected reservation may be canceled without charge."
+            },
+            {
+              "type": "paragraph",
+              "text": "If payment has occurred but production has not been committed, a full refund will be available where the campaign cannot proceed."
+            }
+          ]
+        },
+        {
+          "heading": "9. Campaign Canceled or Not Mailed by Inside914",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "If Inside914 cancels the campaign or cannot provide the agreed mailing service:"
+            },
+            {
+              "type": "list",
+              "items": [
+                "Uncharged reservations are canceled without payment.",
+                "Amounts collected for an unfulfilled campaign are eligible for a full refund.",
+                "The advertiser may alternatively accept a documented replacement mailing.",
+                "A replacement mailing will not be imposed without customer agreement."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "10. Printing Errors and Distribution Problems",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "A material print or mailing error will be investigated using production records and available provider evidence."
+            },
+            {
+              "type": "paragraph",
+              "text": "Appropriate remedies may include a corrected mailing, a full or proportionate refund, or another agreed resolution."
+            },
+            {
+              "type": "paragraph",
+              "text": "Normal postal variation, lack of customer response or failure of an advertising offer to generate sales does not automatically establish a service failure."
+            }
+          ]
+        },
+        {
+          "heading": "11. Refund Processing",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "**Proposed service standard:** Approved refunds will normally be initiated to the original payment method within ten business days after final resolution, subject to applicable legal requirements."
+            },
+            {
+              "type": "paragraph",
+              "text": "The bank or processor may take additional time to post the credit."
+            },
+            {
+              "type": "paragraph",
+              "text": "Refunds must be documented against the original transaction where supported."
+            }
+          ]
+        },
+        {
+          "heading": "12. Payment Method Removal",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "When a reservation is canceled, no further charge may be initiated under its canceled authorization."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 will request removal of a stored card when it is no longer needed."
+            },
+            {
+              "type": "paragraph",
+              "text": "If the same card supports another active, separately authorized reservation, it may remain available for that reservation."
+            },
+            {
+              "type": "paragraph",
+              "text": "Delay in removing a card does not restore charging permission for a canceled reservation."
+            }
+          ]
+        },
+        {
+          "heading": "13. How to Request Changes or Cancellation",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Customers may use the private reservation page or email:"
+            },
+            {
+              "type": "paragraph",
+              "text": "Info@inside914.com"
+            },
+            {
+              "type": "paragraph",
+              "text": "Include the reservation reference, business name and request details."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Proposed response standard:** Within three business days."
+            },
+            {
+              "type": "paragraph",
+              "text": "Submitting a request does not automatically change artwork, reverse a payment or cancel a committed printer order."
+            },
+            {
+              "type": "paragraph",
+              "text": "Qualifying requests that affect authorization or production must nevertheless be resolved before the affected action proceeds."
+            }
+          ]
+        },
+        {
+          "heading": "14. Existing Customers",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Historical reservations remain governed by their originally accepted terms unless an appropriate new agreement is obtained."
+            },
+            {
+              "type": "paragraph",
+              "text": "Original prices, deadlines, authorized amounts and consent records must be preserved."
+            },
+            {
+              "type": "paragraph",
+              "text": "No new policy may retroactively expand the permission to charge."
+            }
+          ]
+        },
+        {
+          "heading": "15. Contact",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914"
+            },
+            {
+              "type": "paragraph",
+              "text": "Operated by Inside Diagnostics LLC"
+            },
+            {
+              "type": "paragraph",
+              "text": "Westchester County, New York"
+            },
+            {
+              "type": "paragraph",
+              "text": "Email: Info@inside914.com"
+            },
+            {
+              "type": "paragraph",
+              "text": "**Status: Owner-approved for new reservations, effective November 2, 2026.**"
+            }
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "sections": [
+        {
+          "heading": "1. Introduction",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 is a shared direct-mail advertising service operated by Inside Diagnostics LLC."
+            },
+            {
+              "type": "paragraph",
+              "text": "This Privacy Policy describes how information is collected, used, stored, shared and protected when visitors use the website, reserve advertising, submit artwork or communicate with the business."
+            }
+          ]
+        },
+        {
+          "heading": "2. Information Collected",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 may collect:"
+            },
+            {
+              "type": "paragraph",
+              "text": "**Business and contact information:** Business name, contact person, email address, telephone number, website and other submitted details."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Reservation information:** Campaign area, advertising position, accepted price, reservation reference, relevant deadlines and booking status."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Artwork information:** Submitted advertisements, logos, images, promotional content, original files, crop settings, revised versions and artwork-review records."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Payment-related information:** Stripe customer/payment-method references, consent records, accepted amounts, transaction states and relevant processing history."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 does not receive or store complete payment-card numbers or card security codes."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Communications:** Customer requests, reservation emails, correspondence, cancellation communications and support history."
+            },
+            {
+              "type": "paragraph",
+              "text": "**Technical information:** IP addresses where processed, browser/device information, timestamps, essential cookies, access-token metadata, security events and operational logs."
+            },
+            {
+              "type": "paragraph",
+              "text": "Some security-related data may be represented using keyed hashes."
+            }
+          ]
+        },
+        {
+          "heading": "3. Purposes of Processing",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Information is used to:"
+            },
+            {
+              "type": "list",
+              "items": [
+                "Process advertising reservations.",
+                "Manage available advertising positions.",
+                "Review and prepare artwork.",
+                "Produce and distribute postcard campaigns.",
+                "Save authorized payment methods.",
+                "Process approved future payments and refunds.",
+                "Send reservation and operational communications.",
+                "Provide private reservation access.",
+                "Resolve customer requests and disputes.",
+                "Maintain security and prevent abuse.",
+                "Maintain accounting, consent and legally required records."
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Reservation authorization does not permit unrelated charges."
+            }
+          ]
+        },
+        {
+          "heading": "4. Stripe Payment Processing",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Stripe handles payment-card entry and storage."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 stores relevant processor references and authorization evidence but does not directly store complete card numbers."
+            },
+            {
+              "type": "paragraph",
+              "text": "Stripe may separately process data according to its own privacy practices and applicable payment-network requirements."
+            }
+          ]
+        },
+        {
+          "heading": "5. Service Providers",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The service uses or may use:"
+            },
+            {
+              "type": "list",
+              "items": [
+                "Supabase for database services, authentication and private storage.",
+                "Vercel for application hosting.",
+                "Stripe for payment processing.",
+                "Resend for transactional email delivery.",
+                "Contracted printing and mailing providers for approved campaign fulfillment."
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Only information reasonably needed for the applicable service should be shared."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 may also disclose information where legally required or necessary to protect rights and investigate misuse."
+            }
+          ]
+        },
+        {
+          "heading": "6. Public Advertising Artwork",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "The final approved advertisement is intended for distribution on physical postcards."
+            },
+            {
+              "type": "paragraph",
+              "text": "Business contact details, URLs, QR codes and other information included in the printed advertisement may be viewed by postcard recipients."
+            },
+            {
+              "type": "paragraph",
+              "text": "Customers should not submit private information for public printing unless they intend that information to be distributed."
+            },
+            {
+              "type": "paragraph",
+              "text": "Original upload files, payment references and internal administrative notes are not intended to be publicly accessible merely because a final postcard is mailed."
+            }
+          ]
+        },
+        {
+          "heading": "7. Email Communications",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 sends transactional messages including confirmations, private access links, artwork notifications, payment communications, cancellation information and campaign updates."
+            },
+            {
+              "type": "paragraph",
+              "text": "Individually reviewed advertising invitations or promotional messages may be sent where legally permitted."
+            },
+            {
+              "type": "paragraph",
+              "text": "Commercial promotional email must follow applicable sender-identification, address and opt-out obligations."
+            },
+            {
+              "type": "paragraph",
+              "text": "Operational customer emails and promotional campaigns must remain appropriately distinguished."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 does not sell customer email lists for unrelated third-party marketing."
+            }
+          ]
+        },
+        {
+          "heading": "8. Cookies and Reservation Access",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Essential cookies and private credentials may be used to maintain checkout state and provide reservation access."
+            },
+            {
+              "type": "paragraph",
+              "text": "Private reservation links can grant access to customer information and should be kept confidential."
+            },
+            {
+              "type": "paragraph",
+              "text": "Access is restricted through expiration rules, secure token handling and server authorization."
+            },
+            {
+              "type": "paragraph",
+              "text": "If nonessential analytics or advertising trackers are later introduced, this policy and any required consent or notice mechanisms will be updated."
+            }
+          ]
+        },
+        {
+          "heading": "9. Data Security",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 uses administrative, technical and operational safeguards intended to reduce unauthorized access and disclosure."
+            },
+            {
+              "type": "paragraph",
+              "text": "These include private Storage, authenticated administration, restricted database access, secure payment processing, encrypted email-delivery payloads and hashed access credentials where appropriate."
+            },
+            {
+              "type": "paragraph",
+              "text": "No online system can guarantee absolute security."
+            },
+            {
+              "type": "paragraph",
+              "text": "Security incidents will be reviewed and notifications provided where required by applicable law."
+            }
+          ]
+        },
+        {
+          "heading": "10. Data Retention",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Business information, artwork, payment consents, support communications and operational records may be retained for campaign fulfillment, legal compliance, security, accounting and dispute resolution."
+            },
+            {
+              "type": "paragraph",
+              "text": "Original artwork and historical versions may be retained following campaign completion where justified."
+            },
+            {
+              "type": "paragraph",
+              "text": "Abandoned uploads may be removed under documented cleanup procedures."
+            },
+            {
+              "type": "paragraph",
+              "text": "A formal retention schedule must be approved and implemented for each data category."
+            },
+            {
+              "type": "paragraph",
+              "text": "Until verified, the public policy must not claim that all records are automatically deleted after a fixed period."
+            }
+          ]
+        },
+        {
+          "heading": "11. Access, Correction and Deletion",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Customers may contact Info@inside914.com to request access to, correction of or deletion of relevant personal information."
+            },
+            {
+              "type": "paragraph",
+              "text": "Reasonable identity verification may be required."
+            },
+            {
+              "type": "paragraph",
+              "text": "Requests are evaluated under applicable law and legitimate retention obligations."
+            },
+            {
+              "type": "paragraph",
+              "text": "Some records may need to remain available for active transactions, tax/accounting records, disputes or legal requirements."
+            }
+          ]
+        },
+        {
+          "heading": "12. Children's Privacy",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 is intended for business advertising customers and is not directed at children."
+            },
+            {
+              "type": "paragraph",
+              "text": "Inside914 does not knowingly solicit children's personal information for advertising reservations."
+            },
+            {
+              "type": "paragraph",
+              "text": "Information identified as improperly collected will be reviewed and addressed as applicable law requires."
+            }
+          ]
+        },
+        {
+          "heading": "13. Security Incidents",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914 will investigate suspected unauthorized access or disclosure and take appropriate corrective action."
+            },
+            {
+              "type": "paragraph",
+              "text": "Notifications will be provided when required by applicable data-breach laws."
+            }
+          ]
+        },
+        {
+          "heading": "14. Policy Changes",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Future policy versions may be published with an updated effective date."
+            },
+            {
+              "type": "paragraph",
+              "text": "Material changes will receive any notice or consent required by applicable law."
+            },
+            {
+              "type": "paragraph",
+              "text": "A Privacy Policy update does not itself alter previously accepted payment authorization."
+            }
+          ]
+        },
+        {
+          "heading": "15. Contact Information",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Inside914"
+            },
+            {
+              "type": "paragraph",
+              "text": "Operated by Inside Diagnostics LLC"
+            },
+            {
+              "type": "paragraph",
+              "text": "Westchester County, New York"
+            },
+            {
+              "type": "paragraph",
+              "text": "Email: Info@inside914.com"
+            },
+            {
+              "type": "paragraph",
+              "text": "**Status: Owner-approved for new reservations, effective November 2, 2026.**"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

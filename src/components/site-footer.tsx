@@ -43,7 +43,7 @@ export function SiteFooter() {
         </nav>
       </div>
       <div className="border-t border-line">
-        <p className="page-width py-4 text-xs text-muted">© Inside914. Local advertising you can verify.</p>
+        <p className="page-width py-4 text-xs text-muted">© Inside914. Local businesses. Westchester mailboxes.</p>
       </div>
     </footer>
   );

@@ -91,7 +91,11 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await expect(page.getByText("Total if all selected campaigns fill: $1,197", { exact: true })).toBeVisible();
   await expect(page.getByText("Due today: $0", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Continue with selected areas" }).click();
-  for (const [i, name] of selected.entries()) await page.getByRole("region", { name, exact: true }).getByRole("button", { name: new RegExp(`position ${["F2", "B3", "F6"][i]}:`) }).click();
+  for (const [i, name] of selected.entries()) {
+    await page.getByRole("button", {name:`Choose position for ${name}`}).click();
+    await page.getByRole("region", { name, exact: true }).getByRole("button", { name: new RegExp(`position ${["F2", "B3", "F6"][i]}:`) }).click();
+  }
+  await page.getByRole("button",{name:`Choose position for ${names[1]}`}).click();
   const back = page.getByRole("region", {name:names[1],exact:true}).getByRole("group",{name:"Back of the postcard"});
   await expect(back.locator("button")).toHaveCount(4);
   await expect(back.locator('[data-reserved-region="postal"]')).toHaveCount(1);
@@ -102,7 +106,15 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   for (const width of [320,375,390,768,1440]) { await page.setViewportSize({ width, height: 1000 }); expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width); }
   await page.setViewportSize({width:375,height:900});
   await page.screenshot({path:"test-results/postcard-v2/customer-mobile.png",fullPage:true});
+  await page.context().setOffline(true);
   await page.getByRole("button", { name: "Continue to artwork" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Connection interrupted");
+  for (const name of selected) { await page.getByRole("button",{name:`Choose position for ${name}`}).click(); await expect(page.getByRole("region", { name, exact: true }).locator('button[aria-pressed="true"]')).toHaveCount(1); }
+  await page.context().setOffline(false);
+  await page.getByRole("button", { name: "Continue to artwork" }).click();
+  await expect(page).toHaveURL(/\/book\/artwork$/);
+  await expect(page.getByRole("button",{name:"Choose an image",exact:true})).toBeVisible();
+  await page.getByRole("link",{name:"Back to your areas"}).click();
   await expect(page).toHaveURL(/\/book\/cart$/);
   await expect(page.getByRole("region",{name:"Checkout time"})).toContainText(/29:|30:/);
   await page.reload();await expect(page.getByRole("region",{name:"Checkout time"})).toContainText(/29:|30:/);
@@ -129,7 +141,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await other.close();
   const images: Buffer[] = [];
   for (const [i, name] of selected.entries()) {
-    await page.getByRole("button", { name: `Edit artwork for ${name}`, exact: true }).click();
+    await page.getByRole("button", { name: new RegExp(`(?:Add|Edit) artwork for ${name}$`) }).click();
     await expect(page.getByTestId("artwork-area")).toHaveText(name);
     const buffer = await sharp({ create: { width: 1200, height: 1200, channels: 3, background: { r: 30+i*70, g: 100, b: 160 } } }).png().toBuffer();
     images.push(buffer);
@@ -137,6 +149,9 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
     await page.getByRole("button", { name: "Save artwork and continue" }).click();
     await expect(page).toHaveURL(/\/book\/cart$/);
   }
+  await expect(page.getByRole("link", { name: "Continue to business details" })).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({path:"test-results/simple-artwork-checklist-mobile.png",fullPage:true});
   await page.getByRole("link", { name: "Continue to business details" }).click();
   await expect(page).toHaveURL(/\/book\/cart\/details$/);
   await expect(page.getByLabel("Type of business")).toHaveCount(0);
@@ -144,16 +159,21 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await page.getByLabel("Your name").fill("Local Tester");
   await page.getByLabel("Email", { exact: false }).fill("independent@example.com");
   await page.getByLabel("Phone", { exact: false }).fill("9145550123");
-  await page.getByRole("button", { name: "Continue to payment details" }).click();
+  await page.screenshot({path:"test-results/simple-business-mobile.png",fullPage:true});
+  await page.getByRole("button", { name: "Continue to save card" }).click();
   await expect(page).toHaveURL(/\/book\/cart\/payment$/);
   await expect(page.getByText("Combined authorized maximum: $1,197", {exact:true})).toBeVisible();
   await expect(page.getByText("Due today: $0.00. No payment is collected today.", {exact:true})).toBeVisible();
+  await page.getByText("Review artwork and campaign details",{exact:true}).click();
+  for (const summary of await page.getByRole("complementary",{name:"Your order"}).getByText("Campaign details",{exact:true}).all()) await summary.click();
   for (const name of selected) await expect(page.getByRole("region",{name:"Reservation summary"}).getByText(`Phase C fixture ${name}`,{exact:true})).toBeVisible();
+  await page.getByText("Review artwork and campaign details",{exact:true}).click();
   const displayedConsent=await page.getByTestId("checkout-consent").textContent();
   expect(displayedConsent).toContain("Inside Diagnostics LLC");
   for (const width of [375,1440]) {
     await page.setViewportSize({width,height:1000});
     await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({path:`test-results/legal-checkout-${width}.png`,fullPage:true});
   }
 
@@ -236,7 +256,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   expect(ok(await db.from("zone_charges").select("id").in("edition_id", ids))).toHaveLength(0);
   const consents = ok(await db.from("payment_consents").select("amount_cents,terms_version,consent_text").in("booking_id", bookings.map(b => b.id)))!;
   expect(consents).toHaveLength(3); expect(consents.every(c => c.amount_cents === 39900)).toBe(true);
-  for (const consent of consents) {expect(consent.terms_version).toBe("square-zones-2026-10-24-review-4");expect(consent.consent_text).toBe(displayedConsent);}
+  for (const consent of consents) {expect(consent.terms_version).toBe("square-zones-2026-11-02-reservations-1");expect(consent.consent_text).toBe(displayedConsent);}
 });
 
 test("another advertiser can reserve another square in the same area without a category", async ({ page }) => {
@@ -245,9 +265,12 @@ test("another advertiser can reserve another square in the same area without a c
   await page.getByRole("button", { name: "Continue with selected areas" }).click();
   await page.getByRole("button", { name: /position B4:/ }).click();
   await page.getByRole("button", { name: "Continue to artwork" }).click();
+  await expect(page).toHaveURL(/\/book\/artwork$/);
+  await expect(page.getByRole("button",{name:"Choose an image",exact:true})).toBeVisible();
+  await page.getByRole("link",{name:"Back to your areas"}).click();
   await expect(page).toHaveURL(/\/book\/cart$/);
   for (const shade of [80,160]) {
-    await page.getByRole("button", { name: "Edit artwork for Central Westchester", exact: true }).click();
+    await page.getByRole("button", { name: /(?:Add|Edit) artwork for Central Westchester$/ }).click();
     const buffer = await sharp({ create: { width: 900, height: 900, channels: 3, background: { r: shade, g: 40, b: 50 } } }).png().toBuffer();
     await page.getByLabel("Ad image file").filter({visible:true}).setInputFiles({ name: "single.png", mimeType: "image/png", buffer });
     await expect(page.getByText(/Image uploaded|Full image preserved/)).toBeVisible();
@@ -263,15 +286,18 @@ test("copied artwork can be edited independently in another area", async ({ page
   await page.goto("/areas");
   for (const name of [names[1],names[2]]) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
   await page.getByRole("button", { name: "Continue with selected areas" }).click();
-  for (const name of [names[1],names[2]]) await page.getByRole("region", { name, exact: true }).getByRole("button", { name: name===names[2] ? /position B4:/ : /position F4:/ }).click();
+  for (const name of [names[1],names[2]]) { await page.getByRole("button",{name:`Choose position for ${name}`}).click(); await page.getByRole("region", { name, exact: true }).getByRole("button", { name: name===names[2] ? /position B4:/ : /position F4:/ }).click(); }
   await page.getByRole("button", { name: "Continue to artwork" }).click();
+  await expect(page).toHaveURL(/\/book\/artwork$/);
+  await expect(page.getByRole("button",{name:"Choose an image",exact:true})).toBeVisible();
+  await page.getByRole("link",{name:"Back to your areas"}).click();
   await expect(page).toHaveURL(/\/book\/cart$/);
-  await page.getByRole("button", { name: `Edit artwork for ${names[1]}`, exact: true }).click();
+  await page.getByRole("button", { name: new RegExp(`(?:Add|Edit) artwork for ${names[1]}$`) }).click();
   const buffer = await sharp({ create: { width: 900, height: 900, channels: 3, background: "purple" } }).png().toBuffer();
   await page.getByLabel("Ad image file").setInputFiles({ name: "copy.png", mimeType: "image/png", buffer });
   await page.getByRole("button", { name: "Save artwork and continue" }).click();
   await expect(page).toHaveURL(/\/book\/cart$/);
-  await page.getByRole("button", { name: "Copy image and position for this area" }).click();
+  await page.getByRole("button", { name: "Use this image" }).click();
   await expect(page.getByTestId("artwork-area")).toHaveText(names[2]);
   await expect(page.getByAltText("Full artwork fitted without stretching")).toBeVisible();
   await page.getByRole("button", {name:"Fill space",exact:true}).click();
@@ -279,7 +305,7 @@ test("copied artwork can be edited independently in another area", async ({ page
   await page.getByRole("checkbox", {name:/I approve this crop/}).check();
   await page.getByRole("button", { name: "Save artwork and continue" }).click();
   await expect(page.getByRole("link", { name: "Continue to business details" })).toBeVisible();
-  await page.getByRole("button", { name: `Edit artwork for ${names[2]}`, exact: true }).click();
+  await page.getByRole("button", { name: new RegExp(`(?:Add|Edit) artwork for ${names[2]}$`) }).click();
   const changed = await sharp({ create: { width: 900, height: 900, channels: 3, background: "orange" } }).png().toBuffer();
   await page.getByLabel("Ad image file").filter({visible:true}).setInputFiles({ name: "changed.png", mimeType: "image/png", buffer: changed });
   await expect(page.getByText(/Image uploaded|Full image preserved/)).toBeVisible();

@@ -1,5 +1,6 @@
 // Local native-stack verification. Never reads credentials from .env.local or calls Stripe.
 // Usage (repository root): node scripts/verify-local-mvp.mjs test:integration
+// If several native stacks exist, set INSIDE914_LOCAL_STACK_ID to the running local stack ID.
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
@@ -9,8 +10,11 @@ if (!["typecheck", "lint", "test", "test:integration", "test:e2e", "build"].incl
 }
 const runtime = resolve(process.env.SUPABASE_HOME ?? "../supabase-runtime");
 const stacks = resolve(runtime, "stacks");
-const roots = readdirSync(stacks).filter(name => existsSync(resolve(stacks, name, "state.json")));
-if (roots.length !== 1) throw new Error("Exactly one local native Supabase stack is required");
+// Multiple local stacks can coexist. An explicit ID selects only a discovered
+// stack directory; it cannot supply a path or a remote connection.
+const stackId = process.env.INSIDE914_LOCAL_STACK_ID;
+const roots = readdirSync(stacks).filter(name => (!stackId || name === stackId) && existsSync(resolve(stacks, name, "state.json")));
+if (roots.length !== 1) throw new Error("Select exactly one local native Supabase stack with INSIDE914_LOCAL_STACK_ID");
 const { credentials } = JSON.parse(readFileSync(resolve(stacks, roots[0], "state.json"), "utf8"));
 if (!credentials?.publishableKey || !credentials?.secretKey) throw new Error("Local stack credentials unavailable");
 const url = "http://127.0.0.1:54321";

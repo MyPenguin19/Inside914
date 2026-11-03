@@ -1,8 +1,8 @@
-import policies from "@/lib/legal/versions/2026-10-24-review-4.json";
+import policies from "@/lib/legal/versions/2026-11-02-reservations-1.json";
 import { SUPPORT_EMAIL } from "@/lib/support";
 import { SITE_URL } from "@/lib/seo";
 
-// Immutable proposed text is shared by the renderer and the version archive.
+// Immutable owner-approved text is shared by the renderer and the version archive.
 export const legalDocuments = policies.documents;
 export const LEGAL_VERSION = policies.version;
 type Document = (typeof legalDocuments)[keyof typeof legalDocuments];

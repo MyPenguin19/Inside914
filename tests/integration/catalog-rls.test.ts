@@ -18,8 +18,8 @@ describe("catalog as anon", () => {
     expect(res.status).toBe(200);
     const rows: Record<string, unknown>[] = await res.json();
 
-    expect(rows).toHaveLength(16); // provisional seed: 8 front + 8 back
-    expect(new Set(rows.map((r) => r.issue_month))).toEqual(new Set(["2027-01-01"]));
+    expect(rows).toHaveLength(16); // explicit historical compatibility fixture, not the current square product
+    expect(new Set(rows.map((r) => r.edition_id))).toEqual(new Set(["00000000-0000-4000-8000-000000000101"]));
     expect(Object.keys(rows[0]).sort()).toEqual(
       [
         "artwork_deadline", "available", "edition_id", "height_in", "household_count", "issue_month", "label", "occupancy",
@@ -29,13 +29,13 @@ describe("catalog as anon", () => {
   });
 
   test("never sees draft editions", async () => {
-    const res = await anon("slot_availability?issue_month=eq.2027-02-01&select=slot_id");
+    const res = await anon("slot_availability?edition_id=eq.00000000-0000-4000-8000-000000000102&select=slot_id");
     expect(await res.json()).toEqual([]);
   });
 
   test("reads only published editions from base tables", async () => {
-    const editions = await (await anon("editions?select=issue_month,status")).json();
-    expect(editions).toEqual([{ issue_month: "2027-01-01", status: "open" }]);
+    const editions = await (await anon("editions?select=id,status")).json();
+    expect(editions).toEqual([{ id: "00000000-0000-4000-8000-000000000101", status: "open" }]);
 
     const slots = await (await anon("slots?select=id")).json();
     expect(slots).toHaveLength(16);
@@ -65,7 +65,7 @@ describe("catalog as anon", () => {
     });
     // Either refused outright or matched no rows; the draft must stay hidden.
     if (res.ok) expect(await res.json()).toEqual([]);
-    const draft = await (await anon("slot_availability?issue_month=eq.2027-02-01&select=slot_id")).json();
+    const draft = await (await anon("slot_availability?edition_id=eq.00000000-0000-4000-8000-000000000102&select=slot_id")).json();
     expect(draft).toEqual([]);
   });
 

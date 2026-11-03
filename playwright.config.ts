@@ -18,6 +18,7 @@ const baseURL = "http://localhost:3000";
 
 export default defineConfig({
   testDir: "e2e",
+  globalSetup: "./tests/fixtures/setup-local-catalog.ts",
   forbidOnly: !!process.env.CI,
   workers: 1, // specs place real holds on one database; run them one at a time
   retries: process.env.CI ? 2 : 0,

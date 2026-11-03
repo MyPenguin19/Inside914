@@ -1,6 +1,6 @@
 import { ProgressSteps } from "@/components/ui/progress-steps";
 
-const STEPS = ["Choose areas", "Positions & artwork", "Business details", "Save card"] as const;
+const STEPS = ["Areas", "Your ad", "Business details", "Save card"] as const;
 
 // current: 1-based index of the step the visitor is on.
 export function BookingSteps({ current }: { current: 1 | 2 | 3 | 4 }) {

@@ -17,6 +17,7 @@ import {
   cropKey,
   cropRemovesContent,
   roundCrop,
+  isUsableCrop,
   formatMegabytes,
   MAX_UPLOAD_BYTES,
   MIN_IMAGE_PIXELS,
@@ -212,6 +213,7 @@ export function ArtworkStudio({
 
   const onAreaChange = useCallback((_: Area, pixels: Area) => {
     const rounded = roundCrop(pixels);
+    if (!isUsableCrop(rounded)) return;
     setFillArea(previous => previous && cropKey(previous) === cropKey(rounded) ? previous : rounded);
   }, []);
   function reset() {

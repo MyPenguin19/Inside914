@@ -78,6 +78,12 @@ export function adAreas(slots: SlotGeometry[]): SlotGeometry[] {
 export function roundCrop(crop: CropPixels): CropPixels {
   return { x: Math.round(crop.x), y: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height) };
 }
+// A cropper can briefly report zero/NaN geometry while its container resizes.
+// Keep the last usable selection instead of passing that geometry to the preview.
+export function isUsableCrop(crop: CropPixels) {
+  return [crop.x, crop.y, crop.width, crop.height].every(Number.isFinite) &&
+    crop.x >= 0 && crop.y >= 0 && crop.width > 0 && crop.height > 0;
+}
 export function cropRemovesContent(crop: CropPixels, image: { width: number; height: number }) {
   const c = roundCrop(crop);
   return c.x > 0 || c.y > 0 || c.width < image.width || c.height < image.height;

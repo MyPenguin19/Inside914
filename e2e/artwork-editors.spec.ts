@@ -61,6 +61,14 @@ test("house editor explains insufficient source, saves minimum and high-resoluti
   await screenshot(page,`house-input-${w}`);
   await expect(save,await page.getByText(/^Original:/).innerText()).toBeEnabled();
   if(w===2000){
+   // Exercise the real cropper's transient zero-size resize event, not only a mock.
+   const cropEditor=page.getByLabel("House artwork crop editor",{exact:true});
+   await cropEditor.evaluate(async element=>{
+    element.style.width="0px";
+    await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+   });
+   await expect(save).toBeEnabled();
+   await cropEditor.evaluate(element=>{element.style.removeProperty("width");});
    for(const width of widths){await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);await screenshot(page,`house-editor-${width}`);}
    await page.getByRole("slider",{name:"House artwork zoom"}).fill("1.2");await page.getByRole("button",{name:"Reset",exact:true}).click();
    await expect(page.getByRole("slider",{name:"House artwork zoom"})).toHaveValue("1");
@@ -94,7 +102,7 @@ test("Fit/Fill, stable crop consent, safe replacement, all viewports and origina
  const stripe:string[]=[];await page.context().route(/https:\/\/api\.stripe\.com\//,r=>{stripe.push(r.request().url());return r.abort();});
  await page.goto("/areas");await page.getByRole("checkbox",{name:/Northern Westchester/}).check();await page.getByRole("button",{name:"Continue with selected areas"}).click();
  await page.getByRole("button",{name:/position B1:/}).click();await page.getByRole("button",{name:"Continue to artwork"}).click();
- await page.getByRole("button",{name:"Edit artwork for Northern Westchester",exact:true}).click();
+ await expect(page).toHaveURL(/\/book\/artwork$/);
  const input=page.getByLabel("Ad image file").filter({visible:true}), save=page.getByRole("button",{name:"Save artwork and continue",exact:true});
  for(const [w,h,transparent] of [[300,300,false],[1800,1800,false],[1000,1600,false],[1600,900,false],[1200,1200,true]] as const){
   const buffer=await editorImage(w,h,transparent);await input.setInputFiles({name:"fixture.png",mimeType:"image/png",buffer});
@@ -130,7 +138,7 @@ test("Fit/Fill, stable crop consent, safe replacement, all viewports and origina
  const active=ok(await db.from("booking_artwork").select("*").eq("booking_id",booking.id).single())!;
  const original=await editorImage(1200,1200,true);
  expect(Buffer.from(await ok(await db.storage.from("artwork").download(active.storage_path))!.arrayBuffer()).equals(original)).toBe(true);
- await page.getByRole("button",{name:"Edit artwork for Northern Westchester",exact:true}).click();
+ await page.getByRole("button",{name:/(?:Add|Edit) artwork for Northern Westchester$/}).click();
  await expect(page.getByRole("button",{name:"Fill space"})).toHaveAttribute("aria-pressed","true");
  await page.route("**/storage/v1/object/upload/sign/**",async r=>{await new Promise(resolve=>setTimeout(resolve,300));await r.abort();});
  await input.setInputFiles({name:"interrupted.png",mimeType:"image/png",buffer:await editorImage(1400,1000)});

@@ -1,0 +1,80 @@
+Inside914 customer-flow simplification — local implementation, November 2, 2026
+
+Customer journey
+1. Areas: choose one or more areas from compact cards or the existing map.
+2. Your ad: choose one position per area, then upload and preview artwork.
+   Continue to artwork now opens the first selected area's editor directly.
+   The area checklist supports separate images or copying an image for review.
+3. Business details: one contact form applies to all selected areas.
+4. Save card: review the area prices, give explicit consent, and reserve for $0 today.
+
+Improvements
+- Mobile area cards precede the map. Town names remain; repeated population tables
+  were removed from checkout. Proposed coverage qualifications remain visible.
+- Only one area's position picker is displayed at a time. Area buttons show saved
+  choices, and Next guides the customer to the next unfinished area.
+- Going back preserves choices. Catalog validation still prevents stale positions
+  from being submitted. Network errors preserve choices for retry.
+- The selection total and next action stay within reach while scrolling.
+- No extra Add artwork stop immediately after holding positions. The server sets
+  the first area's derived HttpOnly hold capability only after successful creation.
+- Artwork cards show area, position, price, thumbnail, and readiness. Campaign
+  details are optional; image-copy controls collapse once an ad is ready.
+- Contact validation focuses the first invalid field without clearing other entries.
+- Checkout has a compact itemized order summary and optional artwork review.
+- Removed the stale Pending owner and legal review label. Approved consent text
+  remains byte-identical, visible, and unticked by default.
+- A network failure no longer leaves card submission stuck. If saving succeeded,
+  confirmation can be retried without calling confirmSetup again.
+
+Verification
+- Typecheck: PASS.
+- Lint: PASS.
+- Unit: 572 passed across 71 files.
+- Integration: 195 passed; 3 real-Stripe credential-dependent tests skipped.
+- E2E: all 43 passed. After the final compact artwork-control refinement, all
+  7 relevant artwork/multi-area tests passed again.
+- Production build: PASS using the normal Turbopack build command.
+  The sandbox's initial worker-port refusal had been cached by the compiler.
+  After granting local network access and proving a temporary loopback listener,
+  the generated cache was preserved under .next/cache and a fresh build passed.
+- Visual inspection: area selection, position picker, completed artwork checklist,
+  contact form and checkout. Responsive tests cover 320, 375, 390, 768 and 1440px.
+- Simulated full journey preserves the exact selected positions, independent
+  original artwork, shared payment method, per-campaign consents and $0 due today.
+- Mocked tests cover consent/network failures and confirmation retry without a
+  second card-save call. No claim of real Stripe execution is made.
+
+Source files changed in this UX pass
+src/app/book/artwork/page.tsx
+src/app/book/cart/actions.ts
+src/app/book/cart/page.tsx
+src/app/book/cart/payment/page.tsx
+src/components/booking/artwork-action-button.tsx (new)
+src/components/booking/booking-steps.tsx
+src/components/booking/cart-hold-timer.tsx
+src/components/booking/category-zone-selector.tsx
+src/components/checkout/area-order-summary.tsx (new)
+src/components/checkout/contact-form.tsx
+src/components/checkout/payment-step.tsx
+
+Test files changed in this UX pass
+tests/artwork-entry.test.ts (new)
+tests/reservation-contact-form.test.tsx (new)
+tests/category-zone-selector.test.tsx
+tests/payment-step.test.tsx
+e2e/artwork-editors.spec.ts
+e2e/home.spec.ts
+e2e/multi-area.spec.ts
+e2e/seo.spec.ts
+
+Boundaries
+Existing uncommitted audit and owner-approved policy work was preserved.
+No admin implementation, pricing, migrations, postcard geometry, or payment
+collection rules changed in this UX pass. Each campaign keeps its own price,
+including the owner's temporary $1 prices. LIVE_COLLECTION_RELEASED remains false.
+Tests used isolated localhost Supabase with real Stripe and Resend credentials
+blanked. No production changes, Stripe writes, real emails, push or deployment.
+
+Local visual artifacts (synthetic test data; development indicators are visible)
+/Users/gela/Documents/Codex/2026-10-18/we-x20/outputs/inside914-simple-flow-2026-11-02/

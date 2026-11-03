@@ -12,8 +12,8 @@ for (const path of PUBLIC_MARKETING_PATHS) {
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
     await expect(page).toHaveTitle(/\| Inside914$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    if (path !== "/contact") await expect(page.getByRole("main")).toContainText("Reservations are not open yet.");
-    if (path === "/areas") await expect(page.getByRole("heading", { name: "Selected: 0 areas" })).toBeVisible();
+    await expect(page.getByRole("main")).not.toContainText("Reservations are not open yet.");
+    if (path === "/areas") await expect(page.getByText("Choose an area to get started", { exact: false })).toBeVisible();
     for (const width of [320, 375, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth), `${path} at ${width}`).toBeLessThanOrEqual(width);
@@ -81,7 +81,7 @@ test("marketing pages remain usable with enlarged text", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   for (const path of PUBLIC_MARKETING_PATHS) {
     await page.goto(path);
-    if (path === "/areas") await expect(page.getByRole("heading", { name: "Selected: 0 areas" })).toBeVisible();
+    if (path === "/areas") await expect(page.getByText("Choose an area to get started", { exact: false })).toBeVisible();
     await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
     await page.locator("header summary").click();
     const overflow = await page.evaluate(() => [...document.querySelectorAll("main *, header *, footer *")].filter(node => {

@@ -1,5 +1,7 @@
 import {afterEach,expect,test,vi} from "vitest";
 vi.mock("server-only",()=>({}));
+// Exercise the retained server-side shutdown path independently of today's approval.
+vi.mock("@/lib/legal/release",()=>({RESERVATION_POLICY:{approvedForReservations:false}}));
 const blocked=vi.hoisted(()=>vi.fn(()=>{throw new Error("No infrastructure access allowed");}));
 vi.mock("@/lib/supabase/admin",()=>({createAdminClient:blocked}));
 vi.mock("@/lib/checkout/stripe",()=>({getStripe:blocked}));

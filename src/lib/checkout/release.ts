@@ -1,12 +1,13 @@
 import { CHECKOUT_CLOSED_MESSAGE } from "./messages";
 import { devTestMode } from "@/lib/dev/test-mode";
+import { RESERVATION_POLICY } from "@/lib/legal/release";
 
-// A reviewed source release is required after final policies and their effective
-// version are approved. Environment variables cannot release commercial checkout.
-export const PUBLIC_CHECKOUT_RELEASED = false;
+// Owner-approved reservation policies release checkout, independently of charging.
+// Environment variables cannot override this reviewed source decision.
+export const PUBLIC_CHECKOUT_RELEASED = RESERVATION_POLICY.approvedForReservations;
 export { CHECKOUT_CLOSED_MESSAGE } from "./messages";
 
-export function checkoutReleased(env: Record<string, string | undefined> = process.env) {
+export function checkoutReleased(env: Record<string, string | undefined> = process.env): boolean {
   return PUBLIC_CHECKOUT_RELEASED || devTestMode(env).active;
 }
 

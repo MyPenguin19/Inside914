@@ -32,13 +32,6 @@ const websiteData = {
   name: "Inside914",
   publisher: { "@id": SITE_URL + "/#organization" },
 };
-const TRUST = [
-  { title: "Reserve without paying upfront", body: "A reservation saves a position without an upfront charge." },
-  { title: "Preview your advertisement", body: "See your selected position and artwork before the postcard is mailed." },
-  { title: "Follow campaign progress", body: "See when your area fills, artwork is approved, and the campaign moves toward mailing." },
-  { title: "Receive mailing documentation", body: "After mailing, access the available documentation for your campaign." },
-];
-
 const STEPS = [
   { title: "Choose your areas", body: "Pick one or more areas on the map." },
   { title: "Choose positions and artwork", body: "Pick a position and add your image. Use the same image or a different one in each area." },
@@ -62,10 +55,6 @@ const FAQ = [
   {
     q: "What happens after I reserve?",
     a: "You receive a confirmation email with a private link to your reservation. Each area moves from reservation to artwork review, a filled campaign, final preparation, payment, and mailing. Follow progress on your private campaign page.",
-  },
-  {
-    q: "How does mailing verification work?",
-    a: "Your private campaign page shows campaign progress and the mailing documentation made available after mailing. It does not provide tracking for individual mailpieces.",
   },
   {
     q: "Can I change my artwork?",
@@ -140,27 +129,6 @@ export default function Home() {
             <p className="mt-6 text-sm text-muted">
               Each area is its own campaign with 10 advertising spaces.
             </p>
-          </div>
-        </section>
-
-        {/* Verified Mail / trust */}
-        <section id="verified-mail" aria-labelledby="verified-title" className="scroll-mt-20 border-b border-line bg-surface">
-          <div className="page-width section-y">
-            <SectionHeading
-              id="verified-title"
-              eyebrow="Inside914 Verified Mail"
-              title="Advertising you can actually follow."
-              intro="Know what’s happening after you reserve. Inside914 gives each advertiser a private campaign page so you can follow your advertisement from reservation through mailing."
-            />
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {TRUST.map((item) => (
-                <li key={item.title} className="rounded-2xl border border-line bg-background p-5">
-                  <span aria-hidden="true" className="block h-1 w-8 rounded-full bg-accent" />
-                  <h3 className="mt-4 font-medium">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">{item.body}</p>
-                </li>
-              ))}
-            </ul>
           </div>
         </section>
 

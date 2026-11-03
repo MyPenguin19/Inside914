@@ -2,6 +2,7 @@ import { getStagedArtwork } from "@/lib/artwork/service";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isLayoutV2 } from "@/lib/print/layouts";
 import { Suspense } from "react";
+import Link from "next/link";
 import {
   extendCurrentHold,
   finalizeArtworkUpload,
@@ -45,6 +46,7 @@ async function Studio({ searchParams }: { searchParams: Promise<{ upload?: strin
   return (
     <div className="mt-8">
       <header className="mb-6">
+        {booking.cartId && <Link href="/book/cart" className="mb-4 inline-block text-sm underline">Back to your areas</Link>}
         <h1 className="text-3xl font-semibold tracking-tight">Add your artwork</h1>
         {booking.cartId && <p className="mt-2 font-medium" data-testid="artwork-area">{booking.zoneName}</p>}
         <p className="mt-2 text-muted">
