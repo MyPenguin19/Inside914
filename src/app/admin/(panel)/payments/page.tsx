@@ -42,21 +42,23 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
 
   let data;
   try {
-    const editions = await listEditions(supabase);
-    const requested = typeof sp.campaign === "string" ? sp.campaign : undefined;
-    const open = editions.filter((e) => e.status === "open").sort((a, b) => Date.parse(a.artworkDeadline) - Date.parse(b.artworkDeadline));
-    const selected = editions.find((e) => e.id === requested) ?? open[0] ?? editions[0] ?? null;
+    const editions = await listEditions(supabase, true);
+    const requested = typeof sp.campaign === "string" && /^[0-9a-f-]{36}$/.test(sp.campaign) ? sp.campaign : undefined;
+    const selected = editions.find((e) => e.id === requested) ?? null;
     const [result, all, slots] = await Promise.all([
-      searchBookings(supabase, { filter, q, page, extra: "payment" }),
-      listEditionBookings(supabase, editions.map((e) => e.id)),
+      searchBookings(supabase, { filter, q, page, editionId: requested, extra: "payment" }),
+      listEditionBookings(supabase, requested ? [requested] : editions.map((e) => e.id)),
       selected ? listSlots(supabase, [selected.id]) : Promise.resolve([]),
     ]);
-    const consents = await listConsents(supabase, [...new Set([...result.rows, ...all.filter(isConfirmed)].map((b) => b.id))]);
-    const {data:charges,error:chargeError}=await supabase.from("zone_charges").select("booking_id,amount_cents,status,stripe_mode");
+    const chargeQuery = supabase.from("zone_charges").select("booking_id,amount_cents,status,stripe_mode");
+    const [consents, {data:charges,error:chargeError}, collection] = await Promise.all([
+      listConsents(supabase, [...new Set([...result.rows, ...all.filter(isConfirmed)].map((b) => b.id))]),
+      requested ? chargeQuery.eq("edition_id", requested) : chargeQuery,
+      selected?.productModel === "square_v1" ? supabase.rpc("admin_collection_preview",{p_id:selected.id}) : {data:null,error:null},
+    ]);
     if(chargeError) throw new Error("Could not load collection ledger");
-    const collection = selected?.productModel === "square_v1" ? await supabase.rpc("admin_collection_preview",{p_id:selected.id}) : {data:null,error:null};
     if(collection.error) throw new Error("Could not verify campaign readiness");
-    data = { collectionReady:(collection.data as {ready?:boolean}|null)?.ready === true, charges: new Map(charges.map(c=>[c.booking_id,c])), ...result, all, slots, consents, selected, editionList: editions, editions: new Map(editions.map((e) => [e.id, e])) };
+    data = { collectionReady:(collection.data as {ready?:boolean}|null)?.ready === true, charges: new Map(charges.map(c=>[c.booking_id,c])), ...result, all, slots, consents, selected, scope: requested ? "this campaign" : "all campaigns", editionList: editions, editions: new Map(editions.map((e) => [e.id, e])) };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin payments failed");
     return <LoadError what="payments" />;
@@ -76,6 +78,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
     const s = new URLSearchParams();
     if (filter !== "confirmed") s.set("filter", filter);
     if (q) s.set("q", q);
+    if (typeof sp.campaign === "string") s.set("campaign", sp.campaign);
     if (p > 1) s.set("page", String(p));
     return `/admin/payments${s.size ? `?${s}` : ""}`;
   };
@@ -83,25 +86,20 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
   return (
     <>
 
+      <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <Stat label={`Authorized (${data.scope})`} value={formatPrice(authorized)} note={`${confirmed.length} confirmed reservations`} />
+        <Stat label={`Cards saved (${data.scope})`} value={`${ready} of ${confirmed.length}`} />
+        <Stat label={`Collected (${data.scope})`} value={formatPrice([...data.charges.values()].filter(c=>c.status==="succeeded" && c.stripe_mode==="live").reduce((sum,c)=>sum+c.amount_cents,0))} note="Recorded live payments only; test payments excluded" />
+      </section>
+      <Filters base="/admin/payments" filter={filter} filters={FILTERS} q={q} campaign={typeof sp.campaign === "string" ? sp.campaign : undefined} campaigns={data.editionList.map(e => ({id:e.id,label:e.name ?? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}`}))} />
       {sel && selStats && (
         <Card as="section" aria-labelledby="readiness-title">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="readiness-title" className="text-lg font-semibold">
               Readiness: {sel.name ?? `${sel.zoneName} · ${formatIssueMonth(sel.issueMonth)}`}
             </h2>
-            {data.editionList.length > 1 && (
-              <form action="/admin/payments" className="flex min-w-0 max-w-full items-center gap-2 text-sm">
-                <label htmlFor="pay-campaign" className="sr-only">Campaign</label>
-                <select id="pay-campaign" name="campaign" defaultValue={sel.id} className="min-w-0 rounded-xl border border-line bg-surface px-3 py-2">
-                  {data.editionList.map((e) => (
-                    <option key={e.id} value={e.id}>{e.name ?? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}`}</option>
-                  ))}
-                </select>
-                <button type="submit" className="rounded-full border border-line px-4 py-2 hover:border-foreground">Show</button>
-              </form>
-            )}
           </div>
-          <p className="mt-2"><Link className="underline" href={`/admin/campaigns/${sel.id}`}>Open campaign to review artwork and payments</Link></p>
+          <p className="mt-2"><Link className="underline" href={`/admin/campaigns/${sel.id}?view=mailing`}>Open Print & mail for this campaign</Link></p>
           {selConfirmed.some(b=>data.consents.get(b.id)?.reviewReason)&&<p role="alert" className="mt-3 text-sm">Consent review required. Legacy deadlines and draft terms must be resolved before collection. Extending a campaign does not renew authorization.</p>}
           <details className="mt-4"><summary className="cursor-pointer">Advanced details</summary>
             <DetailList
@@ -120,12 +118,6 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
         </Card>
       )}
 
-      <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <Stat label="Authorized (all campaigns)" value={formatPrice(authorized)} note={`${confirmed.length} confirmed reservations`} />
-        <Stat label="Cards saved" value={`${ready} of ${confirmed.length}`} />
-        <Stat label="Collected" value={formatPrice([...data.charges.values()].filter(c=>c.status==="succeeded" && c.stripe_mode==="live").reduce((sum,c)=>sum+c.amount_cents,0))} note="Recorded live payments only; test payments excluded" />
-      </section>
-      <Filters base="/admin/payments" filter={filter} filters={FILTERS} q={q} />
       {data.rows.length === 0 ? (
         <EmptyState title="No card setups here yet." />
       ) : (

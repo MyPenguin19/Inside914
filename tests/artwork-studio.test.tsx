@@ -278,6 +278,7 @@ test("duplicate crop callbacks preserve acknowledgement; an actual crop change r
  expect(screen.getByRole("checkbox")).toHaveProperty("checked",true);
  fireEvent.click(screen.getByRole("button",{name:"Save artwork and continue"}));
  await waitFor(()=>expect(actions.saveLayout).toHaveBeenCalledWith(expect.objectContaining({cropApproved:true})));
+ await waitFor(()=>expect(screen.getByRole("button",{name:"Reset"})).toHaveProperty("disabled",false));
  fireEvent.click(screen.getByRole("button",{name:"Reset"}));
  expect(screen.getByRole("checkbox")).toHaveProperty("checked",false);
 });

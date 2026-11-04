@@ -1,5 +1,3 @@
-import { ActionCenter } from "@/components/admin/action-center";
-import { layoutVersion } from "@/lib/print/layouts";
 import { isConfirmed } from "@/lib/admin/metrics";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -12,7 +10,7 @@ import { listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
 import { campaignStats, deadlineMissed } from "@/lib/admin/metrics";
 import { formatDay, formatIssueMonth, formatPrice } from "@/lib/format";
 
-const STATUSES = ["active", "draft", "archived"] as const;
+const STATUSES = ["active", "draft", "finished", "archived"] as const;
 
 export default function CampaignsPage({ searchParams }: PageProps<"/admin/campaigns">) {
   return (
@@ -35,10 +33,15 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
 
   let rows;
   try {
-    const editions = (await listEditions(supabase, true)).filter((e) => status === "archived" ? !!e.archivedAt : !e.archivedAt && (status === "active" || e.status === "draft"));
+    const editions = (await listEditions(supabase, true)).filter((e) => {
+      if (status === "archived") return !!e.archivedAt;
+      if (e.archivedAt) return false;
+      const finished = ["mailed", "completed", "cancelled"].includes(e.status);
+      return status === "finished" ? finished : !finished && (status === "active" || e.status === "draft");
+    });
     const ids = editions.map((e) => e.id);
     const [slots, bookings] = await Promise.all([listSlots(supabase, ids), listEditionBookings(supabase, ids)]);
-    rows = editions.map((e) => ({ edition: e, stats: campaignStats(e, slots, bookings, now), approved: bookings.filter(b=>b.editionId===e.id && isConfirmed(b) && b.artworkReview==="approved").length, hasHistory: bookings.some(b=>b.editionId===e.id) }));
+    rows = editions.map((e) => ({ edition: e, stats: campaignStats(e, slots, bookings, now), approved: bookings.filter(b=>b.editionId===e.id && isConfirmed(b) && b.artworkReview==="approved").length }));
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin campaigns failed");
     return <LoadError what="campaigns" />;
@@ -52,16 +55,15 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
         <p>Confirmed reservations and their agreed amounts are unchanged. No automatic cancellation or charge.</p>
         <Link className="underline" href={`/admin/campaigns/${e.id}#status-title`}>Review amounts, extend deadline or cancel campaign</Link>
       </Notice>)}
-      <ActionCenter />
       <nav aria-label="Filter by status" className="flex flex-wrap gap-2 text-sm">
         {STATUSES.map((s) => (
           <Link
             key={s}
             href={s === "active" ? "/admin/campaigns" : `/admin/campaigns?status=${s}`}
             aria-current={status === s ? "page" : undefined}
-            className={`rounded-full border px-3 py-1.5 ${status === s ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground"}`}
+            className={`inline-flex min-h-11 items-center rounded-full border px-3 py-1.5 ${status === s ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground"}`}
           >
-            {s[0].toUpperCase()+s.slice(1)}
+            {s === "active" ? "Current" : s === "draft" ? "Drafts" : s === "finished" ? "Finished" : "Archived"}
           </Link>
         ))}
       </nav>
@@ -70,24 +72,18 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
       ) : (
         <DataTable
           caption="Campaigns"
-          columns={["Campaign / area", "Layout", "Price per position", "Status", "Reserved", "Artwork approved", "Mailing", "Actions"]}
-          rows={rows.map(({ edition: e, stats, approved, hasHistory }) => [
+          columns={["Campaign / area", "Progress", "Reserved", "Artwork", "Next"]}
+          rows={rows.map(({ edition: e, stats, approved }) => [
             <Link key="n" href={`/admin/campaigns/${e.id}`} className="font-medium underline-offset-4 hover:underline">
-              {e.name ?? e.zoneName}<span className="block text-xs text-muted">{e.zoneName} · {formatIssueMonth(e.issueMonth)}</span>
+              {e.name ?? e.zoneName}<span className="block text-xs text-muted">{e.zoneName} · {formatIssueMonth(e.issueMonth)} · {formatPrice(e.unitPriceCents ?? 0)} per space</span>
             </Link>,
-            layoutVersion(e.layoutTemplate),
-            formatPrice(e.unitPriceCents ?? 0),
             <StatusBadge key="s" tone={e.status === "open" && !e.pausedAt ? "success" : e.pausedAt ? "warning" : "neutral"}>
               {e.archivedAt ? "Archived" : e.status.replaceAll("_", " ")}
               {e.pausedAt ? " · paused" : ""}
             </StatusBadge>,
-            `${stats.reservedUnits} of ${stats.totalUnits}`,
-            `${approved} of ${stats.reservations}`,
-            ["printed","mailed","completed"].includes(e.status) ? e.status : e.mailDate ? `Planned ${formatDay(e.mailDate)}` : "Not scheduled",
-            <div key="actions" className="flex flex-wrap gap-3">
-              {!e.archivedAt && !["cancelled","completed"].includes(e.status) && <Link href={`/admin/campaigns/${e.id}/edit`} className="underline">Edit</Link>}
-              <Link href={`/admin/campaigns/${e.id}#manage-campaign`} className="underline">{e.archivedAt ? "View" : ["cancelled","completed"].includes(e.status) ? "Archive" : e.status==="draft" && !hasHistory ? "Manage / Delete" : "Manage"}</Link>
-            </div>,
+            `${stats.reservedUnits} of ${stats.sellableUnits}`,
+            `${approved} of ${stats.reservations} approved`,
+            <Link key="actions" href={`/admin/campaigns/${e.id}`} className="inline-block rounded-full border border-line px-4 py-2 font-medium hover:border-foreground">Open campaign</Link>,
           ])}
         />
       )}

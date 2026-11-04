@@ -24,7 +24,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between gap-3 lg:block">
             <div>
               <Logo />
-              <p className="text-xs text-muted">Admin</p>
+              <p className="text-xs text-muted">Your business workspace</p>
             </div>
             <form action={signOut} className="lg:hidden">
               <button type="submit" className="min-h-11 rounded-full border border-line px-4 text-sm hover:border-foreground">
@@ -47,7 +47,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</main>
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8"><div className="mx-auto max-w-6xl">{children}</div></main>
     </div>
   );
 }

@@ -10,11 +10,12 @@ import { z } from "zod";
 import { AdPlacement } from "@/components/admin/ad-placement";
 import { Badge, DetailList, LoadError, PageHeader, PanelSkeleton } from "@/components/admin/ui";
 import { DataTable } from "@/components/ui/data-table";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, Notice } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { NoteForm } from "@/components/admin/note-form";
 import { ReservationActions } from "@/components/admin/reservation-actions";
-import { getAccessStatus, getBooking, getConsent, listEditions, listEvents, listNotes, listSlots, searchBookings, signArtwork } from "@/lib/admin/data";
+import { getAccessStatus, getBooking, getConsent, getEdition, listEvents, listNotes, listSlots, searchBookings, signArtwork } from "@/lib/admin/data";
 import { eventLabel } from "@/lib/admin/labels";
 import { artworkLabel, paymentLabel, positionLabel, reservationLabel } from "@/lib/admin/labels";
 import { formatDeadline, formatIssueMonth, formatPhone, formatPrice, formatTimestamp } from "@/lib/format-admin";
@@ -36,8 +37,8 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
   try {
     const booking = await getBooking(supabase, id);
     if (!booking) notFound();
-    const [editions, slots, consent, artwork, history, notes, access, events] = await Promise.all([
-      listEditions(supabase),
+    const [edition, slots, consent, artwork, history, notes, access, events] = await Promise.all([
+      getEdition(supabase, booking.editionId),
       listSlots(supabase, [booking.editionId]),
       getConsent(supabase, id),
       signArtwork(id).catch(() => null),
@@ -46,7 +47,7 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
       getAccessStatus(supabase, id),
       listEvents(supabase, "booking", [id], 10),
     ]);
-    data = { booking, edition: editions.find((e) => e.id === booking.editionId) ?? null, slots, consent, artwork, history: history?.rows ?? [], notes, access, events };
+    data = { booking, edition, slots, consent, artwork, history: history?.rows ?? [], notes, access, events };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error; // notFound()
     console.error(error instanceof Error ? error.message : "admin advertiser failed");
@@ -79,7 +80,8 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
 
       <CustomerRequestList bookingId={b.id}/>
       <EmailDeliveryStatus bookingId={b.id} />
-      <ReservationActions booking={b} spaces={own.map((s) => s.label)} now={now} />
+      <div className="flex flex-wrap gap-3"><ButtonLink href={`/admin/campaigns/${b.editionId}?view=advertisers`} variant="secondary">Open campaign</ButtonLink><ButtonLink href={`/admin/artwork/${b.id}`} variant="secondary">Review artwork</ButtonLink></div>
+      <details open={!!b.flag || !!b.cancellation} className="rounded-2xl border border-line bg-surface p-4"><summary className="cursor-pointer font-medium">Manage reservation or flag a problem</summary><div className="mt-4"><ReservationActions booking={b} spaces={own.map((s) => s.label)} now={now} /></div></details>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -117,8 +119,8 @@ async function AdvertiserDetail({ params }: { params: PageProps<"/admin/advertis
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold">Payment authorization</h2>
-            <p className="mt-1 text-xs text-muted">A saved card is not a payment. Nothing has been collected.</p>
+            <h2 className="text-lg font-semibold">Saved card &amp; payment</h2><Link className="mt-2 inline-block text-sm underline" href={`/admin/payments?campaign=${b.editionId}`}>Open payment records</Link>
+            <p className="mt-1 text-xs text-muted">A saved card authorizes a later payment. Open payment records to see whether money has been collected.</p>
             <div className="mt-4">
               <DetailList
                 rows={[

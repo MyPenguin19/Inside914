@@ -36,7 +36,7 @@ export function PostcardPreview({ dimensions = POSTCARD_INCHES, side, otherSlots
           .filter((z) => z.side === side)
           .map((zone) => (
             <div key={zone.kind} aria-hidden="true" className={`absolute ${layout ? "" : "p-[2%]"}`} style={boxStyle(zone, dimensions)}>
-              {zone.kind === "house" || zone.kind === "postal" ? <div className="flex h-full w-full items-center justify-center border border-line bg-background-soft p-1 text-center text-[9px] text-muted">{!compact && zone.title}</div> : zone.kind === "masthead" ? (
+              {zone.kind === "house" || zone.kind === "postal" ? <div className="flex h-full w-full items-center justify-center border border-line bg-background-soft p-1 text-center text-[9px] text-muted">{!compact && (zone.kind === "house" ? "Reserved" : zone.title)}</div> : zone.kind === "masthead" ? (
                 <div className="flex h-full w-full items-end border-b border-foreground/40 pb-[4%]">
                   <span className="h-[22%] w-[34%] rounded-[1px] bg-foreground/30" />
                 </div>

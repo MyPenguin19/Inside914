@@ -11,7 +11,7 @@ export function PageHeader({ title, description, children }: { title: string; de
         <h1 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       </div>
-      {children}
+      {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}
     </header>
   );
 }
@@ -54,8 +54,8 @@ export function LoadError({ what }: { what: string }) {
   );
 }
 
-export function PanelSkeleton() {
-  return <div className="h-80 animate-pulse rounded-2xl border border-line bg-surface" aria-busy="true" aria-label="Loading" />;
+export function PanelSkeleton({ label = "Loading your workspace…" }: { label?: string }) {
+  return <div role="status" className="rounded-2xl border border-line bg-surface p-6" aria-busy="true"><p className="text-sm text-muted">{label}</p><div className="mt-4 h-24 animate-pulse rounded-xl bg-background-soft motion-reduce:animate-none" aria-hidden="true" /></div>;
 }
 
 export function Pagination({ page, total, pageSize, href }: { page: number; total: number; pageSize: number; href: (page: number) => string }) {

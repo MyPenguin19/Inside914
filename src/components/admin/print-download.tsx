@@ -13,7 +13,7 @@ export function PrintDownload({ editionId, ready = false, houseReady = false, fi
     <p className="my-3 font-medium">{ready ? "Ready to mail" : "PREVIEW — NOT READY TO MAIL"}</p>
     {!houseReady && <p role="alert" className="mb-3 text-sm">Permanent house artwork needs attention. Re-save the house advertisement in Settings before the campaign can become Ready to Mail. <a className="underline" href="/admin/settings">Go to Settings</a></p>}
     {filled !== undefined && <p className="mb-3 text-sm">{filled} of 10 spots filled</p>}
-    <p className="mb-3 text-sm text-muted">Download the current front and back at any time. Empty spaces show Available placeholders. The back uses your permanent house artwork from Settings; until configured, that panel shows the postcard background. Downloads do not charge anyone or change campaign status.</p>
+    <p className="mb-3 text-sm text-muted">Preview the postcard, then download its front and back. Empty ad spaces are marked Available. Use the files for mailing only when the status above says Ready to mail.</p>
     <Button variant="secondary" disabled={busy} onClick={async () => {
       setBusy(true); setMessage(""); const urls: string[] = [];
       try {
@@ -28,7 +28,7 @@ export function PrintDownload({ editionId, ready = false, houseReady = false, fi
       finally { setBusy(false); }
     }}>Preview postcard</Button>
     {!!previews.length && <div className="my-4 grid gap-4 sm:grid-cols-2">{previews.map((url,i)=><figure key={url}><figcaption>{i===0 ? "Front" : "Back"} — current preview</figcaption><img src={url} alt={`${i===0 ? "Front" : "Back"} current postcard`} className="w-full border border-line" /></figure>)}</div>}
-    <form className="space-y-4" onSubmit={async event => {
+    <form className="mt-3 space-y-4" onSubmit={async event => {
       event.preventDefault();
       if (busy) return;
       const data = new FormData(event.currentTarget);

@@ -8,7 +8,7 @@ import { LoadError, PageHeader, PanelSkeleton } from "@/components/admin/ui";
 import { Card, Notice } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { isoToNyLocal } from "@/lib/admin/campaign-form";
-import { hasBookings, listEditions, listZones } from "@/lib/admin/data";
+import { hasBookings, getEdition, listZones } from "@/lib/admin/data";
 import { LAYOUT_TEMPLATES } from "@/lib/admin/layouts";
 
 export default function EditCampaignPage({ params }: PageProps<"/admin/campaigns/[id]/edit">) {
@@ -25,7 +25,7 @@ async function EditCampaign({ params }: { params: PageProps<"/admin/campaigns/[i
   if (!z.uuid().safeParse(id).success) notFound();
   let data;
   try {
-    const edition = (await listEditions(supabase, true)).find((e) => e.id === id);
+    const edition = await getEdition(supabase, id);
     if (!edition) notFound();
     const [zones, booked] = await Promise.all([listZones(supabase), hasBookings(supabase, id)]);
     data = { edition, zones, booked };

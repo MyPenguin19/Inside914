@@ -16,12 +16,13 @@ import { HoldStatePanel } from "@/components/booking/hold-state-panel";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { loadHoldContext } from "@/lib/booking/hold-context";
+import { buttonClass } from "@/components/ui/button";
 
 export const metadata = { title: "Add your artwork · Inside914" };
 
 const MAX_EXTENSIONS = 2; // matches the check in public.extend_hold()
 
-export default function ArtworkPage({ searchParams }: { searchParams: Promise<{ upload?: string }> }) {
+export default function ArtworkPage({ searchParams }: { searchParams: Promise<{ upload?: string; space?: string }> }) {
   return (
     <>
       <SiteHeader />
@@ -36,13 +37,13 @@ export default function ArtworkPage({ searchParams }: { searchParams: Promise<{ 
   );
 }
 
-async function Studio({ searchParams }: { searchParams: Promise<{ upload?: string }> }) {
+async function Studio({ searchParams }: { searchParams: Promise<{ upload?: string; space?: string }> }) {
   const context = await loadHoldContext();
   if (context.kind !== "active") {
     return <HoldStatePanel state={context.kind} editionId={context.kind === "expired" ? context.editionId : undefined} />;
   }
   const { booking, area, otherSlots } = context;
-  const { upload } = await searchParams;
+  const { upload, space } = await searchParams;
   const artwork = (upload ? await getStagedArtwork(createAdminClient(), booking.id, upload) : null) ?? context.artwork;
   return (
     <div className="mt-8">
@@ -50,6 +51,11 @@ async function Studio({ searchParams }: { searchParams: Promise<{ upload?: strin
         {booking.cartId && <Link href="/book/cart" className="mb-4 inline-block text-sm underline">Back to your areas</Link>}
         <h1 className="text-3xl font-semibold tracking-tight">Add your artwork</h1>
         {booking.cartId && <p className="mt-2 font-medium" data-testid="artwork-area">{booking.zoneName}</p>}
+        {booking.cartId && booking.productModel === "square_v1" && <div className="mt-3 flex flex-wrap items-center gap-3">
+          <p className="text-sm">{area.side === "front" ? "Front" : "Back"} · {booking.positions.map(p => p.label).join(" + ")}</p>
+          <Link href={`/book/cart/position?booking=${booking.id}`} className={buttonClass("secondary")}>Change ad space</Link>
+        </div>}
+        {space === "changed" && <p role="status" className="mt-3 text-sm text-accent">Your ad space has been updated. Review your artwork in its new position below.</p>}
         <p className="mt-2 text-muted">
           {isLayoutV2(booking.layoutTemplate) ? "Upload, adjust, and save. Each area keeps its own artwork." : booking.productModel === "square_v1" ? "Upload an ad for this area, then crop, drag and zoom to a square. Other areas keep their own artwork." : "Upload your ad, then drag and zoom until it fits. You’ll see it on the postcard as you go."}
         </p>

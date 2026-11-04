@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("next/server", () => ({ connection: vi.fn() }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 vi.mock("@/lib/booking/category-checkout", () => ({ categoryCatalog: async () => ({ editions: [] }) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => { throw new Error("Unexpected privileged access"); } }));
 import { CategoryCheckout } from "@/components/booking/category-checkout";

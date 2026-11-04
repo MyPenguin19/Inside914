@@ -53,8 +53,8 @@ export function CampaignForm({
       )}
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-3 text-lg font-semibold">Campaign</legend>
-        <TextField id={fieldId("name")} name="name" label="Campaign name" required defaultValue={v("name")} error={e.name} maxLength={120} />
+        <legend className="mb-3 text-lg font-semibold">{mode === "create" ? "1. Choose the area" : "Campaign details"}</legend>
+        <TextField id={fieldId("name")} name="name" label="Campaign name" required defaultValue={v("name")} error={e.name} maxLength={120} hint="A name you will recognize, such as Northern Westchester — January 2027." />
         <SelectField id={fieldId("zone_id")} name="zone_id" label="Area" required defaultValue={v("zone_id")} error={e.zone_id} disabled={fixed}>
           {zones.map((z) => (
             <option key={z.id} value={z.id}>
@@ -64,12 +64,12 @@ export function CampaignForm({
         </SelectField>
         {fixed && <input type="hidden" name="zone_id" value={v("zone_id")} />}
         <TextField id={fieldId("issue_month")} name="issue_month" label="Mailing month" type="month" required defaultValue={v("issue_month")} error={e.issue_month} disabled={locked} />
-        <TextField id={fieldId("target_quantity")} name="target_quantity" label="Target mailing quantity (homes)" hint="Provisional estimate; not a confirmed delivery quantity." type="number" inputMode="numeric" min={1} required defaultValue={v("target_quantity")} error={e.target_quantity} />
+        <TextField id={fieldId("target_quantity")} name="target_quantity" label="Target mailing quantity (homes)" hint="How many homes you plan to reach. This is an estimate." type="number" inputMode="numeric" min={1} required defaultValue={v("target_quantity")} error={e.target_quantity} />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2" disabled={locked}>
-        <legend className="mb-1 text-lg font-semibold">Dates</legend>
-        <p className="text-sm text-muted sm:col-span-2">Times are Westchester time. Order: reservations open → reservation deadline → artwork due → mailing window.</p>
+        <legend className="mb-1 text-lg font-semibold">{mode === "create" ? "2. Set the schedule" : "Schedule"}</legend>
+        <p className="text-sm text-muted sm:col-span-2">Set the last day to reserve, when ads are due, and when you plan to mail. All times are Westchester time.</p>
         <TextField id={fieldId("reservations_open_at")} name="reservations_open_at" label="Reservations open" type="datetime-local" optional defaultValue={v("reservations_open_at")} error={e.reservations_open_at} hint="Leave empty to allow bookings as soon as it's opened." />
         <TextField id={fieldId("reservation_deadline")} name="reservation_deadline" label="Reservation deadline" type="datetime-local" required defaultValue={v("reservation_deadline")} error={e.reservation_deadline} />
         <TextField id={fieldId("artwork_due_at")} name="artwork_due_at" label="Artwork submission deadline" type="datetime-local" required defaultValue={v("artwork_due_at")} error={e.artwork_due_at} />
@@ -79,7 +79,7 @@ export function CampaignForm({
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-1 text-lg font-semibold">Layout and prices</legend>
+        <legend className="mb-1 text-lg font-semibold">{mode === "create" ? "3. Set the price" : "Price and layout"}</legend>
         {fixed && <p className="text-sm text-muted sm:col-span-2">The layout stays with the campaign. Price changes apply only to new reservations.</p>}
         <SelectField id={fieldId("layout_template")} name="layout_template" label="Postcard layout" disabled={fixed} required defaultValue={v("layout_template")} error={e.layout_template} hint={templates.find((t) => t.key === v("layout_template"))?.description}>
           {templates.map((t) => (
@@ -94,7 +94,7 @@ export function CampaignForm({
       </fieldset>
       {fixed && <input type="hidden" name="layout_template" value={v("layout_template")} />}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 border-t border-line pt-5">
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Saving…" : mode === "create" ? "Create draft campaign" : "Save changes"}
         </Button>

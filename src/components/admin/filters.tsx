@@ -6,37 +6,47 @@ export function Filters({
   filter,
   filters,
   q,
+  campaign,
+  campaigns,
   searchLabel = "Search business, contact or email",
 }: {
   base: string;
   filter: string;
   filters: [string, string][];
   q?: string;
+  campaign?: string;
+  campaigns?: { id: string; label: string }[];
   searchLabel?: string;
 }) {
-  const href = (f: string) => {
+  const href = (f: string, query = q) => {
     const p = new URLSearchParams();
-    if (f !== "all") p.set("filter", f);
-    if (q) p.set("q", q);
+    p.set("filter", f);
+    if (query) p.set("q", query);
+    if (campaign) p.set("campaign", campaign);
     const s = p.toString();
     return s ? `${base}?${s}` : base;
   };
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
       <nav aria-label="Filter" className="flex flex-wrap gap-2 text-sm">
         {filters.map(([value, label]) => (
           <Link
             key={value}
             href={href(value)}
             aria-current={filter === value ? "page" : undefined}
-            className={`rounded-full border px-3 py-1.5 ${filter === value ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground"}`}
+            className={`inline-flex min-h-11 items-center rounded-full border px-3 py-1.5 ${filter === value ? "border-foreground bg-foreground text-background" : "border-line hover:border-foreground"}`}
           >
             {label}
           </Link>
         ))}
       </nav>
-      <form action={base} className="flex gap-2" role="search">
-        {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
+      <form key={`${filter}:${campaign}:${q}`} action={base} className="flex flex-wrap items-end gap-3" role="search">
+        <input type="hidden" name="filter" value={filter} />
+        {campaigns && <div className="w-full min-w-0 sm:w-64"><label htmlFor="campaign-filter" className="mb-1 block text-sm text-muted">Campaign</label>
+          <select id="campaign-filter" name="campaign" defaultValue={campaign ?? ""} className="min-h-11 w-full min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-sm">
+            <option value="">All campaigns</option>{campaigns.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+          </select></div>}
+        <div className="min-w-0 flex-1 basis-48">
         <label htmlFor="q" className="sr-only">
           {searchLabel}
         </label>
@@ -45,11 +55,13 @@ export function Filters({
           name="q"
           defaultValue={q}
           placeholder={searchLabel}
-          className="w-full min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-sm lg:w-72"
+          className="min-h-11 w-full min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-sm"
         />
-        <button type="submit" className="rounded-full border border-line px-4 py-2 text-sm hover:border-foreground">
-          Search
+        </div>
+        <button type="submit" className="min-h-11 rounded-full border border-line px-4 py-2 text-sm hover:border-foreground">
+          Show results
         </button>
+        {q && <Link href={href(filter, "")} className="px-2 py-3 text-sm underline">Clear search</Link>}
       </form>
     </div>
   );

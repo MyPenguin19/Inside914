@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export const ADMIN_NAV = [
+  { href: "/admin", label: "Home" },
   { href: "/admin/campaigns", label: "Campaigns" },
   { href: "/admin/advertisers", label: "Advertisers" },
-  { href: "/admin/artwork", label: "Artwork Approval" },
+  { href: "/admin/artwork", label: "Review artwork" },
   { href: "/admin/payments", label: "Payments" },
 ];
 
@@ -20,7 +21,7 @@ export function AdminNav() {
       <Link
         href={href}
         aria-current={isActive(pathname, href) ? "page" : undefined}
-        className={`block whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
+        className={`block min-h-11 whitespace-nowrap rounded-lg px-3 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
           isActive(pathname, href) ? "bg-foreground text-background" : "text-muted hover:bg-background-soft hover:text-foreground"
         } ${extra}`}
       >
@@ -33,6 +34,7 @@ export function AdminNav() {
       <ul className="flex gap-1 overflow-x-auto lg:flex-col">
         {ADMIN_NAV.map((n) => item(n.href, n.label))}
         <li aria-hidden="true" className="hidden lg:my-2 lg:block lg:border-t lg:border-line" />
+        {item("/admin/zones", "Advertising areas", "lg:text-xs")}
         {item("/admin/settings", "Settings", "lg:text-xs")}
       </ul>
     </nav>
