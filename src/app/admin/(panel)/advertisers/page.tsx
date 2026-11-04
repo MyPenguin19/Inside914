@@ -5,7 +5,7 @@ import { Filters, pageParam } from "@/components/admin/filters";
 import { Badge, EmptyState, LoadError, PageHeader, Pagination, PanelSkeleton } from "@/components/admin/ui";
 import { DataTable } from "@/components/ui/data-table";
 import { requireAdmin } from "@/lib/admin/auth";
-import { listCartZones, listEditions, listSlots, PAGE_SIZE, searchBookings, type BookingFilter } from "@/lib/admin/data";
+import { listCartZones, listEditions, PAGE_SIZE, searchBookings, type BookingFilter } from "@/lib/admin/data";
 import { artworkLabel, paymentLabel, positionLabel, reservationLabel } from "@/lib/admin/labels";
 import { formatIssueMonth, formatPhone, formatPrice } from "@/lib/format-admin";
 
@@ -38,9 +38,8 @@ async function Advertisers({ searchParams }: { searchParams: PageProps<"/admin/a
   let data;
   try {
     const [result, editions] = await Promise.all([searchBookings(supabase, { filter, q, page, editionId: campaign }), listEditions(supabase, true)]);
-    const editionIds = [...new Set(result.rows.map((b) => b.editionId))];
-    const [slots, cartZones] = await Promise.all([listSlots(supabase, editionIds), listCartZones(supabase, [...new Set(result.rows.flatMap(b => b.cartId ? [b.cartId] : []))])]);
-    data = { cartZones, ...result, editions: new Map(editions.map((e) => [e.id, e])), labels: new Map(slots.map((s) => [s.id, { label: s.label, side: s.side }])) };
+    const cartZones = await listCartZones(supabase, [...new Set(result.rows.flatMap(b => b.cartId ? [b.cartId] : []))]);
+    data = { cartZones, ...result, editions: new Map(editions.map((e) => [e.id, e])) };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin advertisers failed");
     return <LoadError what="advertisers" />;

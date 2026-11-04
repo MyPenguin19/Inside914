@@ -117,11 +117,13 @@ test("admin pages fit a phone screen", async ({ page }) => {
       if (path.startsWith("/admin/campaigns/new")) await expect(page.getByLabel("Reservation deadline")).toHaveValue("2026-12-15T23:59");
       // Payments streams its readiness card after the heading; measure the complete form.
       if (path === "/admin/payments") await expect(page.getByLabel("Campaign", { exact: true })).toBeVisible();
+      await expect(page.locator('main [aria-busy="true"]:visible')).toHaveCount(0);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `${path} at ${width}px`).toBeLessThanOrEqual(0);
     }
 
-    // The mobile nav scrolls within its own row; the selector and submit remain usable.
+    // Every destination is available in the phone disclosure; no sideways scrolling.
+    if (width < 1024) await page.getByRole("button", { name: "Menu", exact: true }).click();
     const payments = page.getByRole("navigation", { name: "Admin", exact: true }).getByRole("link", { name: "Payments", exact: true });
     await payments.scrollIntoViewIfNeeded();
     await payments.click();

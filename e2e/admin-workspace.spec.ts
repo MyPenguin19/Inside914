@@ -58,6 +58,7 @@ test("owner can find every campaign tool, return Home, and keep the workspace on
   await expect(nav.getByRole("link", {name:"Overview",exact:true})).toHaveAttribute("aria-current", "page");
   await expect(page.getByText("Your next step",{exact:true})).toBeVisible();
   await page.screenshot({path:"../../outputs/inside914-admin-workspace/mobile.png",fullPage:true});
+  await page.getByRole("button", {name:"Menu",exact:true}).click();
   await page.getByRole("navigation", {name:"Admin",exact:true}).getByRole("link", {name:"Home",exact:true}).click();
   await expect(page.getByRole("heading", {name:"Manage Inside914"})).toBeVisible();
   expect(await fixture.snapshot()).toEqual(before);

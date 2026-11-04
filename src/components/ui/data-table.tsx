@@ -31,11 +31,11 @@ export function DataTable({ caption, columns, rows }: { caption: string; columns
       </div>
       <ul aria-label={caption} className="grid gap-3 sm:hidden">
         {rows.map((row, i) => (
-          <li key={i} className="rounded-2xl border border-line bg-surface p-4">
+          <li key={i} className="min-w-0 rounded-2xl border border-line bg-surface p-4 [overflow-wrap:anywhere]">
             <div className="text-base">{row[0]}</div>
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <dl className="mt-3 grid gap-x-4 gap-y-3 text-sm min-[400px]:grid-cols-2">
               {row.slice(1).map((cell, j) => (
-                <div key={j}>
+                <div key={j} className="min-w-0">
                   <dt className="text-xs text-muted">{columns[j + 1]}</dt>
                   <dd className="mt-0.5">{cell}</dd>
                 </div>

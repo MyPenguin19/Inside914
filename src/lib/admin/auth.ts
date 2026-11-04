@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { verifyAdminSession } from "./session";
 
 // The admin security boundary. Every admin page, data loader and server action calls
 // requireAdmin() itself; nothing relies on the proxy or on hidden navigation.
@@ -10,16 +11,10 @@ import { createClient } from "@/lib/supabase/server";
 
 
 // Once per request (React cache): verifies the session with Supabase Auth (getUser contacts the
-// auth server, unlike reading the cookie), then the admins row through RLS.
+// auth server, unlike reading the cookie) and the admins row through RLS in parallel.
 const loadAdmin = cache(async () => {
   await connection(); // per request, never prerendered (and before any env access)
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { supabase, user: null, isAdmin: false } as const;
-  const { data } = await supabase.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
-  return { supabase, user, isAdmin: Boolean(data) } as const;
+  return verifyAdminSession(await createClient());
 });
 
 export async function requireAdmin() {

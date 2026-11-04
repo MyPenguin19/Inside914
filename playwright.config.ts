@@ -1,4 +1,6 @@
 import { loadEnvConfig } from "@next/env";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { assertTestEnvironment } from "./scripts/test-environment";
 import { defineConfig, devices } from "@playwright/test";
 import { isLocalSupabaseUrl } from "./src/lib/dev/test-mode";
@@ -30,6 +32,9 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: false,
     env: {
+      ...(process.env.INSIDE914_AUDIT_UPSTREAM_DELAY_MS ? {
+        NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${pathToFileURL(resolve("tests/fixtures/admin-upstream-delay.mjs")).href}`,
+      } : {}),
       ...Object.fromEntries(
         ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "INSIDE914_DEV_TEST_RESERVATIONS"].flatMap((key) =>
           process.env[key] ? [[key, process.env[key]!]] : [],

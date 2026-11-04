@@ -30,31 +30,53 @@ The admin now keeps the owner focused on one campaign and its next task. This au
 
 Optional fields and uncommon operations remain available in expandable sections. Campaign tabs, search, status filters, browser Back and refresh preserve the current workspace. The full operation-to-location map is in [admin-workspace.md](admin-workspace.md).
 
+## Mobile and loading follow-up
+
+The owner's November 3 screenshots exposed two gaps in the original audit: the horizontal phone navigation clipped destinations, and heading-only timings missed the streamed data wait. The earlier ~0.34-second measurements are superseded by the populated-page measurements below.
+
+- Phones now have a 69px sticky header and a vertical Menu disclosure with all seven destinations and Sign out. Touch targets are at least 44px. Escape returns focus to the toggle; navigation, outside taps and leaving the menu close it.
+- Narrow records use readable cards, long names wrap, and payment summaries stack. Desktop keeps its sidebar and tables.
+- Remote user verification and the RLS admin membership query run concurrently. The cookie supplies only a credential; access still requires a verified user and a matching current admin row. The SDK's explicit-JWT [getUser](https://supabase.com/docs/reference/javascript/auth-getuser) call avoids holding the session lock during the remote check; [getSession](https://supabase.com/docs/reference/javascript/auth-getsession) is never treated as proof of identity.
+- Campaign counts, slots and bookings arrive in one joined query, scoped to the requested status before loading children. Home shares this request between campaign cards and attention items.
+- Paginated advertiser/artwork rows include their position labels. Advertisers with multi-area carts still make a scoped extra read for the other selected areas.
+- Payment records, campaign choices, totals and ledger reads start together. Consent and campaign-readiness reads run only for a selected campaign, where they are displayed.
+- Private data is not cached across requests or users. No migration, environment change, payment change or deployment is part of this follow-up.
+
 ## Measured loading performance
 
-Measurements used a local production build, the isolated local Supabase stack, synthetic confirmed advertisers, and actual image files. Each screen was warmed up, then measured over three full-page navigations. The values below are medians, including navigation and the screen's main heading becoming visible. They are not cold-start, large-account, or live Vercel measurements, and do not measure completion of every optional streamed panel.
+Both versions used local production builds, the same isolated local database, and synthetic reservations. The baseline was an isolated source copy of deployed commit `e555247`. Each local Auth/PostgREST request was delayed by **150ms in the test process only** to expose sequential network waits. This is a controlled simulation, not measured production network latency.
 
-| Screen | Before | After |
-| --- | ---: | ---: |
-| Home | 349 ms | 345 ms |
-| Campaign list | 342 ms | 346 ms |
-| Campaign overview | 338 ms | 342 ms |
-| Campaign advertisers & spaces | 356 ms | 348 ms |
-| Campaign artwork | 383 ms | 351 ms |
-| Campaign print & mail | 331 ms | 342 ms |
-| Campaign settings | 333 ms | 343 ms |
-| New campaign | 343 ms | 335 ms |
-| Advertiser list | 333 ms | 336 ms |
-| Review queue | 331 ms | 339 ms |
-| Payments | 339 ms | 340 ms |
-| Advertising areas | 333 ms | 341 ms |
-| Global settings | 336 ms | 339 ms |
+The benchmark measures a real sidebar click through visible populated rows, totals and completed loading states. Home waits for both current campaigns and attention items. It checks readiness every animation frame; coarse assertion polling is excluded from the timing. One initial circuit is recorded separately, followed by three repeated circuits whose medians are below.
 
-All measured screens were approximately **0.34 seconds locally**. Most differences are small enough to be normal measurement variation; these results do not establish a large speedup. The verified performance improvements are fewer unnecessary reads, image processing only where required, and fewer sequential dependencies. Remote-network benefits still need measurement after deployment. The later search-preservation change only changes link parameters and was verified separately in the production build.
+| Screen | Before | After | Reduction |
+| --- | ---: | ---: | ---: |
+| Campaigns | 692 ms | 373 ms | 46% |
+| Advertisers | 691 ms | 361 ms | 48% |
+| Artwork | 673 ms | 362 ms | 46% |
+| Payments | 980 ms | 375 ms | 62% |
+| Home | 838 ms | 658 ms | 21% |
 
-The performance check observed no browser runtime errors or horizontal overflow across these 13 screens at 375 and 1440 px. Campaign workspace checks also covered 320 px. Screenshots and raw measurements are saved in the workspace's `outputs/inside914-admin-audit` folder.
+These results show reduced waiting with upstream latency. They do not establish live Vercel, cold-start, large-account or multi-area-cart timings. Live authenticated timing remains to be verified after deployment; the connected browser could not attach to the signed-in tab during this session.
 
-## Verification
+Raw reports: `outputs/inside914-admin-audit/data-before-150.json` and `data-after-150.json` in the workspace. The repeatable command is:
+
+```sh
+INSIDE914_E2E_PRODUCTION=true INSIDE914_AUDIT_UPSTREAM_DELAY_MS=150 \
+  node scripts/verify-local-mvp.mjs test:e2e -- e2e/admin-performance.spec.ts
+```
+
+Set `INSIDE914_LOCAL_STACK_ID` when more than one local native stack exists. The latency preload refuses non-local databases and Vercel; it is never imported by application code.
+
+## Follow-up verification
+
+- Production build, TypeScript, lint and whitespace checks pass.
+- 600 unit tests and 22 local database integration tests pass, including cookie-identity rejection, verification failure, mismatched membership and immediately revoked admin membership.
+- 10 distinct production-mode browser tests pass across admin access, mobile navigation, workspace operations, consecutive artwork review and loaded-data performance.
+- Mobile checks exercise every destination at 320, 375, 430 and 768px, Escape/focus behavior, sticky-menu access after scrolling, populated records and horizontal overflow. Existing page checks additionally cover 390 and 1440px.
+- Desktop sidebar/current-page state, filters, selected campaign totals, Back/refresh, proof upload and review persistence remain verified. Synthetic artwork state is unchanged by read-only navigation.
+- Screenshots: `mobile-menu.png`, `mobile-campaigns.png`, `mobile-payments.png`, `mobile-review-artwork.png`, and `desktop-campaigns.png` under the same output folder.
+
+## Original audit verification
 
 - Production build, TypeScript checks, lint and whitespace checks pass.
 - 598 unit tests passed; the final search and confirmation tests were also rerun after the last change.
