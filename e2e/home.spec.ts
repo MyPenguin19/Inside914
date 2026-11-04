@@ -16,7 +16,7 @@ test("homepage: hero, how it works, pricing, FAQ and footer", async ({ page }) =
   }
   const pricing = page.locator("#pricing");
   await expect(pricing).toContainText("Postcard Advertisement");
-  await expect(pricing).toContainText("Price per area");
+  await expect(pricing).toContainText("$399");
   await expect(pricing).toContainText("10 advertising spaces");
   await expect(pricing).not.toContainText("Double");
 
