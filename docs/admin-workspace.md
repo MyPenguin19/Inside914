@@ -2,6 +2,8 @@
 
 The admin is organized around one campaign at a time. All existing operations remain available; this change adds no database migration and does not change authorization, collection rules, campaign transitions or print geometry.
 
+On phones, use **Menu** in the compact sticky header to reach any admin section or sign out. The menu opens vertically, closes after navigation, and supports Escape. Narrow lists display cards with wrapping names and contact details. Desktop retains the sidebar and tables.
+
 ## Where to go
 
 | Job | Location |

@@ -133,6 +133,26 @@ const toEdition = (e: EditionRow): AdminEdition => ({
 });
 
 const EDITION_COLUMNS = "id, archived_at, zone_id, name, target_quantity, product_model, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)";
+const SLOT_COLUMNS = "id, edition_id, side, label, x_in, y_in, width_in, height_in, blocked_at, blocked_reason";
+type SlotRow = Pick<Database["public"]["Tables"]["slots"]["Row"], "id" | "edition_id" | "side" | "label" | "x_in" | "y_in" | "width_in" | "height_in" | "blocked_at" | "blocked_reason">;
+const toSlot = (s: SlotRow): AdminSlot => ({
+  id: s.id, editionId: s.edition_id, side: s.side === "back" ? "back" : "front", label: s.label,
+  x: Number(s.x_in), y: Number(s.y_in), width: Number(s.width_in), height: Number(s.height_in),
+  blockedAt: s.blocked_at, blockedReason: s.blocked_reason,
+});
+
+// One RLS-protected read for campaign cards/counts. Filter editions before embedding
+// their inventory; no separate IDs -> slots/bookings network waterfall.
+export const listCampaignSummaries = cache(async (db: Db, scope: "current" | "draft" | "finished" | "archived" = "current") => {
+  let query = db.from("editions").select(`${EDITION_COLUMNS}, slots(${SLOT_COLUMNS}), bookings(${BOOKING_COLUMNS})`).order("issue_month", { ascending: false });
+  query = scope === "archived" ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+  if (scope === "current") query = query.not("status", "in", "(mailed,completed,cancelled)");
+  if (scope === "draft") query = query.eq("status", "draft");
+  if (scope === "finished") query = query.in("status", ["mailed", "completed", "cancelled"]);
+  const { data, error } = await query.returns<(EditionRow & { slots: SlotRow[]; bookings: BookingRow[] })[]>();
+  if (error) fail("campaign summaries", error);
+  return data.map(e => ({ edition: toEdition(e), slots: e.slots.map(toSlot), bookings: e.bookings.map(toAdminBooking) }));
+});
 
 // Request-only memoization: Home and its attention panel share one authorized read.
 // No admin data or readiness is cached across requests/users.
@@ -166,35 +186,24 @@ export async function listSlots(db: Db, editionIds: string[]): Promise<AdminSlot
   if (!editionIds.length) return [];
   const { data, error } = await db
     .from("slots")
-    .select("id, edition_id, side, label, x_in, y_in, width_in, height_in, blocked_at, blocked_reason")
+    .select(SLOT_COLUMNS)
     .in("edition_id", editionIds)
     .order("side", { ascending: false })
     .order("y_in")
     .order("x_in");
   if (error) fail("slots", error);
-  return data.map((s) => ({
-    id: s.id,
-    editionId: s.edition_id,
-    side: s.side === "back" ? "back" : "front",
-    label: s.label,
-    x: Number(s.x_in),
-    y: Number(s.y_in),
-    width: Number(s.width_in),
-    height: Number(s.height_in),
-    blockedAt: s.blocked_at,
-    blockedReason: s.blocked_reason,
-  }));
+  return data.map(toSlot);
 }
 
-// Every booking for the given editions (bounded by their inventory), for counts and the postcard.
-export async function listEditionBookings(db: Db, editionIds: string[]): Promise<AdminBooking[]> {
-  if (!editionIds.length) return [];
-  const { data, error } = await db
+// Inventory/counts for specified editions; omit IDs for the all-campaign payment totals.
+export async function listEditionBookings(db: Db, editionIds?: string[]): Promise<AdminBooking[]> {
+  if (editionIds && !editionIds.length) return [];
+  let query = db
     .from("bookings")
     .select(BOOKING_COLUMNS)
-    .in("edition_id", editionIds)
-    .order("created_at", { ascending: false })
-    .returns<BookingRow[]>();
+    .order("created_at", { ascending: false });
+  if (editionIds) query = query.in("edition_id", editionIds);
+  const { data, error } = await query.returns<BookingRow[]>();
   if (error) fail("bookings", error);
   return data.map(toAdminBooking);
 }
@@ -219,6 +228,8 @@ export async function searchBookings(
   const contacts = "booking_contacts!inner(business_name, contact_name, email, phone)";
   let columns = BOOKING_COLUMNS.replace("booking_contacts(business_name, contact_name, email, phone)", contacts);
   if (opts.review) columns = columns.replace("booking_artwork(", "booking_artwork!inner(");
+  // Position labels arrive with the paginated rows, including released claims.
+  columns = columns.replace("booking_slots(slot_id, released_at)", "booking_slots(slot_id, released_at, slots(label, side))");
   let query = db.from("bookings").select(columns, { count: "exact" }).order("created_at", { ascending: false });
   if (opts.review) query = query.eq("booking_artwork.review_status", opts.review);
 
@@ -233,9 +244,10 @@ export async function searchBookings(
     query = query.or(`business_name.ilike.%${q}%,contact_name.ilike.%${q}%,email.ilike.%${q}%`, { referencedTable: "booking_contacts" });
   }
   const from = (Math.max(1, opts.page) - 1) * PAGE_SIZE;
-  const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1).returns<BookingRow[]>();
+  const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1).returns<(Omit<BookingRow, "booking_slots"> & { booking_slots: { slot_id: string; released_at: string | null; slots: { label: string; side: string } | null }[] })[]>();
   if (error) fail("advertisers", error);
-  return { rows: data.map(toAdminBooking), total: count ?? 0 };
+  const labels = new Map(data.flatMap(b => b.booking_slots.flatMap(s => s.slots ? [[s.slot_id, s.slots] as const] : [])));
+  return { rows: data.map(toAdminBooking), total: count ?? 0, labels };
 }
 
 export async function getBooking(db: Db, id: string) {

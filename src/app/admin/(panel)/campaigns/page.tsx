@@ -6,7 +6,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { ButtonLink } from "@/components/ui/button";
 import { StatusBadge, Notice } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
-import { listEditionBookings, listEditions, listSlots } from "@/lib/admin/data";
+import { listCampaignSummaries } from "@/lib/admin/data";
 import { campaignStats, deadlineMissed } from "@/lib/admin/metrics";
 import { formatDay, formatIssueMonth, formatPrice } from "@/lib/format";
 
@@ -29,19 +29,12 @@ export default function CampaignsPage({ searchParams }: PageProps<"/admin/campai
 async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/campaigns">["searchParams"] }) {
   const { supabase, now } = await requireAdmin();
   const { status: raw } = await searchParams;
-  const status = STATUSES.includes(raw as (typeof STATUSES)[number]) ? (raw as string) : "active";
+  const status = STATUSES.includes(raw as (typeof STATUSES)[number]) ? (raw as (typeof STATUSES)[number]) : "active";
 
   let rows;
   try {
-    const editions = (await listEditions(supabase, true)).filter((e) => {
-      if (status === "archived") return !!e.archivedAt;
-      if (e.archivedAt) return false;
-      const finished = ["mailed", "completed", "cancelled"].includes(e.status);
-      return status === "finished" ? finished : !finished && (status === "active" || e.status === "draft");
-    });
-    const ids = editions.map((e) => e.id);
-    const [slots, bookings] = await Promise.all([listSlots(supabase, ids), listEditionBookings(supabase, ids)]);
-    rows = editions.map((e) => ({ edition: e, stats: campaignStats(e, slots, bookings, now), approved: bookings.filter(b=>b.editionId===e.id && isConfirmed(b) && b.artworkReview==="approved").length }));
+    const summaries = await listCampaignSummaries(supabase, status === "active" ? "current" : status);
+    rows = summaries.map(({ edition, slots, bookings }) => ({ edition, stats: campaignStats(edition, slots, bookings, now), approved: bookings.filter(b => isConfirmed(b) && b.artworkReview === "approved").length }));
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin campaigns failed");
     return <LoadError what="campaigns" />;
@@ -83,7 +76,7 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
             </StatusBadge>,
             `${stats.reservedUnits} of ${stats.sellableUnits}`,
             `${approved} of ${stats.reservations} approved`,
-            <Link key="actions" href={`/admin/campaigns/${e.id}`} className="inline-block rounded-full border border-line px-4 py-2 font-medium hover:border-foreground">Open campaign</Link>,
+            <Link key="actions" href={`/admin/campaigns/${e.id}`} className="inline-flex min-h-11 items-center rounded-full border border-line px-4 py-2 font-medium hover:border-foreground">Open campaign</Link>,
           ])}
         />
       )}

@@ -2,7 +2,7 @@ import { ownerNotificationsConfigured } from "@/lib/operations/notifications";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
 import { acknowledgeAlert } from "@/app/admin/operations-actions";
-import { listEditions, listSlots, listEditionBookings } from "@/lib/admin/data";
+import { listCampaignSummaries } from "@/lib/admin/data";
 import { campaignStats, attentionItems, artworkAwaitingReview } from "@/lib/admin/metrics";
 import { LoadError } from "./ui";
 import { formatTimestamp } from "@/lib/format-admin";
@@ -11,15 +11,12 @@ export async function ActionCenter() {
   const { supabase, now } = await requireAdmin();
   let data;
   try {
-    const [alerts, allEditions] = await Promise.all([
+    const [alerts, summaries] = await Promise.all([
       supabase.from("operational_alerts").select("id,title,href,created_at").is("resolved_at", null).order("created_at", { ascending: false }).limit(12),
-      listEditions(supabase),
+      listCampaignSummaries(supabase),
     ]);
-    const editions = allEditions.filter(e => !e.archivedAt && !["cancelled", "mailed", "completed"].includes(e.status));
-    const ids = editions.map(e => e.id);
-    const [slots, bookings] = await Promise.all([listSlots(supabase, ids), listEditionBookings(supabase, ids)]);
-    const live = editions.flatMap(e => attentionItems(e, campaignStats(e, slots, bookings, now), [], now).map(item => ({ ...item, title: `${e.name ?? e.zoneName}: ${item.title}` })));
-    data = { alerts, live, review: bookings.filter(artworkAwaitingReview).length };
+    const live = summaries.flatMap(({ edition: e, slots, bookings }) => attentionItems(e, campaignStats(e, slots, bookings, now), [], now).map(item => ({ ...item, title: `${e.name ?? e.zoneName}: ${item.title}` })));
+    data = { alerts, live, review: summaries.reduce((total, s) => total + s.bookings.filter(artworkAwaitingReview).length, 0) };
   } catch {
     return <LoadError what="items needing attention" />;
   }

@@ -8,6 +8,7 @@ import type { Database } from "@/lib/supabase/database.types";
 vi.mock("server-only", () => ({}));
 const { placeHold } = await import("@/lib/booking/place-hold");
 const data = await import("@/lib/admin/data");
+const { verifyAdminSession } = await import("@/lib/admin/session");
 const { campaignStats } = await import("@/lib/admin/metrics");
 
 const url = process.env.SUPABASE_URL!;
@@ -68,6 +69,20 @@ describe.skipIf(!secretKey)("admin access and data (real Supabase Auth + RLS)", 
     expect((await asAdmin.from("admins").select("user_id")).data).toHaveLength(1); // only its own row
   });
 
+  test("parallel session checks require a verified user and current RLS admin membership", async () => {
+    expect(await verifyAdminSession(anon)).toMatchObject({ user: null, isAdmin: false });
+    expect(await verifyAdminSession(asUser)).toMatchObject({ isAdmin: false });
+    const session = await verifyAdminSession(asAdmin);
+    expect(session.isAdmin).toBe(true);
+    expect(session.user?.id).toBe(userIds[0]);
+    expect((await service.from("admins").delete().eq("user_id", userIds[0])).error).toBeNull();
+    try {
+      expect(await verifyAdminSession(asAdmin)).toMatchObject({ isAdmin: false });
+    } finally {
+      expect((await service.from("admins").insert({ user_id: userIds[0] })).error).toBeNull();
+    }
+  });
+
   test("dashboard counts match the database: a confirmed single is 1 unit, 1 reservation, its stored amount", async () => {
     await service.from("bookings").delete().eq("edition_id", EDITION);
     const reserved = await placeHold(service, { slotIds: [slotIds.B1] });
@@ -98,10 +113,15 @@ describe.skipIf(!secretKey)("admin access and data (real Supabase Auth + RLS)", 
     const found = await data.searchBookings(asAdmin, { filter: "confirmed", q: "admin test", page: 1 });
     expect(found.rows.map((b) => b.id)).toEqual([reserved.bookingId]);
     expect(found.total).toBe(1);
+    expect(found.labels.get(slotIds.B1)).toEqual({ label: "B1", side: "back" });
+    const summary = (await data.listCampaignSummaries(asAdmin)).find(s => s.edition.id === EDITION)!;
+    expect(campaignStats(summary.edition, summary.slots, summary.bookings, Date.now())).toEqual(stats);
     expect((await data.searchBookings(asAdmin, { filter: "confirmed", q: "no-such-business", page: 1 })).total).toBe(0);
     expect((await data.searchBookings(asAdmin, { filter: "pending", page: 1 })).rows).toEqual([]); // holds without details aren't advertisers
     // The non-admin's client gets nothing from the same loaders.
     expect((await data.searchBookings(asUser, { filter: "all", page: 1 })).total).toBe(0);
+    expect((await data.searchBookings(asUser, { filter: "all", page: 1 })).labels.size).toBe(0);
+    expect(await data.listCampaignSummaries(asUser)).toEqual([]);
     expect(await data.listEditionBookings(asUser, [EDITION])).toEqual([]);
   });
 

@@ -7,7 +7,7 @@ import { Badge, EmptyState, LoadError, PageHeader, Pagination, PanelSkeleton } f
 import { DataTable } from "@/components/ui/data-table";
 import { Notice } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
-import { listEditions, listSlots, PAGE_SIZE, searchBookings, type BookingFilter } from "@/lib/admin/data";
+import { listEditions, PAGE_SIZE, searchBookings, type BookingFilter } from "@/lib/admin/data";
 import { artworkLabel, positionLabel } from "@/lib/admin/labels";
 import { formatIssueMonth, formatTimestamp } from "@/lib/format-admin";
 
@@ -53,8 +53,7 @@ async function ArtworkQueue({ searchParams }: { searchParams: PageProps<"/admin/
       page,
       extra: "artwork",
     })]);
-    const slots = await listSlots(supabase, [...new Set(result.rows.map((b) => b.editionId))]);
-    data = { ...result, editions: new Map(editions.map((e) => [e.id, e])), labels: new Map(slots.map((s) => [s.id, { label: s.label, side: s.side }])) };
+    data = { ...result, editions: new Map(editions.map((e) => [e.id, e])) };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin artwork failed");
     return <LoadError what="artwork" />;

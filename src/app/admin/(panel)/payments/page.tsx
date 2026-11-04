@@ -42,21 +42,22 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
 
   let data;
   try {
-    const editions = await listEditions(supabase, true);
     const requested = typeof sp.campaign === "string" && /^[0-9a-f-]{36}$/.test(sp.campaign) ? sp.campaign : undefined;
-    const selected = editions.find((e) => e.id === requested) ?? null;
-    const [result, all, slots] = await Promise.all([
-      searchBookings(supabase, { filter, q, page, editionId: requested, extra: "payment" }),
-      listEditionBookings(supabase, requested ? [requested] : editions.map((e) => e.id)),
-      selected ? listSlots(supabase, [selected.id]) : Promise.resolve([]),
-    ]);
     const chargeQuery = supabase.from("zone_charges").select("booking_id,amount_cents,status,stripe_mode");
-    const [consents, {data:charges,error:chargeError}, collection] = await Promise.all([
-      listConsents(supabase, [...new Set([...result.rows, ...all.filter(isConfirmed)].map((b) => b.id))]),
+    const [editions, result, all, { data: charges, error: chargeError }] = await Promise.all([
+      listEditions(supabase, true),
+      searchBookings(supabase, { filter, q, page, editionId: requested, extra: "payment" }),
+      listEditionBookings(supabase, requested ? [requested] : undefined),
       requested ? chargeQuery.eq("edition_id", requested) : chargeQuery,
+    ]);
+    if (chargeError) throw new Error("Could not load collection ledger");
+    const selected = editions.find((e) => e.id === requested) ?? null;
+    // Consent/readiness is displayed only when a campaign is selected.
+    const [slots, consents, collection] = await Promise.all([
+      listSlots(supabase, selected ? [selected.id] : []),
+      listConsents(supabase, selected ? all.filter(isConfirmed).map(b => b.id) : []),
       selected?.productModel === "square_v1" ? supabase.rpc("admin_collection_preview",{p_id:selected.id}) : {data:null,error:null},
     ]);
-    if(chargeError) throw new Error("Could not load collection ledger");
     if(collection.error) throw new Error("Could not verify campaign readiness");
     data = { collectionReady:(collection.data as {ready?:boolean}|null)?.ready === true, charges: new Map(charges.map(c=>[c.booking_id,c])), ...result, all, slots, consents, selected, scope: requested ? "this campaign" : "all campaigns", editionList: editions, editions: new Map(editions.map((e) => [e.id, e])) };
   } catch (error) {
@@ -86,7 +87,7 @@ async function Payments({ searchParams }: { searchParams: PageProps<"/admin/paym
   return (
     <>
 
-      <section aria-label="Totals" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+      <section aria-label="Totals" className="grid gap-3 min-[400px]:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         <Stat label={`Authorized (${data.scope})`} value={formatPrice(authorized)} note={`${confirmed.length} confirmed reservations`} />
         <Stat label={`Cards saved (${data.scope})`} value={`${ready} of ${confirmed.length}`} />
         <Stat label={`Collected (${data.scope})`} value={formatPrice([...data.charges.values()].filter(c=>c.status==="succeeded" && c.stripe_mode==="live").reduce((sum,c)=>sum+c.amount_cents,0))} note="Recorded live payments only; test payments excluded" />
