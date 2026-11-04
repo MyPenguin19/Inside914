@@ -1,6 +1,7 @@
 import { POSTCARD_INCHES, type CatalogSlot, type Side } from "@/lib/booking/selection";
 import { findPostcardLayout, postcardZones } from "@/lib/print/layouts";
 import { formatPrice } from "@/lib/format";
+import { BrandMark } from "@/components/brand-mark";
 
 export type SlotView = { slot: CatalogSlot; selected: boolean; selectable: boolean; note: string };
 
@@ -136,9 +137,7 @@ function Zone({ zone, dimensions, publicLabels }: { publicLabels: boolean; zone:
     return (
       <div aria-hidden="true" className="absolute flex flex-col justify-center px-[5%]" style={boxStyle(zone, dimensions)}>
         <div className="flex items-end justify-between gap-2 border-b-2 border-foreground pb-[3%]">
-          <span className="font-display text-[clamp(1rem,5vw,1.6rem)] font-semibold leading-none tracking-tight">
-            Inside<span className="text-accent">914</span>
-          </span>
+          <BrandMark className="text-[clamp(1rem,5vw,1.6rem)]" />
           <span className="text-right text-[10px] leading-tight text-muted">{zone.detail}</span>
         </div>
         <span className="mt-[2%] text-[10px] uppercase tracking-[0.16em] text-muted">{zone.title}</span>
@@ -150,9 +149,7 @@ function Zone({ zone, dimensions, publicLabels }: { publicLabels: boolean; zone:
       <div className="relative flex h-full w-full gap-[4%] rounded-[4px] border border-line bg-surface/60 p-[4%]">
         <div className="flex flex-1 flex-col justify-between">
           <div className="space-y-1">
-            <span className="block font-display text-sm font-semibold leading-none">
-              Inside<span className="text-accent">914</span>
-            </span>
+            <BrandMark className="text-xs" />
             <span className="block text-[9px] leading-tight text-muted">{zone.detail}</span>
           </div>
           <div className="space-y-1.5 self-center" style={{ width: "70%" }}>
