@@ -24,3 +24,9 @@ Booking ID, token, agreed price, original hold expiry, saved artwork/crop, conta
 - Live payment collection remains disabled. No production data, pricing, Stripe or email provider was changed.
 
 Run checks with the local-only wrapper `node scripts/verify-local-mvp.mjs <script>`. This branch's native stack ID is `03f35f02a1debad64481817082c402721cd9f62f337e3e80fc3a7f827adf9bf2`; select it using `INSIDE914_LOCAL_STACK_ID` when multiple local stacks exist. The wrapper supplies local credentials and disables real payment/email providers.
+
+## Production migration — November 3, 2026
+
+Applied the exact SQL above to Inside914 (`hsexthbomretpmqolkqw`) during the owner-authorized GitHub/Vercel release. The connector recorded version `20261104000557` (UTC), name `change_held_ad_space`; the repository filename is unchanged. SQL MD5: `d7a95ff8249390f0ad82b226fe47e776`.
+
+Read-only verification confirmed security invoker, an empty search path, `service_role` execution, and no execution permission for anonymous or signed-in public clients. The security advisor findings are unchanged from before application. No production reservation was created or changed for verification.

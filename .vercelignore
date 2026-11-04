@@ -1,0 +1,26 @@
+# Credentials and local tooling are never deployment inputs.
+.env
+.env.*
+.claude
+.codex
+.agents
+.mcp.json
+*.pem
+.git
+.vercel
+node_modules
+
+# Local builds, test artifacts and native Supabase runtime data.
+.next
+out
+build
+coverage
+.dev-emails
+test-results
+playwright-report
+playwright/.cache
+supabase/.temp
+supabase/.branches
+*.tsbuildinfo
+.DS_Store
+*-debug.log*
