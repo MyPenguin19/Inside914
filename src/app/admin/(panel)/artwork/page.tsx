@@ -45,15 +45,15 @@ async function ArtworkQueue({ searchParams }: { searchParams: PageProps<"/admin/
 
   let data;
   try {
-    const result = await searchBookings(supabase, {
+    const [editions, result] = await Promise.all([listEditions(supabase, true), searchBookings(supabase, {
       filter: (filter === "pending" ? "confirmed" : "all") as BookingFilter,
       review: filter === "all" ? undefined : filter,
       editionId: campaign,
       q,
       page,
       extra: "artwork",
-    });
-    const [editions, slots] = await Promise.all([listEditions(supabase), listSlots(supabase, [...new Set(result.rows.map((b) => b.editionId))])]);
+    })]);
+    const slots = await listSlots(supabase, [...new Set(result.rows.map((b) => b.editionId))]);
     data = { ...result, editions: new Map(editions.map((e) => [e.id, e])), labels: new Map(slots.map((s) => [s.id, { label: s.label, side: s.side }])) };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin artwork failed");
@@ -71,28 +71,10 @@ async function ArtworkQueue({ searchParams }: { searchParams: PageProps<"/admin/
 
   return (
     <>
-      <Filters base="/admin/artwork" filter={filter} filters={FILTERS} q={q} />
-      {data.editions.size > 1 && (
-        <form action="/admin/artwork" className="flex flex-wrap items-center gap-2 text-sm">
-          {filter !== "pending" && <input type="hidden" name="filter" value={filter} />}
-          <label htmlFor="campaign-filter" className="text-muted">
-            Campaign
-          </label>
-          <select id="campaign-filter" name="campaign" defaultValue={campaign ?? ""} className="min-w-0 rounded-xl border border-line bg-surface px-3 py-2">
-            <option value="">All campaigns</option>
-            {[...data.editions.values()].map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name ?? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}`}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="rounded-full border border-line px-4 py-2 hover:border-foreground">
-            Show
-          </button>
-        </form>
-      )}
+      {campaign && <Link href={`/admin/campaigns/${campaign}?view=artwork`} className="text-sm underline">← Back to this campaign’s artwork</Link>}
+      <Filters base="/admin/artwork" filter={filter} filters={FILTERS} q={q} campaign={campaign} campaigns={[...data.editions.values()].map(e => ({id:e.id,label:e.name ?? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}`}))} />
       {data.rows.length === 0 ? (
-        <EmptyState title="No artwork here." />
+        <EmptyState title={filter === "pending" ? "No ads waiting for review." : "No artwork matches these filters."} />
       ) : (
         <>
           <DataTable

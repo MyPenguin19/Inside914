@@ -26,13 +26,23 @@ export function ConfirmAction({
   tone?: "default" | "danger";
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(action, {});
+  const [reason, setReason] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [state, formAction, pending] = useActionState(async (previous: ActionResult, form: FormData) => {
+    const result = await action(previous, form);
+    if (result.ok) {
+      setOpen(false);
+      setReason("");
+      setConfirmation("");
+    }
+    return result;
+  }, {});
   const id = useId();
 
   if (!open) {
     return (
       <div className="flex flex-col gap-1">
-        <Button variant={tone === "danger" ? "secondary" : "secondary"} onClick={() => setOpen(true)} className={tone === "danger" ? "border-danger/60 text-danger hover:bg-danger hover:text-white" : ""}>
+        <Button variant="secondary" disabled={pending} onClick={() => setOpen(true)} className={tone === "danger" ? "border-danger/60 text-danger hover:bg-danger hover:text-white" : ""}>
           {label}
         </Button>
         {state.message && (
@@ -47,10 +57,8 @@ export function ConfirmAction({
   return (
     <form
       role={confirmationPhrase ? "dialog" : undefined}
-      action={async (form) => {
-        await formAction(form);
-        setOpen(false);
-      }}
+      action={formAction}
+      aria-busy={pending}
       className="flex flex-col gap-3 rounded-2xl border border-line-strong bg-surface p-4"
       aria-labelledby={`${id}-title`}
     >
@@ -61,21 +69,22 @@ export function ConfirmAction({
       {Object.entries(fields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      {confirmationPhrase && <label className="flex flex-col gap-1 text-sm"><span>Type {confirmationPhrase} to confirm</span><input name="confirmation" autoComplete="off" required pattern={confirmationPhrase} className="rounded-xl border border-line bg-surface px-3 py-2" /></label>}
+      {confirmationPhrase && <label className="flex flex-col gap-1 text-sm"><span>Type {confirmationPhrase} to confirm</span><input name="confirmation" value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={pending} autoComplete="off" required pattern={confirmationPhrase} className="rounded-xl border border-line bg-surface px-3 py-2" /></label>}
       {reasonLabel && (
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium">{reasonLabel}</span>
-          <textarea name="reason" required maxLength={500} rows={2} className="rounded-xl border border-line bg-surface px-3 py-2" />
+          <textarea name="reason" value={reason} onChange={event => setReason(event.target.value)} disabled={pending} required maxLength={500} rows={2} className="rounded-xl border border-line bg-surface px-3 py-2" />
         </label>
       )}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending} className={tone === "danger" ? "!bg-danger hover:!bg-danger/90" : ""}>
           {pending ? "Working…" : confirmLabel}
         </Button>
-        <Button variant="quiet" onClick={() => setOpen(false)} className="px-3">
+        <Button variant="quiet" disabled={pending} onClick={() => setOpen(false)} className="px-3">
           Keep as is
         </Button>
       </div>
+      {state.message && !pending && <p role={state.ok ? "status" : "alert"} className={`text-sm ${state.ok ? "text-accent" : "text-danger"}`}>{state.message}</p>}
     </form>
   );
 }

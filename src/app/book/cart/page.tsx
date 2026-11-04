@@ -21,6 +21,7 @@ import {
 } from "@/lib/booking/cart";
 import { getReservationView } from "@/lib/checkout/reservation";
 import { formatPrice } from "@/lib/format";
+import { canChangePosition } from "@/lib/booking/change-position";
 import {
   editAreaArtwork,
   reuseArtwork,
@@ -102,6 +103,7 @@ async function Cart() {
                     {b.artworkReady ? "Edit artwork" : "Add artwork"}
                   </ArtworkActionButton>
                 </form>
+                {canChangePosition(b) && <Link href={`/book/cart/position?booking=${b.id}`} className={buttonClass("secondary")}>Change ad space</Link>}
                 {cart.members.some(
                   (other) => other.id !== b.id && other.artworkReady,
                 ) && (
@@ -142,11 +144,15 @@ async function Cart() {
       {!confirmed && !expired && gate === "artwork_missing" && <p className="text-sm text-muted">Save artwork for each area to continue to business details.</p>}
       </section>
       {!confirmed && (
+        <details>
+        <summary className="cursor-pointer text-sm text-muted">Start over with different areas</summary>
+        <p className="my-3 text-sm text-muted">This releases every held space. To change just one space and keep your saved artwork, use “Change ad space” above.</p>
         <form action={releaseAreas}>
           <button className="underline">
             Release all areas and change selection
           </button>
         </form>
+        </details>
       )}
     </div>
   );

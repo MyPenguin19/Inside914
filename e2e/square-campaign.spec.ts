@@ -84,8 +84,9 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   }
   await page.getByRole("button", { name: "Create draft campaign" }).click();
   await expect(page).toHaveURL(/\/admin\/campaigns\/[a-f0-9-]{36}$/);
-  await page.getByText("Campaign dates and details", {exact:true}).click();
+  await page.getByRole("navigation", {name:"Campaign workspace"}).getByRole("link", {name:"Campaign settings",exact:true}).click();
   await expect(page.getByText("$399 per position · 10 paid positions", { exact: true })).toBeVisible();
+  await page.getByRole("navigation", {name:"Campaign workspace"}).getByRole("link", {name:"Overview",exact:true}).click();
   await expect(page.getByRole("group", { name: "Front of the postcard" }).locator("button")).toHaveCount(6);
   await expect(page.getByRole("group", { name: "Back of the postcard" }).locator("button")).toHaveCount(4);
   for (const width of [320, 375, 390, 768, 1440]) {
@@ -95,8 +96,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   const campaign = ok(await db.from("editions").select("id,status,product_model,layout_template,unit_price_cents,double_unit_price_cents").eq("zone_id", zone).single());
   expect(campaign).toMatchObject({ status: "draft", product_model: "square_v1", layout_template:"amazingmail-9x6-v2", unit_price_cents: 39900, double_unit_price_cents: null });
   expect(ok(await db.from("slots").select("id").eq("edition_id", campaign!.id))).toHaveLength(10);
-  await expect(page.getByRole("link", {name:"Review payments"})).toBeVisible();
-  await expect(page.getByText("0 of 10 spots filled", {exact:true})).toBeVisible();
+  await expect(page.getByRole("navigation",{name:"Campaign workspace"}).getByRole("link",{name:"Print & mail",exact:true})).toBeVisible();
   await expect(page.getByText("Layout approved. Open this campaign when you're ready to accept reservations.")).toBeVisible();
   await expect(page.getByText("Campaign not open yet", {exact:true})).toBeVisible();
   await page.getByRole("button", {name:"Open for reservations", exact:true}).click();
@@ -106,7 +106,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   expect(ok(await db.from("editions").select("status").eq("id",campaign!.id).single())!.status).toBe("open");
   expect(ok(await db.from("slot_availability").select("slot_id").eq("edition_id",campaign!.id).eq("available",true))).toHaveLength(10);
   await page.goto(`/admin/production?campaign=${campaign!.id}`);
-  await expect(page).toHaveURL(new RegExp(`/admin/campaigns/${campaign!.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/admin/campaigns/${campaign!.id}\\?view=mailing$`));
   await expect(page.getByText("PREVIEW — NOT READY TO MAIL", {exact:true})).toBeVisible();
   await expect(page.getByRole("button",{name:"Charge Advertisers & Prepare Mailing",exact:true})).toBeDisabled();
   const downloadPromise = page.waitForEvent("download");

@@ -1,5 +1,4 @@
 
-import { bookingSizeLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Filters, pageParam } from "@/components/admin/filters";
@@ -34,13 +33,13 @@ async function Advertisers({ searchParams }: { searchParams: PageProps<"/admin/a
   const filter = (FILTERS.find(([f]) => f === sp.filter)?.[0] ?? "confirmed") as BookingFilter;
   const q = typeof sp.q === "string" ? sp.q.slice(0, 80) : undefined;
   const page = pageParam(sp.page);
+  const campaign = typeof sp.campaign === "string" && /^[0-9a-f-]{36}$/.test(sp.campaign) ? sp.campaign : undefined;
 
   let data;
   try {
-    const result = await searchBookings(supabase, { filter, q, page });
+    const [result, editions] = await Promise.all([searchBookings(supabase, { filter, q, page, editionId: campaign }), listEditions(supabase, true)]);
     const editionIds = [...new Set(result.rows.map((b) => b.editionId))];
-    const [editions, slots] = await Promise.all([listEditions(supabase), listSlots(supabase, editionIds)]);
-    const cartZones = await listCartZones(supabase, [...new Set(result.rows.flatMap(b => b.cartId ? [b.cartId] : []))]);
+    const [slots, cartZones] = await Promise.all([listSlots(supabase, editionIds), listCartZones(supabase, [...new Set(result.rows.flatMap(b => b.cartId ? [b.cartId] : []))])]);
     data = { cartZones, ...result, editions: new Map(editions.map((e) => [e.id, e])), labels: new Map(slots.map((s) => [s.id, { label: s.label, side: s.side }])) };
   } catch (error) {
     console.error(error instanceof Error ? error.message : "admin advertisers failed");
@@ -51,13 +50,15 @@ async function Advertisers({ searchParams }: { searchParams: PageProps<"/admin/a
     const s = new URLSearchParams();
     if (filter !== "confirmed") s.set("filter", filter);
     if (q) s.set("q", q);
+    if (campaign) s.set("campaign", campaign);
     if (p > 1) s.set("page", String(p));
     return `/admin/advertisers${s.size ? `?${s}` : ""}`;
   };
 
   return (
     <>
-      <Filters base="/admin/advertisers" filter={filter === "confirmed" ? "confirmed" : filter} filters={FILTERS} q={q} />
+      {campaign && <Link href={`/admin/campaigns/${campaign}?view=advertisers`} className="text-sm underline">← Back to this campaign’s advertisers</Link>}
+      <Filters base="/admin/advertisers" filter={filter} filters={FILTERS} q={q} campaign={campaign} campaigns={[...data.editions.values()].map(e => ({id:e.id,label:e.name ?? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}`}))} />
       {data.rows.length === 0 ? (
         <EmptyState title={q ? `No advertisers match “${q}”.` : "No advertisers here yet."}>
           {filter === "confirmed" && !q && "Confirmed reservations appear here once customers complete checkout."}
@@ -66,24 +67,16 @@ async function Advertisers({ searchParams }: { searchParams: PageProps<"/admin/a
         <>
           <DataTable
             caption="Advertisers"
-            columns={["Business", "Selected zones", "Contact", "Email", "Phone", "Campaign", "Position", "Size", "Reservation", "Artwork", "Payment", "Amount"]}
+            columns={["Business / contact", "Campaign / space", "Reservation", "Artwork", "Card / amount"]}
             rows={data.rows.map((b) => {
               const e = data.editions.get(b.editionId);
               return [
-                <Link key="b" href={`/admin/advertisers/${b.id}`} className="font-medium underline-offset-4 hover:underline">
-                  {b.contact?.businessName}
-                </Link>,
-                b.cartId ? (data.cartZones.get(b.cartId)?.join(", ") ?? e?.zoneName ?? "—") : e?.zoneName ?? "—",
-                b.contact?.contactName ?? "—",
-                b.contact?.email ?? "—",
-                b.contact ? formatPhone(b.contact.phone) : "—",
-                e ? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}` : "—",
-                positionLabel(b, data.labels),
-                e?.productModel === "square_v1" ? "Square" : bookingSizeLabel(b.size),
+                <div key="b"><Link href={`/admin/advertisers/${b.id}`} className="font-medium underline underline-offset-4">{b.contact?.businessName ?? "No business details yet"}</Link>
+                  {b.contact && <div className="mt-1 text-xs text-muted"><p>{b.contact.contactName}</p><p className="break-all">{b.contact.email}</p><p>{formatPhone(b.contact.phone)}</p></div>}</div>,
+                <div key="campaign">{e ? <Link href={`/admin/campaigns/${e.id}?view=advertisers`} className="underline underline-offset-4">{e.name ?? `${e.zoneName} · ${formatIssueMonth(e.issueMonth)}`}</Link> : "—"}<p className="mt-1 text-xs text-muted">{positionLabel(b, data.labels)}</p>{b.cartId && <p className="mt-1 text-xs text-muted">Selected areas: {data.cartZones.get(b.cartId)?.join(", ") ?? e?.zoneName ?? "—"}</p>}</div>,
                 <Badge key="r" label={reservationLabel(b, now)} />,
                 <Badge key="a" label={artworkLabel(b)} />,
-                <Badge key="p" label={paymentLabel(b)} />,
-                `${formatPrice(b.priceCents)}${b.pricingMode === "test" ? " (test)" : ""}`,
+                <div key="p"><Badge label={paymentLabel(b)} /><p className="mt-1 text-sm">{formatPrice(b.priceCents)}{b.pricingMode === "test" ? " (test)" : ""}</p></div>,
               ];
             })}
           />

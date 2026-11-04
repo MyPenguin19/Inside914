@@ -36,7 +36,7 @@ export async function saveZone(_prev: ActionResult, form: FormData): Promise<Act
   const v = parsed.data;
   const { error } = await supabase.rpc("admin_save_zone", { p_id: v.id, p_name: v.name, p_slug: v.slug, p_household_count: v.household_count });
   if (error) return { message: adminErrorMessage(error), values };
-  return done(v.id ? "Zone saved." : "Zone created.");
+  return done(v.id ? "Area saved." : "Area created.");
 }
 
 // ---- Campaigns ---------------------------------------------------------------------------

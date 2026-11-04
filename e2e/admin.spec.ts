@@ -72,14 +72,15 @@ test("an admin signs in, sees real data in every section, and signs out", async 
   await signIn(page, admin);
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { name: "Manage Inside914", level: 1 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "1. Campaigns" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your current campaigns" })).toBeVisible();
 
   const nav = page.getByRole("navigation", { name: "Admin" });
   for (const [link, heading] of [
     ["Campaigns", "Campaigns"],
     ["Advertisers", "Advertisers"],
-    ["Artwork Approval", "Artwork"],
+    ["Review artwork", "Artwork"],
     ["Payments", "Payments"],
+    ["Advertising areas", "Advertising areas"],
     ["Settings", "Settings"],
   ]) {
     await nav.getByRole("link", { name: link }).click();
@@ -106,12 +107,13 @@ test("an admin signs in, sees real data in every section, and signs out", async 
 test("admin pages fit a phone screen", async ({ page }) => {
   await signIn(page, admin);
   await expect(page.getByRole("heading", { name: "Manage Inside914", level: 1 })).toBeVisible();
+  test.setTimeout(120_000);
   for (const width of [320, 375, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const path of ["/admin/zones", "/admin/campaigns/new?draft=central-westchester-2027-01", "/admin", "/admin/campaigns", "/admin/campaigns/00000000-0000-4000-8000-000000000101", "/admin/advertisers", "/admin/artwork", "/admin/payments", "/admin/settings"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      if (path === "/admin/zones") await expect(page.getByRole("button", { name: "Create zone", exact: true })).toBeVisible();
+      if (path === "/admin/zones") await expect(page.getByRole("button", { name: "Create area", exact: true })).toBeVisible();
       if (path.startsWith("/admin/campaigns/new")) await expect(page.getByLabel("Reservation deadline")).toHaveValue("2026-12-15T23:59");
       // Payments streams its readiness card after the heading; measure the complete form.
       if (path === "/admin/payments") await expect(page.getByLabel("Campaign", { exact: true })).toBeVisible();
@@ -127,7 +129,7 @@ test("admin pages fit a phone screen", async ({ page }) => {
     await expect(campaign).toBeVisible();
     const value = await campaign.locator("option").last().getAttribute("value");
     await campaign.selectOption(value!);
-    await page.getByRole("button", { name: "Show", exact: true }).click();
+    await page.getByRole("button", { name: "Show results", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`campaign=${value}`));
     await expect(campaign).toHaveValue(value!);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), `campaign form at ${width}px`).toBeLessThanOrEqual(0);

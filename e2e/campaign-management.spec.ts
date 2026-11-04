@@ -54,6 +54,8 @@ test("custom pricing, explicit upgrade, consistent export, archive and guarded d
  await page.getByRole("button",{name:"Save changes"}).click();
  await expect(page).toHaveURL(new RegExp(`/admin/campaigns/${created}$`));
  expect(ok(await db.from("editions").select("unit_price_cents").eq("id",created).single())!.unit_price_cents).toBe(29950);
+ await page.getByRole("navigation",{name:"Campaign workspace"}).getByRole("link",{name:"Campaign settings",exact:true}).click();
+ await page.getByText("Archive, delete or change layout",{exact:true}).click();
  await page.getByRole("button",{name:"Delete campaign",exact:true}).click();
  await expect(page.getByRole("dialog")).toContainText("cannot be undone");
  expect(ok(await db.from("editions").select("id").eq("id",created))).toHaveLength(1);
@@ -62,7 +64,8 @@ test("custom pricing, explicit upgrade, consistent export, archive and guarded d
  expect(ok(await db.from("editions").select("id").eq("id",created))).toHaveLength(0);
  const v1=ok(await admin.rpc("admin_create_square_campaign",{p:{zone_id:zone,name:`V1 management ${zone}`,issue_month:"2098-02-01",target_quantity:5000,reservation_deadline:"2097-12-15T23:59:00Z",artwork_due_at:"2097-12-20T23:59:00Z",mailing_window_start:"2098-02-11",mailing_window_end:"2098-02-15",layout_template:"amazingmail-9x6-ten-square-draft",unit_price_cents:44900,double_price_cents:null}}))! as string;campaigns.push(v1);
  const before=ok(await db.from("slots").select("id,label").eq("edition_id",v1).order("label"));
- await page.goto(`/admin/campaigns/${v1}`);
+ await page.goto(`/admin/campaigns/${v1}?view=settings`);
+ await page.getByText("Archive, delete or change layout",{exact:true}).click();
  await expect(page.locator(`[data-campaign-id="${v1}"]`)).toContainText("Layout: V1");
  await page.getByText("Upgrade this V1 campaign to V2",{exact:true}).click();
  await page.getByRole("button",{name:"Preview upgrade (no changes)"}).click();
@@ -73,6 +76,7 @@ test("custom pricing, explicit upgrade, consistent export, archive and guarded d
  await page.getByRole("button",{name:"Confirm V2 upgrade"}).click();
  await expect(page.locator(`[data-campaign-id="${v1}"]`)).toContainText("Layout: V2");
  expect(ok(await db.from("slots").select("id,label").eq("edition_id",v1).order("label"))).toEqual(before);
+ await page.getByRole("navigation",{name:"Campaign workspace"}).getByRole("link",{name:"Overview",exact:true}).click();
  for(const width of [320,375,390,768,1440]){
   await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   if (width === 375 || width === 1440) {
@@ -92,6 +96,8 @@ test("custom pricing, explicit upgrade, consistent export, archive and guarded d
  }
  // No reservations: normal cancellation has no customer notifications or card cleanup to perform.
  await page.getByRole("button",{name:"Cancel campaign",exact:true}).click();await page.getByRole("button",{name:"Cancel campaign",exact:true}).last().click();
+ await page.getByRole("navigation",{name:"Campaign workspace"}).getByRole("link",{name:"Campaign settings",exact:true}).click();
+ await page.getByText("Archive, delete or change layout",{exact:true}).click();
  await expect(page.getByRole("button",{name:"Archive campaign",exact:true})).toBeVisible();
  await page.getByRole("button",{name:"Archive campaign",exact:true}).click();
  await page.getByLabel("Type ARCHIVE CAMPAIGN to confirm").fill("ARCHIVE CAMPAIGN");await page.getByRole("button",{name:"Archive",exact:true}).click();

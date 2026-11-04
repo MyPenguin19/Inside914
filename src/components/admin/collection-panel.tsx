@@ -1,5 +1,5 @@
 import { formatPrice } from "@/lib/format";
-import { loadHouseArtwork } from "@/lib/print/house-artwork";
+import { getCampaignProduction } from "@/lib/admin/production-data";
 import { requireAdmin } from "@/lib/admin/auth";
 import { getCollectionContext } from "@/lib/payments/environment";
 import { activateZone, reconcilePaymentCancellation } from "@/app/admin/collection-actions";
@@ -12,21 +12,22 @@ import { DataTable } from "@/components/ui/data-table";
 
 export async function CollectionPanel({editionId}:{editionId:string}) {
   const {supabase,now}=await requireAdmin();
-  const [{data:preview,error},{data:charges,error:ledgerError},{data:bookings,error:bookingsError}]=await Promise.all([
-    supabase.rpc("admin_collection_preview",{p_id:editionId}),
-    supabase.from("zone_charges").select("id,booking_id,status,amount_cents,failure_code,recovery_expires_at").eq("edition_id",editionId).order("created_at"),
+  const [production, {data:bookings,error:bookingsError}]=await Promise.all([
+    getCampaignProduction(supabase, editionId),
     supabase.from("bookings").select("id,reference,price_cents,booking_contacts(business_name)").eq("edition_id",editionId).not("status","in","(pending,released,cancelled)"),
   ]);
+  const {data:preview,error}=production.collection;
+  const {data:charges,error:ledgerError}=production.ledger;
   let configured=true;try {getCollectionContext();} catch {configured=false;}
   const result=preview as {ready?:boolean;existing?:boolean;reason?:string}|null;
   const controls=charges?.length ? await supabase.from("booking_payment_controls").select("*").in("booking_id",charges.map(c=>c.booking_id)) : {data:[],error:null};
-  const houseReady=!!await loadHouseArtwork(supabase);
+  const houseReady=!!production.houseBytes;
   const ready=houseReady && configured && !error && !ledgerError && !bookingsError && !controls.error && !controls.data?.some(c=>c.revoked_at || c.state==="reconciliation") && result?.ready===true;
   return <Card><h2 className="text-lg font-semibold">Payments for this campaign</h2>
     <p className="mt-2 text-sm text-muted">Advertisers save a card with $0 due when they reserve. Once all 10 spaces are filled and the final postcard proof is approved, review the agreed amounts below. Total authorized: {formatPrice((bookings ?? []).reduce((total,b)=>total+b.price_cents,0))}.</p>
     {!configured && <p className="mt-2 text-sm">Charging is currently turned off. Existing reservations and saved authorizations are preserved.</p>}
     {result?.reason && <p className="mt-2 text-sm">Next: {collectionReason(result.reason)}</p>}
-    {houseReady && result?.ready && !result.existing && <p className="mt-2 text-sm">All payment checks passed. Review the advertisers below before approving collection.</p>}
+    {configured && houseReady && result?.ready && !result.existing && <p className="mt-2 text-sm">All payment checks passed. Review the advertisers below before approving collection.</p>}
     {(error || ledgerError || bookingsError) && <p role="alert">Could not verify payment readiness. Collection is blocked.</p>}
     {!!bookings?.length && !charges?.length && <div className="mt-3"><DataTable caption="Payment authorization preview" columns={["Advertiser","Reference","Amount"]} rows={bookings.map(b=>[b.booking_contacts?.business_name ?? "Advertiser",b.reference ?? "—",formatPrice(b.price_cents)])}/></div>}
     {!!charges?.length && <p className="mt-3">Payments received: {charges.filter(c=>c.status==="succeeded").length} of 10 · Needs attention: {charges.filter(c=>["requires_action","requires_payment_method","canceled"].includes(c.status)).length}</p>}
@@ -48,7 +49,7 @@ function collectionReason(reason: string) {
     zone_must_be_closed: "Close reservations once all 10 spaces are reserved.",
     printer_layout_not_approved: "Get the postcard layout approved.",
     mailing_window_required: "Set the mailing dates.",
-    approved_final_proof_required: "Approve the final printer proof under Advanced / Printer Records.",
+    approved_final_proof_required: "Approve the final printer proof under Printer proof & records above.",
     current_final_proof_required: "Approve a new printer proof that includes the current advertiser and house artwork.",
     house_artwork_required: "Upload the permanent house advertisement in Settings.",
     print_resolution_required: "Request higher-resolution advertiser artwork (at least 300 effective DPI at its printed size).",

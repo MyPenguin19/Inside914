@@ -8,29 +8,31 @@ import { EvidenceForm } from "./evidence-form";
 import { EmptyState } from "./ui";
 import { Card, StatusBadge } from "@/components/ui/primitives";
 import { formatTimestamp, formatDay, formatHouseholds } from "@/lib/format-admin";
-const KIND: Record<string,string> = {printer_confirmation:"Printer confirmation", final_proof:"Final approved proof",postal_acceptance:"Postal acceptance receipt",mailing_confirmation:"Mailing confirmation",other:"Other"};
+const KIND: Record<string,string> = {printer_confirmation:"Printer confirmation", final_proof:"Final postcard proof",postal_acceptance:"Postal acceptance receipt",mailing_confirmation:"Mailing confirmation",other:"Other"};
 export async function PrinterRecords({editionId}:{editionId:string}) {
  const {supabase}=await requireAdmin();
  const e={id:editionId};
- const {data:edition}=await supabase.from("editions").select("layout_template").eq("id",editionId).single();
+ const [{data:edition,error:editionError}, evidence, events]=await Promise.all([
+   supabase.from("editions").select("layout_template").eq("id",editionId).single(),
+   listEvidence(supabase,editionId),
+   supabase.from("printer_order_events").select("*").eq("edition_id",editionId).order("recorded_at"),
+ ]);
+ if(editionError) throw new Error("Printer layout could not be loaded");
  const layout=findPostcardLayout(edition?.layout_template);
- const evidence=await listEvidence(supabase,editionId);
- const events=await supabase.from("printer_order_events").select("*").eq("edition_id",editionId).order("recorded_at");
  if(events.error) throw new Error("Printer progress could not be loaded");
  const evidenceLinks=await Promise.all(evidence.map(x=>x.storage_path ? signEvidence(x.storage_path) : null));
- return <details><summary className="cursor-pointer text-lg font-semibold">Advanced / Printer Records</summary>
- <p className="my-4 text-sm text-muted">{isLayoutV2(layout?.key) ? "V2: front 2.78 × 2.78 inches; back 2.2925 × 2.815 inches. Paid/postal clearance 0.3075 inch; house/postal gap 0.125 inch." : "V1: paid squares remain 2.5 × 2.5 inches. Back paid/postal clearance is only 0.0125 inch; the house panel touches the postal boundary."} Reservation geometry is approved; final printing still requires printer confirmation covering the current customer and house artwork. Export: 7300 × 4900 pixels, 800 DPI metadata; advertiser source: at least 300 effective DPI at its placed size. Resampling adds no detail. Mailing-service eligibility, including EDDM, is not certified.</p>
+ return <section className="rounded-2xl border border-line bg-surface p-5 sm:p-6"><h2 className="text-xl font-semibold">Printer proof &amp; records</h2><p className="mt-2 text-sm text-muted">Upload the printer’s final proof below and approve it after checking every ad. Keep order updates and mailing receipts here too.</p><details className="mt-4"><summary className="cursor-pointer text-sm">Print specifications</summary>
+ <p className="my-4 text-sm text-muted">{isLayoutV2(layout?.key) ? "V2: front 2.78 × 2.78 inches; back 2.2925 × 2.815 inches. Paid/postal clearance 0.3075 inch; house/postal gap 0.125 inch." : "V1: paid squares remain 2.5 × 2.5 inches. Back paid/postal clearance is only 0.0125 inch; the house panel touches the postal boundary."} Reservation geometry is approved; final printing still requires printer confirmation covering the current customer and house artwork. Export: 7300 × 4900 pixels, 800 DPI metadata; advertiser source: at least 300 effective DPI at its placed size. Resampling adds no detail. Mailing-service eligibility, including EDDM, is not certified.</p></details>
       <section aria-labelledby="evidence-title">
-        <PrinterProgress editionId={editionId} events={events.data} evidence={evidence.filter(e=>!!e.storage_path).map(e=>({id:e.id,title:e.title}))}/>
         <h2 id="evidence-title" className="text-lg font-semibold">
-          Mailing evidence
+          Proofs &amp; receipts
         </h2>
         <p className="mt-1 text-sm text-muted">
           Keep the printer’s final approved proof here. Approve it only after checking the current advertiser and permanent house artwork. Mailing receipts are optional.
         </p>
         {evidence.length === 0 ? (
           <div className="mt-3">
-            <EmptyState title="No evidence uploaded for this campaign." />
+            <EmptyState title="No proofs or receipts saved yet." />
           </div>
         ) : (
           <ul className="mt-3 grid gap-2">
@@ -63,7 +65,7 @@ export async function PrinterRecords({editionId}:{editionId:string}) {
                 </div>
                 <div className="flex flex-col items-start gap-2 sm:items-end">
                   <StatusBadge tone={x.published_at ? "success" : "neutral"}>
-                    {x.published_at ? `Published ${formatTimestamp(x.published_at)}` : "Not published"}
+                    {x.published_at ? `${x.kind === "final_proof" ? "Approved & shared" : "Published"} ${formatTimestamp(x.published_at)}` : x.kind === "final_proof" ? "Awaiting your approval" : "Not published"}
                   </StatusBadge>
                   <ConfirmAction
                     label={x.kind === "final_proof" ? (x.published_at ? "Withdraw proof approval" : "Approve final proof") : (x.published_at ? "Unpublish" : "Publish")}
@@ -87,11 +89,14 @@ export async function PrinterRecords({editionId}:{editionId:string}) {
           </ul>
         )}
         <Card className="mt-4">
-          <h3 className="font-medium">Add evidence</h3>
+          <h3 className="font-medium">Upload a proof or receipt</h3>
           <div className="mt-4">
-            <EvidenceForm editionId={e.id} />
+            <EvidenceForm editionId={e.id} defaultKind="final_proof" />
           </div>
         </Card>
+        <details className="mt-5 border-t border-line pt-4"><summary className="cursor-pointer font-medium">Record printer updates</summary>
+        <PrinterProgress editionId={editionId} events={events.data} evidence={evidence.filter(e=>!!e.storage_path).map(e=>({id:e.id,title:e.title}))}/>
+        </details>
       </section>
- </details>;
+ </section>;
 }

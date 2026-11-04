@@ -40,11 +40,11 @@ async function NewCampaign({ searchParams }: { searchParams: Promise<{ draft?: s
     return <LoadError what="the areas" />;
   }
   const central = zones.find((z) => z.name === "Central Westchester") ?? zones[0];
-  if (!zones.length) return <Card><p>Create a geographic zone before creating a campaign.</p><Link href="/admin/zones" className="underline">Manage zones</Link></Card>;
-  if (preset && !zones.some((z) => z.slug === FIRST_ZONE.slug)) return <Card><p>Create Central Westchester before loading this draft.</p><Link href="/admin/zones" className="underline">Manage zones</Link></Card>;
+  if (!zones.length) return <Card><p>Add an advertising area before creating a campaign.</p><Link href="/admin/zones" className="underline">Manage areas</Link></Card>;
+  if (preset && !zones.some((z) => z.slug === FIRST_ZONE.slug)) return <Card><p>Create Central Westchester before loading this draft.</p><Link href="/admin/zones" className="underline">Manage areas</Link></Card>;
   const requestedSlug = preset ? FIRST_ZONE.slug : query.area;
   const selected = requestedSlug ? zones.find((zone) => zone.slug === requestedSlug) : central;
-  if (!selected) return <Card><p>This area is not configured. Create its zone before preparing a campaign.</p><Link href="/admin/zones" className="underline">Manage zones</Link></Card>;
+  if (!selected) return <Card><p>This area is not configured. Add its advertising area before preparing a campaign.</p><Link href="/admin/zones" className="underline">Manage areas</Link></Card>;
   return (
     <Card>
       <CampaignForm

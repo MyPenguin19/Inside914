@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getArtwork } from "@/lib/artwork/service";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -131,16 +132,22 @@ const toEdition = (e: EditionRow): AdminEdition => ({
   status: e.status,
 });
 
-export async function listEditions(db: Db, includeArchived = false): Promise<AdminEdition[]> {
-  const { data, error } = await db
-    .from("editions")
-    .select(
-      "id, archived_at, zone_id, name, target_quantity, product_model, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)",
-    )
-    .order("issue_month", { ascending: false })
-    .returns<EditionRow[]>();
+const EDITION_COLUMNS = "id, archived_at, zone_id, name, target_quantity, product_model, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)";
+
+// Request-only memoization: Home and its attention panel share one authorized read.
+// No admin data or readiness is cached across requests/users.
+export const listEditions = cache(async (db: Db, includeArchived = false): Promise<AdminEdition[]> => {
+  let query = db.from("editions").select(EDITION_COLUMNS).order("issue_month", { ascending: false });
+  if (!includeArchived) query = query.is("archived_at", null);
+  const { data, error } = await query.returns<EditionRow[]>();
   if (error) fail("campaigns", error);
-  return data.filter(e => includeArchived || !e.archived_at).map(toEdition);
+  return data.map(toEdition);
+});
+
+export async function getEdition(db: Db, id: string): Promise<AdminEdition | null> {
+  const { data, error } = await db.from("editions").select(EDITION_COLUMNS).eq("id", id).returns<EditionRow[]>().maybeSingle();
+  if (error) fail("campaign", error);
+  return data ? toEdition(data) : null;
 }
 
 export async function listZones(db: Db) {
@@ -273,6 +280,18 @@ export async function listArtworkReviews(db: Db, bookingId: string) {
   const { data, error } = await db.from("artwork_reviews").select("id, artwork_id, decision, note, created_at").eq("booking_id", bookingId).order("created_at", { ascending: false });
   if (error) fail("artwork reviews", error);
   return data;
+}
+
+export async function nextArtworkReview(db: Db, editionId: string, currentId: string) {
+  const { data, error } = await db.from("bookings")
+    .select("id,booking_artwork!inner(status,review_status,crop_width)")
+    .eq("edition_id", editionId).neq("id", currentId)
+    .not("status", "in", "(pending,released,cancelled)")
+    .eq("booking_artwork.status", "ready").eq("booking_artwork.review_status", "pending")
+    .not("booking_artwork.crop_width", "is", null)
+    .order("created_at").order("id").limit(1).maybeSingle();
+  if (error) fail("next artwork review", error);
+  return data?.id ?? null;
 }
 
 // Latest consent per booking: the amount the customer agreed to, to check against the stored price.

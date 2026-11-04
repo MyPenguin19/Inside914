@@ -7,7 +7,7 @@ import { SelectField, TextField } from "@/components/ui/field";
 
 const KINDS: [string, string][] = [
   ["printer_confirmation", "Printer confirmation"],
-  ["final_proof", "Final approved postcard proof"],
+  ["final_proof", "Printer’s final postcard proof"],
   ["postal_acceptance", "Postal acceptance receipt"],
   ["mailing_confirmation", "Mailing provider confirmation"],
   ["other", "Other"],
@@ -27,7 +27,7 @@ function put(url: string, file: File) {
 
 // Genuine fulfillment documents only. Files go straight to private storage; the server checks them
 // and records the evidence unpublished. Quantities are optional and entered exactly as documented.
-export function EvidenceForm({ editionId }: { editionId: string }) {
+export function EvidenceForm({ editionId, defaultKind = "printer_confirmation" }: { editionId: string; defaultKind?: "printer_confirmation" | "final_proof" }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function EvidenceForm({ editionId }: { editionId: string }) {
   return (
     <form ref={formRef} action={action} className="grid grid-cols-1 gap-4 sm:grid-cols-2" noValidate>
       <input type="hidden" name="edition_id" value={editionId} />
-      <SelectField id="kind" label="Type of document" required defaultValue="printer_confirmation">
+      <SelectField id="kind" label="Type of document" required defaultValue={defaultKind}>
         {KINDS.map(([v, l]) => (
           <option key={v} value={v}>
             {l}
@@ -70,13 +70,15 @@ export function EvidenceForm({ editionId }: { editionId: string }) {
         </label>
         <input id="file" name="file" type="file" accept="application/pdf,image/jpeg,image/png" className="min-w-0 w-full text-sm" />
       </div>
+      <details className="sm:col-span-2"><summary className="cursor-pointer text-sm font-medium">Add quantities, date or notes (optional)</summary><div className="mt-4 grid gap-4 sm:grid-cols-2">
       <TextField id="quantity_printed" label="Quantity printed" type="number" min={0} optional hint="Only if the document states it." />
       <TextField id="quantity_accepted" label="Quantity accepted for mailing" type="number" min={0} optional hint="Only if the document states it." />
       <TextField id="event_date" label="Date on the document" type="date" optional />
       <TextField id="notes" label="Notes" optional maxLength={2000} />
+      </div></details>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <Button type="submit" disabled={pending || uploading}>
-          {uploading ? "Uploading…" : pending ? "Saving…" : "Save evidence"}
+          {uploading ? "Uploading…" : pending ? "Saving…" : "Save document"}
         </Button>
         {(state.message || uploadError) && (
           <p role="status" className={`text-sm ${state.ok ? "text-accent" : "text-danger"}`}>

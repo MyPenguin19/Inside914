@@ -11,6 +11,7 @@ const db=createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.en
 const credentials={email:"",password:""};
 const ids:string[]=[]; let user:string; let admin:SupabaseClient<Database>;
 const names=["Central Westchester","Southern Westchester","Northern Westchester","Eastern Westchester"];
+// Every hold and artwork object in these tests belongs to a local fixture campaign.
 function ok<T>(result:{data:T;error:unknown}) {expect(result.error).toBeNull();return result.data;}
 test.beforeAll(async()=>{
   const email=`square-flow-${randomUUID()}@example.com`,password=randomBytes(24).toString("base64url");
@@ -40,6 +41,90 @@ test.afterAll(async()=>{
     deleteLocalCampaignFixtures(ids);
   }
   if(user){ok(await db.from("admin_events").delete().eq("admin_user_id",user));await admin?.auth.signOut();expect((await db.auth.admin.deleteUser(user)).error).toBeNull();}
+});
+test("change one held space from artwork or areas; keep artwork, price and other areas", async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto("/areas");
+  for (const name of [names[2], names[3]]) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
+  await page.getByRole("button", { name: "Continue with selected areas" }).click();
+  for (const name of [names[2], names[3]]) {
+    await page.getByRole("button", { name: `Choose position for ${name}` }).click();
+    await page.getByRole("button", { name: /position F4:/ }).click();
+  }
+  await page.getByRole("button", { name: "Continue to artwork" }).click();
+  await expect(page).toHaveURL(/\/book\/artwork$/);
+  await page.getByRole("link", { name: "Back to your areas" }).click();
+  await page.getByRole("button", { name: `Add artwork for ${names[2]}` }).click();
+  const buffer = await sharp({ create: { width: 1200, height: 1200, channels: 3, background: { r: 30, g: 100, b: 160 } } }).png().toBuffer();
+  await page.getByLabel("Ad image file").setInputFiles({ name: "change-space.png", mimeType: "image/png", buffer });
+  await page.getByRole("button", { name: "Save artwork and continue" }).click();
+  await expect(page).toHaveURL(/\/book\/cart$/);
+  const pending = ok(await db.from("bookings").select("*").in("edition_id", [ids[2], ids[3]]).eq("status", "pending"))!;
+  const northern = pending.find(b => b.edition_id === ids[2])!;
+  const eastern = pending.find(b => b.edition_id === ids[3])!;
+  const artwork = ok(await db.from("booking_artwork").select("*").eq("booking_id", northern.id).single())!;
+  const claim = async (id: string) => ok(await db.from("booking_slots").select("slot_id,slots(label)").eq("booking_id", id).is("released_at", null).single())!;
+  const originalOther = await claim(eastern.id);
+  await page.getByRole("button", { name: `Edit artwork for ${names[2]}` }).click();
+  await expect(page).toHaveURL(/\/book\/artwork$/);
+  await expect(page.getByTestId("artwork-area")).toHaveText(names[2]);
+  await page.getByRole("link", { name: "Change ad space", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Change ad space" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /position F4: Your current space/ })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /position B2:/ }).click();
+  await page.context().setOffline(true);
+  await page.getByRole("button", { name: "Save new space" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Connection interrupted");
+  await page.context().setOffline(false);
+  expect((await claim(northern.id)).slots?.label).toBe("F4");
+  // A different visitor takes B2 after this page loaded. The original F4 must survive.
+  const target = ok(await db.from("slots").select("id").eq("edition_id", ids[2]).eq("label", "B2").single())!;
+  const competitor = ok(await db.rpc("hold_cart", { p_token_hash: randomBytes(32).toString("hex"), p_pricing_mode: "test",
+    p_items: [{ edition_id: ids[2], slot_ids: [target.id], mode: "standard", token_hash: randomBytes(32).toString("hex") }] }))!;
+  await page.getByRole("button", { name: "Save new space" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Your current space is still held");
+  await expect(page.getByRole("button", { name: /position B2:/ })).toBeDisabled();
+  expect((await claim(northern.id)).slots?.label).toBe("F4");
+  const available = page.getByRole("button", { name: /position B1:/ });
+  await available.focus(); await page.keyboard.press("Enter");
+  for (const width of [320, 375, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
+  await page.screenshot({ path: "test-results/change-ad-space-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.screenshot({ path: "test-results/change-ad-space-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Save new space" }).click();
+  await expect(page).toHaveURL(/\/book\/artwork\?space=changed$/);
+  await expect(page.getByRole("status").filter({ hasText: "Your ad space has been updated" })).toBeVisible();
+  const preview = page.getByRole("img", { name: "Preview of the back of the postcard with your ad in place" });
+  await expect(preview.getByText("Reserved", { exact: true })).toBeVisible();
+  await expect(preview.getByText("Inside914 + Inside Diagnostics")).toHaveCount(0);
+  expect((await claim(northern.id)).slots?.label).toBe("B1");
+  expect(await claim(eastern.id)).toEqual(originalOther);
+  expect(ok(await db.from("bookings").select("*").eq("id", northern.id).single())).toEqual(northern);
+  expect(ok(await db.from("booking_artwork").select("*").eq("booking_id", northern.id).single())).toEqual(artwork);
+  await page.screenshot({ path: "test-results/changed-space-artwork-mobile.png", fullPage: true });
+  await page.getByRole("link", { name: "Change ad space", exact: true }).click();
+  await page.getByRole("button", { name: /position F3:/ }).click();
+  await page.getByRole("link", { name: "Keep current space" }).click();
+  expect((await claim(northern.id)).slots?.label).toBe("B1");
+  await page.goto("/areas");
+  await expect(page.getByRole("heading", { name: "Your selected areas" })).toBeVisible();
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
+  await page.getByRole("region", { name: names[2], exact: true }).getByRole("link", { name: "Change ad space" }).click();
+  await page.getByRole("button", { name: /position F3:/ }).click();
+  await page.getByRole("button", { name: "Save new space" }).click();
+  await expect(page).toHaveURL(/\/book\/artwork\?space=changed$/);
+  await page.reload();
+  await expect(page.getByText("Front · F3", { exact: true })).toBeVisible();
+  expect((await claim(northern.id)).slots?.label).toBe("F3");
+  expect(ok(await db.from("booking_artwork").select("*").eq("booking_id", northern.id).single())).toEqual(artwork);
+  // Release only this test's fixture data before the remaining flows run.
+  ok(await db.from("bookings").update({ status: "released" }).in("cart_id", [northern.cart_id!, competitor]));
+  ok(await db.storage.from("artwork").remove([artwork.storage_path]));
+  ok(await db.from("bookings").delete().in("cart_id", [northern.cart_id!, competitor]));
+  ok(await db.from("reservation_carts").delete().in("id", [northern.cart_id!, competitor]));
 });
 test("map selection matches cards and works with keyboard and touch-sized layouts", async ({ page }) => {
   await page.goto("/areas");
@@ -303,6 +388,7 @@ test("another advertiser can reserve another square in the same area without a c
     await page.getByRole("button", { name: "Save artwork and continue" }).click();
     await expect(page.getByRole("link", { name: "Continue to business details" })).toBeVisible();
   }
+  await page.getByText("Start over with different areas", { exact: true }).click();
   await page.getByRole("button", { name: "Release all areas and change selection" }).click();
   await expect(page).toHaveURL(/\/book\/multi$/);
 });
@@ -345,5 +431,6 @@ test("copied artwork can be edited independently in another area", async ({ page
     expect(downloaded.error).toBeNull();
     expect(Buffer.from(await downloaded.data!.arrayBuffer()).equals(b.edition_id === ids[1] ? buffer : changed)).toBe(true);
   }
+  await page.getByText("Start over with different areas", { exact: true }).click();
   await page.getByRole("button", { name: "Release all areas and change selection" }).click();
 });

@@ -1055,6 +1055,7 @@ export type Database = {
       claim_advertiser_bookings: { Args: never; Returns: number }
       advertiser_manage: { Args: { p_booking:string; p_action:string; p:Json }; Returns:string }
       hold_cart: { Args: { p_token_hash: string; p_items: Json; p_pricing_mode: string }; Returns: string }
+      change_cart_position: { Args: { p_cart_hash: string; p_booking_id: string; p_expected_slot: string; p_slot_id: string }; Returns: string }
       confirm_cart: { Args: { p_cart_id: string; p_setup_intent_id: string; p_payment_method_id: string; p_references: Json }; Returns: string }
       admin_add_booking_note: {
         Args: { p_body: string; p_booking_id: string }

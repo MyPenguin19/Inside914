@@ -47,21 +47,22 @@ const main = (page: Page) => page.getByRole("main");
 test("manage a geographic zone without publishing it", async ({ page }) => {
   await signIn(page);
   await page.goto("/admin/zones");
-  const form = page.locator("form").filter({ has: page.getByRole("button", { name: "Create zone", exact: true }) });
-  await form.getByLabel("Zone name").fill(`E2E zone ${zoneSlug}`);
-  await form.getByLabel(/^Slug/).fill(zoneSlug);
-  await form.getByLabel("Target households (provisional)").fill("5000");
-  await form.getByRole("button", { name: "Create zone", exact: true }).click();
+  const form = page.locator("form").filter({ has: page.getByRole("button", { name: "Create area", exact: true }) });
+  await form.getByLabel("Area name").fill(`E2E zone ${zoneSlug}`);
+  await form.getByLabel(/^Link name/).fill(zoneSlug);
+  await form.getByLabel("Estimated households").fill("5000");
+  await form.getByRole("button", { name: "Create area", exact: true }).click();
   await expect(page.getByRole("heading", { name: `E2E zone ${zoneSlug}`, exact: true })).toBeVisible();
+  await page.getByRole("heading", { name: `E2E zone ${zoneSlug}`, exact: true }).locator("..").getByText("Edit area details", { exact: true }).click();
   const saved = page.locator("form").filter({ has: page.locator(`input[value="${zoneSlug}"]`) }).first();
-  await saved.getByLabel("Target households (provisional)").fill("5100");
-  await saved.getByRole("button", { name: "Save zone", exact: true }).click();
-  await expect(saved.getByRole("status")).toHaveText("Zone saved.");
-  await form.getByLabel("Zone name").fill(`E2E zone ${zoneSlug}`);
-  await form.getByLabel(/^Slug/).fill(zoneSlug);
-  await form.getByLabel("Target households (provisional)").fill("5000");
-  await form.getByRole("button", { name: "Create zone", exact: true }).click();
-  await expect(form.getByRole("status")).toHaveText("A zone with this name or slug already exists.");
+  await saved.getByLabel("Estimated households").fill("5100");
+  await saved.getByRole("button", { name: "Save area", exact: true }).click();
+  await expect(saved.getByRole("status")).toHaveText("Area saved.");
+  await form.getByLabel("Area name").fill(`E2E zone ${zoneSlug}`);
+  await form.getByLabel(/^Link name/).fill(zoneSlug);
+  await form.getByLabel("Estimated households").fill("5000");
+  await form.getByRole("button", { name: "Create area", exact: true }).click();
+  await expect(form.getByRole("status")).toHaveText("An area with this name or link name already exists.");
 });
 
 test("each geographic area prepares its own draft without copying dates or inventing quantities", async ({ page }) => {
@@ -148,7 +149,7 @@ test("production, payments readiness, artwork queue and new pages render and fit
   await page.goto("/admin/production");
   await page.getByText("Before sending to the printer", {exact:true}).click();
   await expect(main(page).getByText("Printer specifications aren't confirmed")).toBeVisible();
-  await page.goto("/admin/payments");
+  await page.goto("/admin/payments?campaign=00000000-0000-4000-8000-000000000101");
   await page.getByText("Advanced details", {exact:true}).click();
   await expect(main(page).getByText("Fully reserved", { exact: true })).toBeVisible();
   await expect(main(page).getByRole("button", { name: /charge/i })).toHaveCount(0);

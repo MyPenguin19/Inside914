@@ -26,7 +26,7 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // The app reads Supabase settings from .env.local, or from these when set in the shell.
   webServer: {
-    command: "npm run dev",
+    command: process.env.INSIDE914_E2E_PRODUCTION === "true" ? "npm run start" : "npm run dev",
     url: baseURL,
     reuseExistingServer: false,
     env: {

@@ -12,9 +12,9 @@ export function ZoneForm({ zone, prefix }: { zone: { id?: string; name: string; 
   return <form action={action} className="flex min-w-0 flex-col gap-4">
     <input type="hidden" name="id" value={zone.id ?? ""} />
     {state.message && <Notice tone={state.ok ? "success" : "danger"} role="status">{state.message}</Notice>}
-    <TextField id={`${prefix}-name`} name="name" label="Zone name" required maxLength={120} defaultValue={v("name")} />
-    <TextField id={`${prefix}-slug`} name="slug" label="Slug" required maxLength={120} defaultValue={v("slug")} hint="Used in public links. Locked once a campaign uses this zone." />
-    <TextField id={`${prefix}-households`} name="household_count" label="Target households (provisional)" type="number" min={0} max={1000000} required defaultValue={v("household_count")} hint="An estimate, not a confirmed delivery quantity. Use 0 while the estimate is unset. No postal routes or ZIP codes are implied." />
-    <div><Button type="submit" disabled={pending}>{pending ? "Saving…" : zone.id ? "Save zone" : "Create zone"}</Button></div>
+    <TextField id={`${prefix}-name`} name="name" label="Area name" required maxLength={120} defaultValue={v("name")} />
+    <TextField id={`${prefix}-slug`} name="slug" label="Link name" required maxLength={120} defaultValue={v("slug")} hint="A short name for web links, such as northern-westchester. Use lowercase letters and hyphens. It stays fixed once a campaign uses this area." />
+    <TextField id={`${prefix}-households`} name="household_count" label="Estimated households" type="number" min={0} max={1000000} required defaultValue={v("household_count")} hint="An estimate, not a confirmed delivery quantity. Use 0 while the estimate is unset. No postal routes or ZIP codes are implied." />
+    <div><Button type="submit" disabled={pending}>{pending ? "Saving…" : zone.id ? "Save area" : "Create area"}</Button></div>
   </form>;
 }

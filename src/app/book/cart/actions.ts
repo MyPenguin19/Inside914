@@ -30,6 +30,8 @@ import { getStripe } from "@/lib/checkout/stripe";
 import { isDevTestModeActive, isTestStripeId } from "@/lib/dev/test-mode";
 import { fakeStripe } from "@/lib/dev/fake-stripe";
 import { createCategoryCart, ZoneSelection } from "@/lib/booking/category-checkout";
+import { changePosition } from "@/lib/booking/change-position";
+import { revalidatePath } from "next/cache";
 const token = async () => (await cookies()).get(CART_COOKIE)?.value;
 const options = {
   httpOnly: true,
@@ -67,7 +69,7 @@ export async function holdAreas(raw: unknown) {
       return {
         ok: false,
         message:
-          "You already have held areas. Return to your area reservation to finish or release them.",
+          "Your areas are already held. Review them to change an ad space or continue.",
       };
     const selection = ZoneSelection.parse(raw);
     const cart = await createCategoryCart(admin, selection);
@@ -81,6 +83,21 @@ export async function holdAreas(raw: unknown) {
       ok: false,
       message: e instanceof Error ? e.message : "Could not hold these areas.",
     };
+  }
+}
+export async function changeAreaPosition(raw: unknown) {
+  if (!checkoutReleased()) return { ok: false as const, message: CHECKOUT_CLOSED_MESSAGE };
+  try {
+    const secret = await token();
+    const result = await changePosition(createAdminClient(), secret, raw);
+    if (!result.ok) return result;
+    (await cookies()).set(HOLD_COOKIE, cartMemberToken(secret!, result.editionId), options);
+    revalidatePath("/book/cart");
+    revalidatePath("/book/artwork");
+    revalidatePath("/areas");
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, message: "We couldn’t confirm the change. Review your current space before trying again." };
   }
 }
 export async function editAreaArtwork(form: FormData) {

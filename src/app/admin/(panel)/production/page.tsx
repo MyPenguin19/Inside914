@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PrintDownload } from "@/components/admin/print-download";
 import { Suspense } from "react";
@@ -83,7 +84,7 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
 
   if (!data) return <EmptyState title="No campaigns yet." />;
   const { editions, edition: e, slots, bookings, confirmed, consents, artworks, evidence, evidenceLinks } = data;
-  if (e.productModel === "square_v1") redirect(`/admin/campaigns/${e.id}`);
+  if (e.productModel === "square_v1") redirect(`/admin/campaigns/${e.id}?view=mailing`);
   const stats = campaignStats(e, slots, bookings, now);
   const placements: Placement[] = confirmed.map((b, i) => ({
     slots: slots.filter((s) => b.claims.some((c) => !c.released && c.slotId === s.id)),
@@ -109,6 +110,7 @@ async function Production({ searchParams }: { searchParams: PageProps<"/admin/pr
 
   return (
     <>
+      <Link href={`/admin/campaigns/${e.id}?view=mailing`} className="text-sm underline">← Back to this campaign</Link>
       {editions.length > 1 && (
         <form action="/admin/production" className="flex flex-wrap items-center gap-2 text-sm">
           <label htmlFor="prod-campaign" className="text-muted">

@@ -10,11 +10,12 @@ import { Card } from "@/components/ui/primitives";
 import { requireAdmin } from "@/lib/admin/auth";
 import { reviewArtwork } from "@/app/admin/admin-actions";
 import { ConfirmAction } from "@/components/admin/confirm-action";
-import { getBooking, listArtworkReviews, listEditions, listSlots, signArtwork } from "@/lib/admin/data";
+import { getBooking, listArtworkReviews, getEdition, listSlots, signArtwork, nextArtworkReview } from "@/lib/admin/data";
 import { artworkLabel, positionLabel } from "@/lib/admin/labels";
 import { formatIssueMonth, formatTimestamp } from "@/lib/format-admin";
 import { OriginalBackupPanel } from "@/components/admin/original-backup-panel";
 import { layoutVersion } from "@/lib/print/layouts";
+import { ButtonLink } from "@/components/ui/button";
 
 export default function ArtworkDetailPage({ params }: PageProps<"/admin/artwork/[id]">) {
   return (
@@ -33,8 +34,8 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
   try {
     const booking = await getBooking(supabase, id);
     if (!booking) notFound();
-    const [editions, slots, artwork, reviews] = await Promise.all([listEditions(supabase), listSlots(supabase, [booking.editionId]), signArtwork(id).catch(() => null), listArtworkReviews(supabase, id)]);
-    data = { booking, edition: editions.find((e) => e.id === booking.editionId) ?? null, slots, artwork, reviews };
+    const [edition, slots, artwork, reviews, nextId] = await Promise.all([getEdition(supabase, booking.editionId), listSlots(supabase, [booking.editionId]), signArtwork(id).catch(() => null), listArtworkReviews(supabase, id), nextArtworkReview(supabase, booking.editionId, id)]);
+    data = { booking, edition, slots, artwork, reviews, nextId };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error; // notFound()
     console.error(error instanceof Error ? error.message : "admin artwork detail failed");
@@ -49,8 +50,8 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <Link href="/admin/artwork" className="text-sm text-muted underline-offset-4 hover:text-foreground hover:underline">
-          ← Artwork queue
+        <Link href={`/admin/artwork?campaign=${b.editionId}`} className="text-sm text-muted underline-offset-4 hover:text-foreground hover:underline">
+          ← Back to artwork review
         </Link>
         <div className="mt-2">
           <PageHeader title={b.contact?.businessName ?? "Artwork"} description={edition ? `${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)}` : undefined}>
@@ -59,13 +60,13 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
         </div>
       </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-        <div className="grid min-w-0 content-start gap-4"><OriginalBackupPanel bookingId={id} />{artwork && own.length ? <AdPlacement layoutKey={edition?.layoutTemplate} dimensions={edition?.productModel === "square_v1" ? {width:9,height:6} : undefined} artwork={artwork} own={own} slots={slots} /> : <EmptyState title="No artwork uploaded." />}</div>
+        <div className="grid min-w-0 content-start gap-4">{artwork && own.length ? <AdPlacement layoutKey={edition?.layoutTemplate} dimensions={edition?.productModel === "square_v1" ? {width:9,height:6} : undefined} artwork={artwork} own={own} slots={slots} /> : <EmptyState title="No artwork uploaded." />}<Suspense fallback={<PanelSkeleton label="Checking original download…" />}><OriginalBackupPanel bookingId={id} /></Suspense></div>
         <Card>
           <h2 className="text-lg font-semibold">Details</h2>
           <div className="mt-4">
             <DetailList
               rows={[
-                ["Campaign", edition ? <Link href={`/admin/campaigns/${edition.id}`} className="underline underline-offset-4">{edition.name ?? `${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)}`}</Link> : "Unavailable"],
+                ["Campaign", edition ? <Link href={`/admin/campaigns/${edition.id}?view=artwork`} className="underline underline-offset-4">{edition.name ?? `${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)}`}</Link> : "Unavailable"],
                 ["Layout", layoutVersion(edition?.layoutTemplate)],
                 ["Position", positionLabel(b, labels)],
                 ["Size", bookingSizeLabel(b.size)],
@@ -94,9 +95,15 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
             )}
           </div>
 
+          <div className="mt-6 border-t border-line pt-4">
+            {data.nextId ? <ButtonLink href={`/admin/artwork/${data.nextId}`}>Next ad awaiting review</ButtonLink> : <ButtonLink href={`/admin/artwork?campaign=${b.editionId}`} variant="secondary">Back to this campaign’s review queue</ButtonLink>}
+            <p className="mt-2 text-xs text-muted">Moving to another ad does not approve this one.</p>
+            {b.contact && <p className="mt-3 text-sm">Need a replacement? <a href={`mailto:${b.contact.email}`} className="underline underline-offset-4">Email {b.contact.contactName || "the advertiser"}</a>.</p>}
+          </div>
+
           {reviews.length > 0 && (
-            <div className="mt-6">
-              <h3 className="font-medium">Review history</h3>
+            <details className="mt-6">
+              <summary className="cursor-pointer font-medium">Review history</summary>
               <ul className="mt-2 grid gap-2 text-sm">
                 {reviews.map((r) => (
                   <li key={r.id} className="rounded-xl bg-background-soft px-3 py-2">
@@ -107,7 +114,7 @@ async function ArtworkDetail({ params }: { params: PageProps<"/admin/artwork/[id
                   </li>
                 ))}
               </ul>
-            </div>
+            </details>
           )}
           <Link href={`/admin/advertisers/${b.id}`} className="mt-5 inline-block text-sm underline-offset-4 hover:underline">
             Open advertiser →

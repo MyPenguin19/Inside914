@@ -47,7 +47,7 @@ test("campaign ZIP verifies sources and manifest, labels missing and historical 
   const first = plan.sources.find((s: { bookingId: string }) => s.bookingId === fixture.bookings[0]);
   expect((await page.request.get(`/admin/artwork/${fixture.bookings[1]}/original?version=${first.version}`)).status()).toBe(404);
   expect((await page.request.get(`/admin/artwork/${fixture.bookings[0]}/original?path=../../other.png`)).status()).toBe(400);
-  await page.goto(`/admin/campaigns/${fixture.campaign}`);
+  await page.goto(`/admin/campaigns/${fixture.campaign}?view=artwork`);
   const button = page.getByRole("button", { name: "Download All Original Artwork" });
   await expect(button).toBeEnabled(); await expect(page.getByText("3 advertisers · 2 current originals available · 1 unavailable")).toBeVisible();
   for (const width of [320,375,1440]) { await page.setViewportSize({ width, height: 1000 }); expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width); }

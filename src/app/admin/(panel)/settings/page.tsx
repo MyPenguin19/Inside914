@@ -33,8 +33,10 @@ function attempt<T>(fn: () => T): T | null {
 
 async function Settings() {
   const { supabase } = await requireAdmin();
-  const { data: house, error: houseError } = await supabase.from("house_artwork").select("updated_at").eq("singleton", true).maybeSingle();
-  const { error: dbError } = await supabase.from("editions").select("id", { head: true, count: "exact" });
+  const [{ data: house, error: houseError }, { error: dbError }] = await Promise.all([
+    supabase.from("house_artwork").select("updated_at").eq("singleton", true).maybeSingle(),
+    supabase.from("editions").select("id", { head: true }).limit(1),
+  ]);
   const pricing = attempt(() => getPricingMode());
   const stripeMode = attempt(() => getStripeKeyMode());
   const email = getEmailEnv();
