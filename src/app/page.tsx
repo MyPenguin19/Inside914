@@ -120,7 +120,7 @@ export default function Home() {
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               <PriceCard
                 name="Postcard Advertisement"
-                price="Price per area"
+                price="$399"
                 detail="One advertising space on a shared postcard mailed within your selected Westchester area."
                 diagram={<SizeDiagram />}
               />
