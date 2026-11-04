@@ -16,7 +16,7 @@ export default async function OpenGraphImage() {
   return new ImageResponse(
     <div style={{ display: "flex", width: "100%", height: "100%", padding: 78, background: "#fbfaf7", color: "#1c1b19", flexDirection: "column", justifyContent: "space-between", fontFamily: "Geist", fontWeight: 500 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 4.48, fontFamily: "Fraunces", fontWeight: 600, fontSize: 56, letterSpacing: -3.08, lineHeight: 1 }}>
-        <span>INSIDE</span><span style={{ border: "3.08px solid #1c1b19", padding: "4.48px 12.32px", fontFamily: "Geist", fontWeight: 500, letterSpacing: -4.2, lineHeight: 0.9 }}>914</span>
+        <span>INSIDE</span><span style={{ border: "3.08px solid #1c1b19", padding: "4.48px 10.36px 4.48px 14.28px", fontFamily: "Geist", fontWeight: 500, letterSpacing: 0, lineHeight: 1 }}>914</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", maxWidth: 900 }}>
         <span style={{ color: "#1f5c4a", fontSize: 25, letterSpacing: 3 }}>WESTCHESTER COUNTY</span>
