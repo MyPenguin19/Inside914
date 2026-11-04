@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HeaderCta } from "@/components/header-cta";
+import { BrandMark } from "@/components/brand-mark";
 
 const NAV = [
   { href: "/#how-it-works", label: "How It Works" },
@@ -11,8 +12,8 @@ const NAV = [
 
 export function Logo() {
   return (
-    <Link href="/" className="font-display text-xl font-semibold tracking-tight text-foreground">
-      Inside<span className="text-accent">914</span>
+    <Link href="/" aria-label="Inside 914 home" className="inline-flex min-h-11 shrink-0 items-center text-2xl">
+      <BrandMark />
     </Link>
   );
 }
