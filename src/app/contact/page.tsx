@@ -2,7 +2,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ContactMessageForm } from "@/components/contact-message-form";
 import { Card, Eyebrow } from "@/components/ui/primitives";
-import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "@/lib/support";
+import { BUSINESS_ADDRESS_LABEL, SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "@/lib/support";
 import { MARKETING_PAGES } from "@/lib/marketing-content";
 import { MarketingBreadcrumb, MarketingPageSeo } from "@/components/marketing/page-seo";
 import { marketingMetadata, SITE_URL } from "@/lib/seo";
@@ -24,7 +24,7 @@ export default function ContactPage() {
           <ul className="mt-8 space-y-4 text-base">
             <li><a href={`mailto:${SUPPORT_EMAIL}`} className="break-words underline underline-offset-4">{SUPPORT_EMAIL}</a></li>
             <li><a href={SUPPORT_PHONE_HREF} className="underline underline-offset-4">{SUPPORT_PHONE}</a></li>
-            <li className="text-muted">Westchester County, NY</li>
+            <li className="text-muted"><address className="not-italic">{BUSINESS_ADDRESS_LABEL}</address></li>
           </ul>
         </div>
         <Card className="min-w-0"><h2 className="mb-5 font-display text-2xl font-medium">Send a message</h2><ContactMessageForm /></Card>

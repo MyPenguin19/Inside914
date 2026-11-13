@@ -21,6 +21,23 @@ test("legacy hosting alias redirects public pages and preserves campaign trackin
   }
 });
 
+test("agent requests preserve HEAD, browser navigation and private-route authentication", async ({ page, request }) => {
+  const head = await request.head("/", { headers: { accept: "text/markdown" } });
+  expect(head.status()).toBe(200);
+  expect(head.headers()["content-type"]).toContain("text/markdown");
+  expect(await head.body()).toHaveLength(0);
+  const admin = await request.get("/admin/campaigns", { headers: { accept: "text/markdown" }, maxRedirects: 0 });
+  expect(admin.status()).toBe(307);
+  expect(admin.headers().location).toContain("/admin/login");
+  await page.goto("/");
+  await page.getByRole("link", { name: "About Inside914", exact: true }).click();
+  await expect(page).toHaveURL(/\/about$/);
+  await expect(page.locator("main address")).toHaveText("N State RD, Briarcliff Manor, NY 10510");
+  await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Home", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Westchester Mailboxes.");
+});
+
 for (const path of PUBLIC_MARKETING_PATHS) {
   test(`marketing metadata and responsive semantics: ${path}`, async ({ page }) => {
     await page.goto(path);

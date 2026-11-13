@@ -19,6 +19,7 @@ export function SiteFooter() {
         <nav aria-label="Explore Inside914">
           <h2 className="text-sm font-semibold">Explore</h2>
           <ul className="mt-3 text-sm text-muted">
+            <li><Link href="/about" className="footer-link">About Inside914</Link></li>
             {MARKETING_NAV.filter(item => item.href !== "/contact").map(item => <li key={item.href}><Link href={item.href} className="footer-link">{item.label}</Link></li>)}
           </ul>
         </nav>

@@ -13,7 +13,7 @@ const production = process.argv.includes("--production");
 assert(production ? base.href === `${canonical}/` && !preview : ["localhost", "127.0.0.1"].includes(base.hostname), "Use a local server or the explicitly authorized production host");
 const regions = ["central", "southern", "northern", "eastern"].map(region => `/areas/${region}-westchester`);
 const policies = ["terms", "reservation-policy", "payment-authorization", "cancellation-policy", "privacy"].map(slug => `/legal/${slug}`);
-const paths = ["/", "/how-it-works", "/areas", ...regions, "/pricing", "/our-postcard", "/faq", "/contact", ...policies];
+const paths = ["/", "/how-it-works", "/areas", ...regions, "/pricing", "/our-postcard", "/faq", "/contact", "/about", ...policies];
 const cache = new Map();
 const external = new Set();
 let links = 0;
@@ -79,7 +79,7 @@ for (const path of paths) {
     assert(img.getAttribute("aria-label") || img.getAttribute("aria-labelledby") || img.querySelector("title"), `${path}: graphic without accessible name`);
   }
   const schema = [...doc.querySelectorAll('script[type="application/ld+json"]')].flatMap(script => JSON.parse(script.textContent));
-  const pageType = path === "/faq" ? "FAQPage" : path === "/contact" ? "ContactPage" : path === "/areas" ? "CollectionPage" : "WebPage";
+  const pageType = path === "/faq" ? "FAQPage" : path === "/contact" ? "ContactPage" : path === "/about" ? "AboutPage" : path === "/areas" ? "CollectionPage" : "WebPage";
   const webPage = schema.find(item => item["@type"] === pageType);
   assert(webPage, `${path}: missing ${pageType} schema`);
   assert.equal(webPage.url, canonical + path);
@@ -91,6 +91,8 @@ for (const path of paths) {
   assert.equal(organization.email, "Info@inside914.com");
   assert.equal(organization.telephone, "+19148795022");
   assert.equal(organization.logo.url, `${canonical}/brand-logo`);
+  assert.deepEqual(organization.address, { "@type": "PostalAddress", streetAddress: "N State RD", addressLocality: "Briarcliff Manor", addressRegion: "NY", postalCode: "10510", addressCountry: "US" });
+  if (["/about", "/contact"].includes(path)) assert(doc.querySelector("main address")?.textContent.includes("N State RD, Briarcliff Manor, NY 10510"));
   const ids = schema.map(item => item["@id"]);
   assert.equal(new Set(ids).size, ids.length, `${path}: duplicate schema IDs`);
   const checkReferences = value => {
@@ -148,11 +150,46 @@ assert.equal(sitemap.status, 200); assert.match(sitemap.contentType, /xml/);
 const xml = new JSDOM(sitemap.bytes.toString(), { contentType: "text/xml" }).window.document;
 assert.equal(xml.querySelector("parsererror"), null);
 assert.deepEqual([...xml.querySelectorAll("loc")].map(node => node.textContent), preview ? [] : paths.map(path => canonical + path));
-assert.equal(xml.querySelectorAll("lastmod").length, 0);
+assert.equal(xml.querySelectorAll("lastmod").length, preview ? 0 : paths.length);
+for (const entry of xml.querySelectorAll("url")) {
+  const date = entry.querySelector("lastmod")?.textContent;
+  assert.match(date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(new Date(date).toISOString().slice(0, 10), date);
+  assert(new Date(date).getTime() <= Date.now(), "Sitemap lastmod is in the future");
+}
 const robots = await get("/robots.txt");
 assert.equal(robots.status, 200); assert.match(robots.contentType, /text\/plain/);
 assert.match(robots.bytes.toString(), preview ? /^Disallow: \/$/m : /^Allow: \/$/m);
 if (!preview) assert(robots.bytes.toString().includes(`Sitemap: ${canonical}/sitemap.xml`));
+if (!preview) assert.match(robots.bytes.toString(), /^Content-Signal: search=yes, ai-train=no$/m);
+
+// Alternate representations must work in both cache orders without leaking into HTML.
+const home = await get("/");
+assert(home.doc.querySelector('a[href="/about"]'), "Homepage must link About");
+assert.equal(home.doc.querySelector('link[rel="alternate"][type="text/markdown"]')?.getAttribute("href"), `${canonical}/index.md`);
+const markdown = await get("/index.md");
+assert.equal(markdown.status, 200); assert.match(markdown.contentType, /^text\/markdown/);
+assert.match(markdown.bytes.toString(), /^# Inside914/);
+const llms = await get("/llms.txt");
+assert.equal(llms.status, 200); assert.match(llms.contentType, /^text\/(plain|markdown)/);
+assert.match(llms.bytes.toString(), /^# Inside914\n/);
+for (const match of llms.bytes.toString().matchAll(/\]\((https:\/\/inside914\.com[^)]+)\)/g)) {
+  assert.equal((await get(new URL(match[1]).pathname)).status, 200, `Broken llms.txt link: ${match[1]}`);
+}
+for (const accept of ["text/html", "text/markdown", "text/html", "text/markdown, text/html, */*", "text/markdown;q=0", "text/markdown;q=0.2, text/html;q=0.8", "*/*"]) {
+  const response = await fetch(base, { headers: { accept }, signal: AbortSignal.timeout(20000) });
+  assert.equal(response.status, 200);
+  const body = await response.text();
+  if (["text/markdown", "text/markdown, text/html, */*"].includes(accept)) {
+    assert.match(response.headers.get("content-type"), /^text\/markdown/);
+    assert.equal(body, markdown.bytes.toString());
+    assert.match(response.headers.get("cache-control"), /private.*no-store/);
+    assert.match(response.headers.get("vary"), /\bAccept\b/i);
+  } else {
+    assert.match(response.headers.get("content-type"), /^text\/html/);
+    assert(body.includes("<h1"), "HTML variant lost its heading");
+  }
+}
 for (const path of ["/admin/login", "/book/cart", "/reservation/access", "/reservation/recover", "/pay"]) {
   const response = await fetch(new URL(path, base), { redirect: "manual" });
   assert(response.status < 500, path);

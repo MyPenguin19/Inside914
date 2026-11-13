@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { marketingMetadata } from "@/lib/seo";
-import { ADVERTISED_PRICE_LABEL, ADVERTISING_FAQ, CAMPAIGN_STEPS, MARKETING_PAGES } from "@/lib/marketing-content";
+import { ADVERTISED_PRICE_LABEL, ADVERTISING_FAQ, CAMPAIGN_STEPS, HOME_INTRO, MARKETING_PAGES } from "@/lib/marketing-content";
 import { MarketingPageSeo } from "@/components/marketing/page-seo";
 import { PUBLIC_CHECKOUT_RELEASED, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 import { REGIONS } from "@/lib/catalog/regions";
@@ -29,7 +29,7 @@ export default function Home() {
               Westchester Mailboxes.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-              Put your business in Westchester mailboxes. Pick your areas, choose a position, and add your ad. Pay nothing today.
+              {HOME_INTRO}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href="/areas" size="lg">

@@ -7,9 +7,9 @@ import { MARKETING_NAV } from "@/lib/marketing-content";
 import { MarketingBreadcrumb } from "./page-seo";
 
 export function MarketingPage({ path, title, intro, children }: {
-  path: (typeof MARKETING_NAV)[number]["href"]; title: string; intro: string; children: ReactNode;
+  path: (typeof MARKETING_NAV)[number]["href"] | "/about"; title: string; intro: string; children: ReactNode;
 }) {
-  const label = MARKETING_NAV.find(item => item.href === path)!.label;
+  const label = path === "/about" ? "About" : MARKETING_NAV.find(item => item.href === path)!.label;
   return <>
     <SiteHeader />
     <main id="main-content" tabIndex={-1} className="page-width min-w-0 flex-1 break-words py-10 sm:py-14">

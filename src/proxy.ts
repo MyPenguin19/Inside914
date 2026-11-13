@@ -1,9 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { prefersMarkdown } from "@/lib/accept-markdown";
+import { homepageMarkdownResponse } from "@/lib/agent-content";
 
 // Refresh administrator sessions and route signed-out visitors to the admin login.
 // Each protected page and action independently verifies its session and authorization.
 export async function proxy(request: NextRequest) {
+  // Public representation selection must run before any administrator session work.
+  // Next client navigations use _rsc and must retain the React server payload.
+  if (request.nextUrl.pathname === "/") {
+    if (["GET", "HEAD"].includes(request.method) && !request.nextUrl.searchParams.has("_rsc") && prefersMarkdown(request.headers.get("accept"))) {
+      return homepageMarkdownResponse(request.method);
+    }
+    const publicResponse = NextResponse.next();
+    publicResponse.headers.append("Vary", "Accept");
+    publicResponse.headers.set("Link", '</llms.txt>; rel="describedby"');
+    return publicResponse;
+  }
   if (/^\/(account|dashboard)(\/|$)/.test(request.nextUrl.pathname)) {
     return NextResponse.redirect(new URL("/areas", request.url), 303);
   }
@@ -38,4 +51,4 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ["/admin", "/admin/:path*", "/dashboard/:path*", "/account/:path*"] };
+export const config = { matcher: ["/", "/admin", "/admin/:path*", "/dashboard/:path*", "/account/:path*"] };

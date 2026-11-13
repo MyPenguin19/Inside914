@@ -10,6 +10,7 @@ import { REGIONS } from "../src/lib/catalog/regions";
 import { PUBLIC_CHECKOUT_RELEASED } from "../src/lib/checkout/release";
 import { LIVE_COLLECTION_RELEASED } from "../src/lib/payments/environment";
 import { INVITATION_EMAIL_RELEASED } from "../src/lib/invitations/release";
+import { PUBLIC_PAGE_LAST_MODIFIED } from "../src/lib/content-dates";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -26,10 +27,16 @@ describe("public SEO and indexing boundaries", () => {
   it.each(["//outside.example/path", "https://outside.example", "/areas?token=secret", "/areas#private", "/\\outside.example"])("rejects noncanonical or parameterized SEO input %s", path => {
     expect(() => absoluteUrl(path)).toThrow();
   });
-  it("includes sixteen unique public pages and published policies without invented timestamps", () => {
+  it("includes seventeen public pages with stable editorial modification dates", () => {
     vi.stubEnv("VERCEL_ENV", "production");
-    expect(sitemap()).toEqual(PUBLIC_INDEXABLE_PATHS.map(path => ({ url: absoluteUrl(path) })));
-    expect(new Set(sitemap().map(item => item.url)).size).toBe(16);
+    expect(sitemap()).toEqual(PUBLIC_INDEXABLE_PATHS.map(path => ({ url: absoluteUrl(path), lastModified: PUBLIC_PAGE_LAST_MODIFIED[path] })));
+    expect(new Set(sitemap().map(item => item.url)).size).toBe(17);
+    const original = sitemap();
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2028-01-01T00:00:00Z"));
+      expect(sitemap()).toEqual(original);
+    } finally { vi.useRealTimers(); }
     expect(PUBLIC_POLICY_PATHS).toHaveLength(5);
     expect(sitemap().map(item => item.url)).toContain("https://inside914.com/contact");
     for (const { slug } of REGIONS) expect(sitemap().map(item => item.url)).toContain(absoluteUrl(`/areas/${slug}`));
@@ -37,7 +44,7 @@ describe("public SEO and indexing boundaries", () => {
   });
   it("allows public marketing and HTML noindex inspection; blocks API/token crawling", () => {
     vi.stubEnv("VERCEL_ENV", "production");
-    expect(robots()).toEqual({ rules: [{ userAgent: "*", allow: "/", disallow: ["/api/", "/r/", "/reservation/evidence/"] }], sitemap: `${SITE_URL}/sitemap.xml` });
+    expect(robots()).toEqual({ rules: [{ userAgent: "*", allow: "/", disallow: ["/api/", "/r/", "/reservation/evidence/"], other: { "Content-Signal": "search=yes, ai-train=no" } }], sitemap: `${SITE_URL}/sitemap.xml` });
   });
   it("previews have no sitemap entries and disallow crawling", async () => {
     vi.stubEnv("VERCEL_ENV", "preview");
@@ -88,13 +95,17 @@ describe("public SEO and indexing boundaries", () => {
         { "@type": "ListItem", position: 2, name: "Advertising areas", item: `${SITE_URL}/areas` },
         { "@type": "ListItem", position: 3, name: region.name, item: `${SITE_URL}/areas/${region.slug}` },
       ] }));
-      expect(JSON.stringify(graph)).not.toMatch(/AggregateRating|LocalBusiness|streetAddress|latitude/);
+      expect(JSON.stringify(graph)).not.toMatch(/AggregateRating|LocalBusiness|latitude/);
     }
   });
   it("uses published contact details and a crawlable logo for the organization", () => {
     const graph = pageStructuredData("/contact", "Contact", "Contact Inside914", { type: "ContactPage" });
     expect(graph).toContainEqual(expect.objectContaining({ "@type": "Organization", legalName: "Inside Diagnostics LLC", telephone: "+19148795022", email: "Info@inside914.com", logo: { "@type": "ImageObject", url: `${SITE_URL}/brand-logo`, width: 600, height: 240 } }));
     expect(graph).toContainEqual(expect.objectContaining({ "@type": "ContactPage", breadcrumb: { "@id": `${SITE_URL}/contact#breadcrumb` } }));
+    const organization = graph.find(item => item["@type"] === "Organization");
+    expect(organization).toMatchObject({ address: { "@type": "PostalAddress", streetAddress: "N State RD", addressLocality: "Briarcliff Manor", addressRegion: "NY", postalCode: "10510", addressCountry: "US" } });
+    // The owner supplied the homepage, not an independently verified external profile.
+    expect(organization).not.toHaveProperty("sameAs");
   });
   it("describes the advertised service price and FAQ from the displayed copy", () => {
     expect(postcardService.offers).toMatchObject({ "@type": "Offer", price: ADVERTISED_PRICE, priceCurrency: "USD", url: `${SITE_URL}/pricing` });

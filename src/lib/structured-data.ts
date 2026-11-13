@@ -1,5 +1,5 @@
 import { SITE_URL, SITE_NAME, absoluteUrl } from "./seo";
-import { SUPPORT_EMAIL, SUPPORT_PHONE_HREF } from "./support";
+import { BUSINESS_ADDRESS, SUPPORT_EMAIL, SUPPORT_PHONE_HREF } from "./support";
 import { ADVERTISED_PRICE, ADVERTISING_FAQ } from "./marketing-content";
 
 export function regionStructuredData(slug: string, name: string, description: string) {
@@ -11,6 +11,7 @@ const organization = {
   name: SITE_NAME, legalName: "Inside Diagnostics LLC", url: absoluteUrl("/"),
   logo: { "@type": "ImageObject", url: absoluteUrl("/brand-logo"), width: 600, height: 240 },
   email: SUPPORT_EMAIL, telephone: SUPPORT_PHONE_HREF.replace("tel:", ""),
+  address: { "@type": "PostalAddress", ...BUSINESS_ADDRESS },
   description: "Inside914 provides shared postcard advertising for local businesses in Westchester County, New York.",
   areaServed: { "@type": "AdministrativeArea", name: "Westchester County, New York" },
 };
@@ -33,7 +34,7 @@ export const faqQuestions = ADVERTISING_FAQ.map(({ q, a }) => ({
 }));
 
 export function pageStructuredData(path: string, name: string, description: string, options: {
-  type?: "WebPage" | "ContactPage" | "CollectionPage" | "FAQPage";
+  type?: "WebPage" | "ContactPage" | "AboutPage" | "CollectionPage" | "FAQPage";
   parent?: { name: string; path: string };
   mainEntity?: Record<string, unknown> | readonly Record<string, unknown>[];
   entities?: readonly Record<string, unknown>[];

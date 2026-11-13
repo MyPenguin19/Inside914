@@ -1,6 +1,7 @@
 // Public editorial copy only. Actual campaign prices are resolved by lib/pricing.ts.
 export const ADVERTISED_PRICE = 399;
 export const ADVERTISED_PRICE_LABEL = `$${ADVERTISED_PRICE}`;
+export const HOME_INTRO = "Put your business in Westchester mailboxes. Pick your areas, choose a position, and add your ad. Pay nothing today.";
 
 export const MARKETING_NAV = [
   { href: "/how-it-works", label: "How It Works" },
@@ -12,6 +13,7 @@ export const MARKETING_NAV = [
 ] as const;
 
 export const MARKETING_PAGES = {
+  "/about": { title: "About Our Westchester Advertising Business", description: "Meet Inside914, operated by Inside Diagnostics LLC in Briarcliff Manor, NY. Learn how shared postcards connect businesses with Westchester communities." },
   "/": { title: "Westchester Postcard Advertising", description: "Explore shared postcard advertising for Westchester County businesses. Compare four local areas, learn how reservations work and plan your next campaign." },
   "/how-it-works": { title: "How Shared Postcard Advertising Works", description: "Learn how Inside914 shared postcard campaigns work in Westchester: choose areas, select an ad position, upload artwork and reserve with nothing charged today." },
   "/areas": { title: "Westchester Advertising Areas", description: "Compare Central, Southern, Northern and Eastern Westchester advertising areas. Explore the map, proposed communities, campaign prices and postcard positions." },

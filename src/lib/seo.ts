@@ -5,7 +5,7 @@ import { POLICY_LINKS } from "./legal/public-policies";
 export const SITE_URL = "https://inside914.com";
 export const SITE_NAME = "Inside914";
 export const SEO_CONTACT_EMAIL = "Info@inside914.com";
-export const PUBLIC_MARKETING_PATHS = ["/", "/how-it-works", "/areas", "/areas/central-westchester", "/areas/southern-westchester", "/areas/northern-westchester", "/areas/eastern-westchester", "/pricing", "/our-postcard", "/faq", "/contact"] as const;
+export const PUBLIC_MARKETING_PATHS = ["/", "/how-it-works", "/areas", "/areas/central-westchester", "/areas/southern-westchester", "/areas/northern-westchester", "/areas/eastern-westchester", "/pricing", "/our-postcard", "/faq", "/contact", "/about"] as const;
 export const PUBLIC_POLICY_PATHS = POLICY_LINKS.map(({ slug }) => `/legal/${slug}` as const);
 export const PUBLIC_INDEXABLE_PATHS = [...PUBLIC_MARKETING_PATHS, ...PUBLIC_POLICY_PATHS] as const;
 export const PRIVATE_ROBOTS = { index: false, follow: false, noarchive: true } as const;
@@ -26,7 +26,7 @@ export function marketingMetadata(path: (typeof PUBLIC_INDEXABLE_PATHS)[number],
     // Absolute avoids the root template duplicating the brand, including on the homepage.
     title: { absolute: brandedTitle },
     description,
-    alternates: { canonical: absoluteUrl(path) },
+    alternates: { canonical: absoluteUrl(path), ...(path === "/" ? { types: { "text/markdown": absoluteUrl("/index.md") } } : {}) },
     openGraph: { type: "website", siteName: SITE_NAME, locale: "en_US", title: brandedTitle, description, url: absoluteUrl(path), images: [image] },
     twitter: { card: "summary_large_image", title: brandedTitle, description, images: [image] },
   };

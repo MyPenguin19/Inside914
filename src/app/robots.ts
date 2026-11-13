@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
     // HTML routes remain crawlable so engines can see their noindex directives.
     // Tokens, APIs and downloadable private evidence are not crawl destinations.
     // Authentication/authorization, not robots.txt, protects private data.
-    rules: [{ userAgent: "*", allow: "/", disallow: ["/api/", "/r/", "/reservation/evidence/"] }],
+    rules: [{ userAgent: "*", allow: "/", disallow: ["/api/", "/r/", "/reservation/evidence/"], other: { "Content-Signal": "search=yes, ai-train=no" } }],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }
