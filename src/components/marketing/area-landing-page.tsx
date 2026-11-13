@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AREA_GUIDE } from "@/components/booking/westchester-map-data";
 import { REGION_CONTENT } from "@/lib/seo-regions";
-import { regionStructuredData } from "@/lib/seo";
+import { regionStructuredData } from "@/lib/structured-data";
 import { PUBLIC_CHECKOUT_RELEASED, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 
 // Four explicit routes share this server-only presentation. Unknown paths are real 404s,
@@ -44,7 +44,7 @@ export function AreaLandingPage({ region }: { region: (typeof REGIONS)[number] }
         <p className="mt-4 leading-relaxed text-muted">Area groupings are planning guides. Postal routes, final household quantities, mailing dates and printer specifications must be confirmed for the individual campaign. An area name is not a promise to deliver to every address in that region.</p>
         <div className="mt-8 flex flex-wrap gap-4">
           <Link className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:bg-accent" href="/areas">Explore all advertising areas</Link>
-          <Link className="rounded-full border border-line px-6 py-3 text-sm font-medium hover:bg-background-soft" href="/#how-it-works">How shared mail works</Link>
+          <Link className="rounded-full border border-line px-6 py-3 text-sm font-medium hover:bg-background-soft" href="/how-it-works">How shared mail works</Link>
         </div>
         <h2 className="mt-12 font-display text-2xl font-medium">Other Westchester advertising areas</h2>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">

@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { SITE_URL, marketingMetadata } from "@/lib/seo";
+import { marketingMetadata } from "@/lib/seo";
+import { ADVERTISED_PRICE_LABEL, ADVERTISING_FAQ, CAMPAIGN_STEPS, MARKETING_PAGES } from "@/lib/marketing-content";
+import { MarketingPageSeo } from "@/components/marketing/page-seo";
 import { PUBLIC_CHECKOUT_RELEASED, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 import { REGIONS } from "@/lib/catalog/regions";
 import { PostcardIllustration, SizeDiagram } from "@/components/marketing/postcard-illustration";
@@ -8,65 +10,14 @@ import { SiteHeader } from "@/components/site-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, Eyebrow, SectionHeading } from "@/components/ui/primitives";
 
-export const metadata = marketingMetadata(
-  "/", "Westchester Postcard Advertising",
-  "Explore shared postcard advertising for Westchester County businesses. Compare four local areas, learn how reservations work and plan your next campaign.",
-);
-const organizationData = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "@id": SITE_URL + "/#organization",
-  name: "Inside914",
-  legalName: "Inside Diagnostics LLC",
-  brand: { "@type": "Brand", name: "Inside914" },
-  url: SITE_URL,
-  email: "Info@inside914.com",
-  description: "Inside914 provides shared postcard advertising for local businesses in Westchester County, New York.",
-  areaServed: { "@type": "AdministrativeArea", name: "Westchester County, New York" },
-};
-const websiteData = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": SITE_URL + "/#website",
-  url: SITE_URL,
-  name: "Inside914",
-  publisher: { "@id": SITE_URL + "/#organization" },
-};
-const STEPS = [
-  { title: "Choose your areas", body: "Pick one or more areas on the map." },
-  { title: "Choose positions and artwork", body: "Pick a position and add your image. Use the same image or a different one in each area." },
-  { title: "Add your business details", body: "Tell us your business name and how to reach you." },
-  { title: "Reserve securely", body: "Save your card. Pay $0 today, then the agreed price per area when its postcard fills and is approved." },
-];
-
-const FAQ = [
-  {
-    q: "How does shared mail work?",
-    a: "Multiple local businesses share one professionally printed postcard mailed within a selected Westchester area. Each campaign has 10 paid advertising spaces. Choose one or multiple areas, with a separate position and artwork for each.",
-  },
-  {
-    q: "When am I charged?",
-    a: "Nothing is charged when you reserve. Your card is saved securely. Each selected area is independent: you are charged the agreed price for an area only after that campaign fills and is approved.",
-  },
-  {
-    q: "What if the postcard doesn't fill?",
-    a: "You are not charged for an area unless its campaign fills and is approved. If it isn't fully reserved by its deadline, new reservations close while Inside914 reviews cancellation or revised dates. Other selected areas are handled independently.",
-  },
-  {
-    q: "What happens after I reserve?",
-    a: "You receive a confirmation email with a private link to your reservation. Each area moves from reservation to artwork review, a filled campaign, final preparation, payment, and mailing. Follow progress on your private campaign page.",
-  },
-  {
-    q: "Can I change my artwork?",
-    a: "Yes. Before reserving, you can replace or adjust your artwork. After reserving, contact us for help with changes before the applicable artwork deadline and final approval or production lock.",
-  },
-];
+const copy = MARKETING_PAGES["/"];
+export const metadata = marketingMetadata("/", copy.title, copy.description);
 
 export default function Home() {
   return (
     <>
       <SiteHeader />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([organizationData, websiteData]).replace(/</g, "\\u003c") }} />
+      <MarketingPageSeo path="/" />
       <main className="min-w-0 flex-1 break-words">
         {/* Hero */}
         <section className="page-width grid items-center gap-10 overflow-x-clip pb-12 pt-10 md:grid-cols-[1.15fr_1fr] md:gap-12 md:pb-16 md:pt-14">
@@ -84,21 +35,24 @@ export default function Home() {
               <ButtonLink href="/areas" size="lg">
                 Explore Advertising Areas
               </ButtonLink>
-              <ButtonLink href="#how-it-works" size="lg" variant="secondary">
+              <ButtonLink href="/how-it-works" size="lg" variant="secondary">
                 How It Works
               </ButtonLink>
             </div>
             <p className="mt-4 text-sm text-muted">Prices shown per area · Choose one or multiple areas · $0 at reservation</p>
             {!PUBLIC_CHECKOUT_RELEASED && <p className="mt-3 max-w-xl text-sm text-muted">{CHECKOUT_CLOSED_MESSAGE}</p>}
           </div>
-          <PostcardIllustration />
+          <div className="min-w-0">
+            <PostcardIllustration />
+            <p className="mt-5 text-center text-sm"><Link href="/our-postcard" className="underline underline-offset-4 hover:text-accent">Explore the postcard layout and artwork tips</Link></p>
+          </div>
         </section>
 
         {/* How it works */}
         <section id="how-it-works" aria-labelledby="how-title" className="page-width section-y scroll-mt-20">
           <SectionHeading id="how-title" eyebrow="How it works" title="Four simple steps." />
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, i) => (
+            {CAMPAIGN_STEPS.map((step, i) => (
               <li key={step.title} className="relative rounded-2xl border border-line bg-surface p-5">
                 <span className="font-display text-3xl text-accent">{i + 1}</span>
                 <h3 className="mt-3 font-medium">{step.title}</h3>
@@ -106,6 +60,7 @@ export default function Home() {
               </li>
             ))}
           </ol>
+          <Link href="/how-it-works" className="mt-6 inline-block text-sm font-medium underline underline-offset-4 hover:text-accent">See the full campaign process</Link>
         </section>
 
         {/* Pricing */}
@@ -120,7 +75,7 @@ export default function Home() {
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               <PriceCard
                 name="Postcard Advertisement"
-                price="$399"
+                price={ADVERTISED_PRICE_LABEL}
                 detail="One advertising space on a shared postcard mailed within your selected Westchester area."
                 diagram={<SizeDiagram />}
               />
@@ -129,14 +84,18 @@ export default function Home() {
             <p className="mt-6 text-sm text-muted">
               Each area is its own campaign with 10 advertising spaces.
             </p>
+            <Link href="/pricing" className="mt-4 inline-block text-sm font-medium underline underline-offset-4 hover:text-accent">View pricing and payment details</Link>
           </div>
         </section>
 
         {/* FAQ */}
         <section id="faq" aria-labelledby="faq-title" className="page-width section-y grid scroll-mt-20 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] lg:gap-12">
-          <SectionHeading id="faq-title" eyebrow="Questions" title="Good to know." />
+          <div>
+            <SectionHeading id="faq-title" eyebrow="Questions" title="Good to know." />
+            <Link href="/faq" className="mt-4 inline-block text-sm font-medium underline underline-offset-4 hover:text-accent">Read all advertising questions</Link>
+          </div>
           <div className="divide-y divide-line self-start rounded-2xl border border-line bg-surface">
-            {FAQ.map((item) => (
+            {ADVERTISING_FAQ.slice(0, 5).map((item) => (
               <details key={item.q} className="group">
                 <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-3.5 font-medium [&::-webkit-details-marker]:hidden">
                   {item.q}
