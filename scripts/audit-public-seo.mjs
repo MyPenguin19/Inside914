@@ -12,7 +12,7 @@ const canonical = "https://inside914.com";
 const production = process.argv.includes("--production");
 assert(production ? base.href === `${canonical}/` && !preview : ["localhost", "127.0.0.1"].includes(base.hostname), "Use a local server or the explicitly authorized production host");
 const regions = ["central", "southern", "northern", "eastern"].map(region => `/areas/${region}-westchester`);
-const paths = ["/", "/areas", ...regions, "/contact"];
+const paths = ["/", "/how-it-works", "/areas", ...regions, "/pricing", "/our-postcard", "/faq", "/contact"];
 const cache = new Map();
 const external = new Set();
 let links = 0;
@@ -78,14 +78,53 @@ for (const path of paths) {
     assert(img.getAttribute("aria-label") || img.getAttribute("aria-labelledby") || img.querySelector("title"), `${path}: graphic without accessible name`);
   }
   const schema = [...doc.querySelectorAll('script[type="application/ld+json"]')].flatMap(script => JSON.parse(script.textContent));
-  if (path === "/") {
-    assert(schema.some(item => item["@type"] === "WebSite"));
-    assert(schema.some(item => item["@type"] === "Organization" && item.name === "Inside914" && item.legalName === "Inside Diagnostics LLC"));
-  } else if (regions.includes(path)) {
-    assert(schema.some(item => item["@type"] === "WebPage" && item.url === canonical + path));
+  const pageType = path === "/faq" ? "FAQPage" : path === "/contact" ? "ContactPage" : path === "/areas" ? "CollectionPage" : "WebPage";
+  const webPage = schema.find(item => item["@type"] === pageType);
+  assert(webPage, `${path}: missing ${pageType} schema`);
+  assert.equal(webPage.url, canonical + path);
+  assert.equal(webPage.description, description);
+  assert(schema.some(item => item["@type"] === "WebSite" && item.url === `${canonical}/`));
+  const organization = schema.find(item => item["@type"] === "Organization");
+  assert.equal(organization?.name, "Inside914");
+  assert.equal(organization.legalName, "Inside Diagnostics LLC");
+  assert.equal(organization.email, "Info@inside914.com");
+  assert.equal(organization.telephone, "+19148795022");
+  assert.equal(organization.logo.url, `${canonical}/brand-logo`);
+  const ids = schema.map(item => item["@id"]);
+  assert.equal(new Set(ids).size, ids.length, `${path}: duplicate schema IDs`);
+  const checkReferences = value => {
+    if (!value || typeof value !== "object") return;
+    if (Object.keys(value).length === 1 && value["@id"]) assert(ids.includes(value["@id"]), `${path}: unresolved schema reference ${value["@id"]}`);
+    for (const child of Object.values(value)) checkReferences(child);
+  };
+  schema.forEach(checkReferences);
+  if (path !== "/") {
     const crumb = schema.find(item => item["@type"] === "BreadcrumbList");
-    assert.deepEqual(crumb.itemListElement.map(item => item.position), [1, 2, 3]);
-    assert.equal(crumb.itemListElement[2].item, canonical + path);
+    assert(crumb && doc.querySelector('nav[aria-label="Breadcrumb"]'), `${path}: breadcrumb missing`);
+    assert.deepEqual(crumb.itemListElement.map(item => item.position), regions.includes(path) ? [1, 2, 3] : [1, 2]);
+    assert.equal(crumb.itemListElement.at(-1).item, canonical + path);
+    assert.equal(webPage.breadcrumb["@id"], crumb["@id"]);
+  }
+  if (path === "/pricing") {
+    const service = schema.find(item => item["@type"] === "Service");
+    assert.equal(service.offers.price, 399);
+    assert.equal(service.offers.priceCurrency, "USD");
+    assert(doc.querySelector("main").textContent.includes(`$${service.offers.price}`));
+    assert.equal(webPage.mainEntity["@id"], service["@id"]);
+  }
+  if (path === "/faq") {
+    assert.equal(webPage.mainEntity.length, doc.querySelectorAll('section[id^="question-"]').length);
+    for (const question of webPage.mainEntity) {
+      assert.equal(question["@type"], "Question");
+      assert.equal(question.acceptedAnswer["@type"], "Answer");
+      assert(doc.querySelector("main").textContent.includes(question.name));
+      assert(doc.querySelector("main").textContent.includes(question.acceptedAnswer.text));
+    }
+  }
+  for (const nav of doc.querySelectorAll('header nav[aria-label="Main"]')) {
+    const hrefs = [...nav.querySelectorAll("a[href]")].map(link => link.getAttribute("href"));
+    for (const required of ["/how-it-works", "/areas", "/pricing", "/our-postcard", "/faq", "/contact"]) assert(hrefs.includes(required), `${path}: menu missing ${required}`);
+    assert(hrefs.every(href => paths.includes(href)), `${path}: menu link is not a dedicated indexable page`);
   }
   // Check actual server HTML hyperlinks and assets, including off-page fragments and policies.
   const refs = [...doc.querySelectorAll("a[href], img[src]")].map(el => el.getAttribute("href") ?? el.getAttribute("src"));
@@ -122,12 +161,15 @@ for (const path of ["/admin/login", "/book/cart", "/reservation/access", "/reser
   assert(response.status < 500, path);
   assert.match(response.headers.get("x-robots-tag") ?? "", /noindex/, path);
 }
-const closedCheckout = await get("/book/cart");
-assert.match(closedCheckout.doc.querySelector("main").textContent, /Reservations are not open yet/);
 const image = await get("/opengraph-image");
 assert.equal(image.contentType, "image/png");
 const pixels = await sharp(image.bytes).metadata();
 assert.equal(pixels.width, 1200); assert.equal(pixels.height, 630);
+const logo = await get("/brand-logo");
+assert.equal(logo.status, 200); assert.match(logo.contentType, /^image\/png/);
+assert(!/noindex/.test(logo.headers.get("x-robots-tag") ?? "") || preview);
+const logoPixels = await sharp(logo.bytes).metadata();
+assert.equal(logoPixels.width, 600); assert.equal(logoPixels.height, 240);
 for (const path of ["/areas/", "/editions/00000000-0000-4000-8000-000000000999"]) {
   const result = await get(path);
   assert.equal(result.status, 200); assert.equal(result.url.pathname, "/areas"); assert.equal(result.chain.length, 2);

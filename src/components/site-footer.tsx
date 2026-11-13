@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "@/lib/support";
 import { REGIONS } from "@/lib/catalog/regions";
+import { MARKETING_NAV } from "@/lib/marketing-content";
 import { Logo } from "@/components/site-header";
 
 export function SiteFooter() {
@@ -37,6 +38,9 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="page-width pb-6">
+        <nav aria-label="Explore Inside914" className="mb-6 flex flex-wrap gap-x-5 gap-y-3 text-sm text-muted">
+          {MARKETING_NAV.map(item => <Link key={item.href} href={item.href} className="hover:text-foreground">{item.label}</Link>)}
+        </nav>
         <h2 className="text-sm font-semibold">Westchester advertising areas</h2>
         <nav aria-label="Regional advertising" className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
           {REGIONS.map(area => <Link key={area.slug} href={`/areas/${area.slug}`} className="hover:text-foreground">{area.name}</Link>)}

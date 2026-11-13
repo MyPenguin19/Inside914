@@ -1,5 +1,25 @@
 import { expect, test } from "@playwright/test";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { MARKETING_NAV } from "../src/lib/marketing-content";
 import { PUBLIC_MARKETING_PATHS, SITE_URL } from "../src/lib/seo";
+
+test("server HTML, schema, sitemap and public links pass the crawler audit", async ({ baseURL }, testInfo) => {
+  test.setTimeout(90_000);
+  const { stdout } = await promisify(execFile)(process.execPath, ["scripts/audit-public-seo.mjs", baseURL!], { timeout: 80_000 });
+  const audit = JSON.parse(stdout);
+  expect(audit.passed).toBe(true);
+  expect(audit.pages).toHaveLength(PUBLIC_MARKETING_PATHS.length);
+  await testInfo.attach("seo-crawl.json", { body: stdout, contentType: "application/json" });
+});
+
+test("legacy hosting alias redirects public pages and preserves campaign tracking parameters", async ({ request }) => {
+  for (const path of PUBLIC_MARKETING_PATHS) {
+    const response = await request.get(`${path}?utm_source=seo-audit`, { headers: { host: "inside914.vercel.app" }, maxRedirects: 0 });
+    expect(response.status()).toBe(308);
+    expect(new URL(response.headers().location).href).toBe(`${SITE_URL}${path}?utm_source=seo-audit`);
+  }
+});
 
 for (const path of PUBLIC_MARKETING_PATHS) {
   test(`marketing metadata and responsive semantics: ${path}`, async ({ page }) => {
@@ -39,7 +59,7 @@ test("mobile navigation, map keyboard control and reduced motion", async ({ page
   await expect(menu).toBeFocused();
   expect(await menu.evaluate(node => getComputedStyle(node).outlineStyle)).toBe("solid");
   await page.keyboard.press("Enter");
-  const link = page.getByRole("link", { name: "Advertising Areas", exact: true }).last();
+  const link = page.locator("header").getByRole("link", { name: "Advertising Areas", exact: true }).last();
   await expect(link).toBeVisible();
   expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await link.focus();
@@ -90,5 +110,34 @@ test("marketing pages remain usable with enlarged text", async ({ page }) => {
     }).slice(0, 12).map(node => ({ tag: node.tagName, text: node.textContent?.slice(0, 60), class: node.className, right: node.getBoundingClientRect().right })));
     expect(await page.evaluate(() => document.documentElement.scrollWidth), `${path} with 200% text: ${JSON.stringify(overflow)}`).toBeLessThanOrEqual(390);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  }
+});
+
+
+test("each desktop and mobile menu link opens its own SEO page", async ({ page }) => {
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const item of MARKETING_NAV) {
+      await page.goto("/");
+      if (width < 1024) await page.locator("header summary").click();
+      await page.locator("header").getByRole("link", { name: item.label, exact: true }).filter({ visible: true }).click();
+      await expect(page).toHaveURL(new RegExp(`${item.href}$`));
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", SITE_URL + item.href);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    }
+  }
+});
+
+test("dedicated sample and FAQ content work without changing booking state", async ({ page }) => {
+  await page.goto("/our-postcard");
+  await page.getByRole("button", { name: "Flip postcard" }).click();
+  await expect(page.getByRole("img", { name: /Back of the sample postcard/ })).toBeVisible();
+  await page.getByRole("button", { name: "View front" }).click();
+  await expect(page.getByRole("img", { name: /Front of the sample postcard/ })).toBeVisible();
+  await page.goto("/faq");
+  const questions = await page.locator('script[type="application/ld+json"]').evaluate(node => JSON.parse(node.textContent!).find((item: { "@type": string }) => item["@type"] === "FAQPage").mainEntity);
+  for (const question of questions) {
+    await expect(page.getByRole("heading", { name: question.name, exact: true })).toBeVisible();
+    await expect(page.getByText(question.acceptedAnswer.text, { exact: true })).toBeVisible();
   }
 });

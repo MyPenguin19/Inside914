@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PUBLIC_MARKETING_PATHS, PRIVATE_ROUTE_PREFIXES, SITE_URL, absoluteUrl, marketingMetadata, regionStructuredData } from "../src/lib/seo";
+import { PUBLIC_MARKETING_PATHS, PRIVATE_ROUTE_PREFIXES, SITE_URL, absoluteUrl, marketingMetadata } from "../src/lib/seo";
+import { pageStructuredData, regionStructuredData, postcardService, faqQuestions } from "../src/lib/structured-data";
+import { MARKETING_NAV, MARKETING_PAGES, ADVERTISING_FAQ, ADVERTISED_PRICE } from "../src/lib/marketing-content";
 import { REGION_CONTENT } from "../src/lib/seo-regions";
 import sitemap from "../src/app/sitemap";
 import robots from "../src/app/robots";
@@ -16,13 +18,18 @@ describe("public SEO and indexing boundaries", () => {
     expect(SITE_URL).toBe("https://inside914.com");
     expect(absoluteUrl("/areas")).toBe(`${SITE_URL}/areas`);
   });
+  it("permanently redirects public legacy-host pages to the canonical host", async () => {
+    expect(await config.redirects!()).toEqual(PUBLIC_MARKETING_PATHS.map(path => ({
+      source: path, has: [{ type: "host", value: "inside914.vercel.app" }], destination: absoluteUrl(path), permanent: true,
+    })));
+  });
   it.each(["//outside.example/path", "https://outside.example", "/areas?token=secret", "/areas#private", "/\\outside.example"])("rejects noncanonical or parameterized SEO input %s", path => {
     expect(() => absoluteUrl(path)).toThrow();
   });
-  it("includes exactly seven unique public pages without invented timestamps", () => {
+  it("includes exactly eleven unique public pages without invented timestamps", () => {
     vi.stubEnv("VERCEL_ENV", "production");
     expect(sitemap()).toEqual(PUBLIC_MARKETING_PATHS.map(path => ({ url: absoluteUrl(path) })));
-    expect(new Set(sitemap().map(item => item.url)).size).toBe(7);
+    expect(new Set(sitemap().map(item => item.url)).size).toBe(11);
     expect(sitemap().map(item => item.url)).toContain("https://inside914.com/contact");
     for (const { slug } of REGIONS) expect(sitemap().map(item => item.url)).toContain(absoluteUrl(`/areas/${slug}`));
     expect(sitemap().every(({ url }) => !/\/(admin|api|book|pay|reservation|r|account|legal)(\/|$)/.test(url))).toBe(true);
@@ -62,14 +69,37 @@ describe("public SEO and indexing boundaries", () => {
     }
     expect(descriptions.size).toBe(4); expect(titles.size).toBe(4);
   });
+  it("every menu entry is a dedicated, canonical marketing page", () => {
+    for (const { href } of MARKETING_NAV) {
+      expect(href).not.toMatch(/[?#]/);
+      expect(PUBLIC_MARKETING_PATHS).toContain(href);
+      expect(MARKETING_PAGES[href].description.length).toBeGreaterThan(100);
+    }
+    expect(new Set(Object.values(MARKETING_PAGES).map(page => page.title)).size).toBe(Object.keys(MARKETING_PAGES).length);
+    expect(new Set(Object.values(MARKETING_PAGES).map(page => page.description)).size).toBe(Object.keys(MARKETING_PAGES).length);
+  });
   it("regional schema connects the webpage, website and breadcrumb without invented business facts", () => {
     for (const region of REGIONS) {
-      const [page, breadcrumb] = regionStructuredData(region.slug, region.name, REGION_CONTENT[region.slug].description);
-      expect(page).toMatchObject({ "@type": "WebPage", url: `${SITE_URL}/areas/${region.slug}`, isPartOf: { "@id": `${SITE_URL}/#website` } });
-      expect(breadcrumb.itemListElement?.map(item => item.position)).toEqual([1, 2, 3]);
-      expect(page.breadcrumb?.["@id"]).toBe(breadcrumb["@id"]);
-      expect(JSON.stringify([page, breadcrumb])).not.toMatch(/AggregateRating|LocalBusiness|streetAddress|latitude/);
+      const graph = regionStructuredData(region.slug, region.name, REGION_CONTENT[region.slug].description);
+      expect(graph).toContainEqual(expect.objectContaining({ "@type": "WebPage", url: `${SITE_URL}/areas/${region.slug}`, isPartOf: { "@id": `${SITE_URL}/#website` } }));
+      expect(graph).toContainEqual(expect.objectContaining({ "@type": "BreadcrumbList", itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+        { "@type": "ListItem", position: 2, name: "Advertising areas", item: `${SITE_URL}/areas` },
+        { "@type": "ListItem", position: 3, name: region.name, item: `${SITE_URL}/areas/${region.slug}` },
+      ] }));
+      expect(JSON.stringify(graph)).not.toMatch(/AggregateRating|LocalBusiness|streetAddress|latitude/);
     }
+  });
+  it("uses published contact details and a crawlable logo for the organization", () => {
+    const graph = pageStructuredData("/contact", "Contact", "Contact Inside914", { type: "ContactPage" });
+    expect(graph).toContainEqual(expect.objectContaining({ "@type": "Organization", legalName: "Inside Diagnostics LLC", telephone: "+19148795022", email: "Info@inside914.com", logo: { "@type": "ImageObject", url: `${SITE_URL}/brand-logo`, width: 600, height: 240 } }));
+    expect(graph).toContainEqual(expect.objectContaining({ "@type": "ContactPage", breadcrumb: { "@id": `${SITE_URL}/contact#breadcrumb` } }));
+  });
+  it("describes the advertised service price and FAQ from the displayed copy", () => {
+    expect(postcardService.offers).toMatchObject({ "@type": "Offer", price: ADVERTISED_PRICE, priceCurrency: "USD", url: `${SITE_URL}/pricing` });
+    expect(postcardService).not.toHaveProperty("aggregateRating");
+    expect(postcardService.offers).not.toHaveProperty("availability");
+    expect(faqQuestions).toEqual(ADVERTISING_FAQ.map(({ q, a }) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })));
   });
   it("approved reservations remain separate from collection and invitation emails", () => {
     expect(PUBLIC_CHECKOUT_RELEASED).toBe(true);

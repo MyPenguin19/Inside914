@@ -3,14 +3,19 @@ import { SiteFooter } from "@/components/site-footer";
 import { ContactMessageForm } from "@/components/contact-message-form";
 import { Card, Eyebrow } from "@/components/ui/primitives";
 import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "@/lib/support";
-import { marketingMetadata } from "@/lib/seo";
+import { MARKETING_PAGES } from "@/lib/marketing-content";
+import { MarketingBreadcrumb, MarketingPageSeo } from "@/components/marketing/page-seo";
+import { marketingMetadata, SITE_URL } from "@/lib/seo";
 
-export const metadata = marketingMetadata("/contact", "Contact Us for Westchester Advertising", "Contact Inside914 about postcard advertising in Westchester County. Send a message, email Info@inside914.com or call 914-879-5022 to get in touch.");
+const copy = MARKETING_PAGES["/contact"];
+export const metadata = marketingMetadata("/contact", copy.title, copy.description);
 
 export default function ContactPage() {
   return <>
     <SiteHeader />
+    <MarketingPageSeo path="/contact" type="ContactPage" mainEntity={{ "@id": `${SITE_URL}/#organization` }} />
     <main className="page-width flex-1 py-12 sm:py-16">
+      <MarketingBreadcrumb label="Contact" />
       <div className="grid items-start gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
         <div className="min-w-0">
           <Eyebrow>Get in touch</Eyebrow>

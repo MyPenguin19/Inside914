@@ -3,12 +3,7 @@ import { Suspense } from "react";
 import { HeaderCta } from "@/components/header-cta";
 import { BrandMark } from "@/components/brand-mark";
 
-const NAV = [
-  { href: "/#how-it-works", label: "How It Works" },
-  { href: "/areas", label: "Advertising Areas" },
-  { href: "/#pricing", label: "Pricing" },
-  { href: "/contact", label: "Contact" },
-];
+import { MARKETING_NAV } from "@/lib/marketing-content";
 
 export function Logo() {
   return (
@@ -23,14 +18,14 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-background/90 backdrop-blur">
       <div className="page-width flex flex-wrap items-center justify-between gap-4 py-3">
         <Logo />
-        <nav aria-label="Main" className="hidden items-center gap-7 text-sm text-muted lg:flex">
-          {NAV.map((item) => (
+        <nav aria-label="Main" className="hidden items-center gap-5 text-sm text-muted lg:flex">
+          {MARKETING_NAV.map((item) => (
             <Link key={item.href} href={item.href} className="hover:text-foreground">
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 lg:ml-0">
           {/* Reads the URL, so it streams in on dynamic routes instead of blocking prerendering. */}
           <Suspense fallback={null}>
             <HeaderCta />
@@ -41,7 +36,7 @@ export function SiteHeader() {
               Menu
             </summary>
             <nav aria-label="Main" className="absolute right-0 mt-2 flex w-60 max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-line bg-surface p-2 shadow-lg">
-              {NAV.map((item) => (
+              {MARKETING_NAV.map((item) => (
                 <Link key={item.href} href={item.href} className="rounded-xl px-4 py-3 text-base hover:bg-background-soft">
                   {item.label}
                 </Link>

@@ -14,8 +14,13 @@ export async function generateMetadata({ params }: PageProps<"/legal/[doc]">): P
     "reservation-policy": "Reservation and Cancellation Policy",
     privacy: "Privacy Policy",
   };
+  const descriptions: Record<string, string> = {
+    terms: "Read the Inside914 advertising terms for shared postcard campaigns in Westchester County, including advertiser responsibilities, artwork and payment conditions.",
+    "reservation-policy": "Review Inside914 reservation and cancellation terms, including campaign approval, payment timing, artwork deadlines and how selected areas are handled.",
+    privacy: "Read how Inside914 handles business contact information, reservation details, artwork and website analytics for its Westchester postcard advertising service.",
+  };
   if (!Object.hasOwn(titles, doc)) return { robots: { index: false, follow: false } };
-  return { title: titles[doc], robots: { index: false, follow: true }, alternates: { canonical: `/legal/${doc}` } };
+  return { title: titles[doc], description: descriptions[doc], robots: { index: false, follow: true }, alternates: { canonical: `/legal/${doc}` } };
 }
 export function generateStaticParams() {
   return Object.keys(legalDocuments).map((doc) => ({ doc }));
