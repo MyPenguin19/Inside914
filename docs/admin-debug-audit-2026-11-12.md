@@ -2,7 +2,7 @@
 
 ## Scope and result
 
-Investigated campaign area editing and audited the admin workflows without changing the visual design. Local fixes are implemented and verified. The owner explicitly approved applying the migration and releasing the fixes. The exact migration was applied to production on November 13, 2026 at 04:50:55 UTC (November 12 in New York); the application release is being verified separately.
+Investigated campaign area editing and audited the admin workflows without changing the visual design. Local fixes are implemented and verified. The owner explicitly approved applying the migration and releasing the fixes. The exact migration was applied to production on November 13, 2026 at 04:50:55 UTC (November 12 in New York); the application fixes are released on `https://inside914.com`.
 
 The reported campaign `a97812fd-a594-425e-b874-63228a8d5658` was inspected read-only. Its name is Southern Westchester, but its stored area is Central Westchester. It is a draft with no bookings or invitations. This audit does not move or rename that production campaign.
 
@@ -49,3 +49,16 @@ Applied after explicit owner approval as production migration `20261113045055_ad
 - This is regression coverage of the available workflows, not a guarantee about every possible input or external-provider outage.
 
 The satisfied remote migration approval requirement is in `CLAUDE.md`, under “Requires my explicit approval in chat”: “running migrations against a remote Supabase project.”
+
+## Production release verification
+
+- Released application commit: `4fc46f4` (implementation commit `81d1bcc`).
+- Live deployment: `dpl_7C18bPZMkpg2zbXfwU9bQCkZaAfn`, `https://inside914-7yl1atab0-mypenguin19s-projects.vercel.app`.
+- Built with production settings using `--skip-domain`, checked while staged, then promoted. Vercel inspection confirms `inside914.com` resolves to this Ready deployment.
+- Staged homepage and admin sign-in returned 200; unauthenticated campaign editing redirected to sign-in.
+- After promotion, homepage, areas, and admin sign-in returned 200. Seven protected admin routes redirected to sign-in and retained noindex headers. The public homepage retained indexable headers.
+- The new deployment's runtime error-log query returned zero records during the release check window.
+- The final signed-in production browser check could not run because the browser-control connection failed. The local browser suite verified actual area saves, persistence after reload, and conflict recovery; production verification was read-only.
+- Rollback deployment retained: `dpl_9Ltea6RcSGU7aVVMWY3ab6ZN4YBR`. The database change is backward compatible with that application.
+
+The owner can refresh the reported campaign editor to choose and save the correct area. Existing production campaign values were not moved or renamed during release.
