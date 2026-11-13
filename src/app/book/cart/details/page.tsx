@@ -12,7 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CART_COOKIE, ownedCart, cartGate } from "@/lib/booking/cart";
 import { submitCartContact } from "../actions";
 export default function Page() {
-  return <><SiteHeader /><main className="page-width flex-1 py-8"><BookingSteps current={3} /><Suspense fallback={<BookingLoading step={3} title="Your business details" message="Loading your business details…" showSteps={false} form />}><Details /></Suspense></main><SiteFooter /></>;
+  return <><SiteHeader /><main id="main-content" tabIndex={-1} className="page-width flex-1 py-8"><BookingSteps current={3} /><Suspense fallback={<BookingLoading step={3} title="Your business details" message="Loading your business details…" showSteps={false} form />}><Details /></Suspense></main><SiteFooter /></>;
 }
 async function Details() {
   // Defer database initialization until this request-only boundary (including Preview builds).

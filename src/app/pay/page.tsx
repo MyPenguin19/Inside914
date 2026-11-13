@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/primitives";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 export const metadata={title:"Payment recovery · Inside914",robots:{index:false,follow:false},referrer:"no-referrer" as const};
-export default function PayPage(){return <><SiteHeader/><main className="page-width flex-1 py-8"><Suspense fallback={<p>Loading payment status…</p>}><Payment/></Suspense></main><SiteFooter/></>;}
+export default function PayPage(){return <><SiteHeader/><main id="main-content" tabIndex={-1} className="page-width flex-1 py-8"><Suspense fallback={<p>Loading payment status…</p>}><Payment/></Suspense></main><SiteFooter/></>;}
 async function Payment(){
   await connection();
   let details;

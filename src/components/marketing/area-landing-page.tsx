@@ -16,7 +16,7 @@ export function AreaLandingPage({ region }: { region: (typeof REGIONS)[number] }
   return <>
     <SiteHeader />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />
-    <main className="page-width min-w-0 flex-1 break-words py-10 sm:py-14">
+    <main id="main-content" tabIndex={-1} className="page-width min-w-0 flex-1 break-words py-10 sm:py-14">
       <nav aria-label="Breadcrumb" className="text-sm text-muted">
         <ol className="flex flex-wrap gap-2">
           <li><Link className="underline hover:text-foreground" href="/">Home</Link></li>
@@ -26,11 +26,11 @@ export function AreaLandingPage({ region }: { region: (typeof REGIONS)[number] }
       </nav>
       <article className="mt-9 max-w-3xl">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Westchester County, New York</p>
-        <h1 className="mt-3 font-display text-4xl font-medium tracking-tight sm:text-5xl">{copy.title}</h1>
+        <h1 className="mt-3 text-balance font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">{copy.title}</h1>
         <p className="mt-5 text-lg leading-relaxed text-muted">{copy.intro}</p>
         <h2 className="mt-10 font-display text-2xl font-medium">Communities in the proposed area</h2>
         <p className="mt-4 leading-relaxed text-muted">{guide.description} These examples come from the existing Inside914 area map. They are not confirmed delivery locations.</p>
-        <ul className="mt-4 grid list-inside list-disc gap-2 sm:grid-cols-2">
+        <ul className="mt-5 grid list-inside list-disc gap-x-6 gap-y-3 rounded-xl border border-line bg-surface p-5 sm:grid-cols-2">
           {guide.municipalities.map(town => <li key={town.id}>{town.name}</li>)}
         </ul>
         <p className="mt-4 text-sm text-muted">Municipality names follow the <a className="underline" href="https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Civil_Boundaries/MapServer/6">New York State civil boundaries source</a> used by our map. Inside914’s four groupings are proposed, not official postal regions.</p>

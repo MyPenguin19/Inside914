@@ -11,6 +11,7 @@ export function ReservationAccess({recovery=false}:{recovery?:boolean}) {
  if(token) return <section className="space-y-4"><h1 className="text-3xl font-semibold">Your private reservation</h1><p>This link is for you. Keep it private.</p>
   <Button disabled={opening} onClick={async()=>{setOpening(true);try {const result=await openPrivateReservation(token,recovery);setError(result.message??"");}catch{setError("Connection interrupted. Please try again.");}finally{setOpening(false);}}}>{opening?"Opening…":"Open reservation"}</Button>{error&&<p role="alert">{error} <a href="/reservation/recover" className="underline">Request another link</a></p>}</section>;
  return <form action={action} className="space-y-5"><h1 className="text-3xl font-semibold">Find your reservation</h1><p>Enter the email and reference from your reservation.</p>
-  <TextField id="email" name="email" type="email" label="Email" required/><TextField id="reference" name="reference" label="Reservation reference" required/>
+  <p className="text-sm text-muted">Both fields are required.</p>
+  <TextField id="email" name="email" type="email" autoComplete="email" label="Email" required/><TextField id="reference" name="reference" label="Reservation reference" required/>
   <Button type="submit" disabled={pending}>{pending?"Requesting…":"Email a private link"}</Button>{state.message&&<p role="status">{state.message}</p>}</form>;
 }

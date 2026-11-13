@@ -10,7 +10,6 @@ export function InteractivePostcard({ front, back }: { front: ReactNode; back: R
 
   return (
     <figure aria-label="Interactive sample card" className="mx-auto w-full min-w-0 max-w-[500px]">
-      <p className="mb-4 text-xs font-medium uppercase tracking-[0.16em] text-accent">Interactive sample card</p>
       <div id={postcardId} className="[perspective:1200px]">
         <div
           className="grid transition-transform duration-500 ease-in-out [transform-style:preserve-3d] motion-reduce:transition-none"

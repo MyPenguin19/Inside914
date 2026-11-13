@@ -52,7 +52,7 @@ test("areas need no category and each selected area needs an explicit square", a
  expect(screen.getByText("Due today: $0")).toBeTruthy();
  fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
  expect((screen.getByRole("button",{name:"Continue to artwork"}) as HTMLButtonElement).disabled).toBe(true);
- for(const name of ["Central Westchester","Southern Westchester"]) { fireEvent.click(screen.getByRole("button",{name:`Choose position for ${name}`})); fireEvent.click(within(screen.getByRole("region",{name})).getByRole("button",{name:/position F1:/})); }
+ for(const name of ["Central Westchester","Southern Westchester"]) { fireEvent.click(screen.getByRole("button",{name:new RegExp(`Choose position for ${name}`)})); fireEvent.click(within(screen.getByRole("region",{name})).getByRole("button",{name:/position F1:/})); }
  fireEvent.click(screen.getByRole("button",{name:"Continue to artwork"}));
  await waitFor(()=>expect(push).toHaveBeenCalledWith("/book/artwork"));
  expect(hold).toHaveBeenCalledWith({selections:[{editionId:"e0",slotId:"s0"},{editionId:"e1",slotId:"s1"}]});

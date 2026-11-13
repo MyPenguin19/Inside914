@@ -19,7 +19,7 @@ export default function HoldPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <BookingSteps current={2} />
         <Suspense fallback={<div className="mt-8 h-72 animate-pulse rounded-2xl border border-line bg-surface" />}>
           <HoldDetails />

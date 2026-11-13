@@ -19,7 +19,7 @@ export function AreaOrderSummary({ view }: { view: ReservationView }) {
     </div>
     <details className="text-sm">
       <summary className="cursor-pointer text-muted">Campaign details</summary>
-      <div className="mt-3"><ReservationSummary provisional view={view} showReservationTerms={false} /></div>
+      <div className="mt-3"><ReservationSummary provisional view={view} label={`Reservation summary for ${view.zoneName}`} showReservationTerms={false} /></div>
     </details>
   </div>;
 }

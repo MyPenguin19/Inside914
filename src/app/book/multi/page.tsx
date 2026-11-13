@@ -7,7 +7,7 @@ export default function Page({searchParams}:{searchParams:Promise<{invite?:strin
   return (
     <>
       <SiteHeader />
-      <main className="page-width flex-1 py-8">
+      <main id="main-content" tabIndex={-1} className="page-width flex-1 py-8">
         <h1 className="mb-6 text-3xl font-semibold">
           Choose your areas
         </h1>

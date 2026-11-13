@@ -152,7 +152,7 @@ const robots = await get("/robots.txt");
 assert.equal(robots.status, 200); assert.match(robots.contentType, /text\/plain/);
 assert.match(robots.bytes.toString(), preview ? /^Disallow: \/$/m : /^Allow: \/$/m);
 if (!preview) assert(robots.bytes.toString().includes(`Sitemap: ${canonical}/sitemap.xml`));
-for (const policy of ["terms", "privacy", "reservation-policy"]) {
+for (const policy of ["terms", "privacy", "reservation-policy", "payment-authorization", "cancellation-policy"]) {
   const { doc } = await get(`/legal/${policy}`);
   assert.match(doc.querySelector('meta[name="robots"]').content, /noindex/);
 }

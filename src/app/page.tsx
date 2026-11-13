@@ -18,12 +18,12 @@ export default function Home() {
     <>
       <SiteHeader />
       <MarketingPageSeo path="/" />
-      <main className="min-w-0 flex-1 break-words">
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 break-words">
         {/* Hero */}
         <section className="page-width grid items-center gap-10 overflow-x-clip pb-12 pt-10 md:grid-cols-[1.15fr_1fr] md:gap-12 md:pb-16 md:pt-14">
           <div className="min-w-0">
             <Eyebrow>WESTCHESTER COUNTY · SHARED DIRECT MAIL</Eyebrow>
-            <h1 className="mt-4 font-display text-[2.6rem] font-medium leading-[1.05] tracking-tight sm:text-6xl">
+            <h1 className="mt-4 text-balance font-display text-[2.6rem] font-medium leading-[1.08] tracking-tight sm:text-6xl">
               Your Business.
               <br />
               Westchester Mailboxes.
@@ -31,7 +31,7 @@ export default function Home() {
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
               Put your business in Westchester mailboxes. Pick your areas, choose a position, and add your ad. Pay nothing today.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href="/areas" size="lg">
                 Explore Advertising Areas
               </ButtonLink>
@@ -65,14 +65,18 @@ export default function Home() {
 
         {/* Pricing */}
         <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-y border-line bg-background-soft">
-          <div className="page-width section-y">
+          <div className="page-width section-y grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
+            <div>
             <SectionHeading
               id="pricing-title"
               eyebrow="Pricing"
               title="Simple, clear pricing."
               intro="Choose one advertising space at the price listed for each Westchester area. Choose as many available areas as you want. Nothing is charged today."
             />
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              <p className="mt-5 text-sm leading-relaxed text-muted">Each area is its own campaign with 10 advertising spaces.</p>
+              <Link href="/pricing" className="mt-5 inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4 hover:text-accent">View pricing and payment details</Link>
+            </div>
+            <div>
               <PriceCard
                 name="Postcard Advertisement"
                 price={ADVERTISED_PRICE_LABEL}
@@ -81,10 +85,6 @@ export default function Home() {
               />
 
             </div>
-            <p className="mt-6 text-sm text-muted">
-              Each area is its own campaign with 10 advertising spaces.
-            </p>
-            <Link href="/pricing" className="mt-4 inline-block text-sm font-medium underline underline-offset-4 hover:text-accent">View pricing and payment details</Link>
           </div>
         </section>
 
@@ -120,7 +120,7 @@ export default function Home() {
         {/* Closing CTA */}
         <section className="page-width pb-14 md:pb-16">
           <Card tone="dark" className="flex flex-col items-start justify-between gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
-            <div>
+            <div className="min-w-0 max-w-full">
               <h2 className="font-display text-3xl font-medium">Ready to advertise locally?</h2>
               <p className="mt-2 text-background/75">See available spaces across our Westchester advertising areas.</p>
             </div>
@@ -137,11 +137,12 @@ export default function Home() {
 
 function PriceCard({ name, price, detail, diagram, highlight = false }: { name: string; price: string; detail: string; diagram: React.ReactNode; highlight?: boolean }) {
   return (
-    <Card className={`flex flex-wrap items-start gap-6 ${highlight ? "ring-2 ring-accent" : ""}`}>
+    <Card className={`flex flex-col items-start gap-6 sm:flex-row ${highlight ? "ring-2 ring-accent" : ""}`}>
       {diagram}
-      <div className="flex min-w-0 flex-[1_1_8rem] flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <h3 className="font-medium">{name}</h3>
-        <p className="mt-1 font-display text-4xl font-medium">{price}</p>
+        <p className="mt-2 font-display text-5xl font-medium">{price}</p>
+        <p className="mt-1 text-sm font-medium">Per area</p>
         <p className="mt-3 text-sm leading-relaxed text-muted">{detail}</p>
       </div>
     </Card>

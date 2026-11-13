@@ -14,7 +14,9 @@ export function ReservationSummary({
   zones,
   provisional = false,
   showReservationTerms = true,
+  label = "Reservation summary",
 }: {
+  label?: string;
   provisional?: boolean;
   showReservationTerms?: boolean;
   view: ReservationView;
@@ -23,7 +25,7 @@ export function ReservationSummary({
 }) {
   const side = view.size === "both_sides" ? "Front and back" : view.area.side === "front" ? "Front" : "Back";
   return (
-    <section aria-label="Reservation summary" className="rounded-2xl border border-line bg-surface p-5">
+    <section aria-label={label} className="rounded-2xl border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold">Your reservation</h2>
       <div className="mt-4 grid grid-cols-[96px_minmax(0,1fr)] gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
         <div>{(view.areas ?? [view.area]).map(previewArea => <PostcardPreview layoutKey={view.layoutTemplate} dimensions={view.productModel === "square_v1" ? { width: 9, height: 6 } : undefined} key={previewArea.side} side={previewArea.side} otherSlots={view.otherSlots} area={previewArea} showSafeArea={false} compact zones={zones}>

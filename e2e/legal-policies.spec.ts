@@ -1,5 +1,25 @@
 import { expect, test } from "@playwright/test";
 
+for (const [route, title, count] of [
+  ["payment-authorization", "Reservation and Payment Authorization", 7],
+  ["cancellation-policy", "Cancellation and Refund Policy", 6],
+] as const) {
+  test(`${route} is a dedicated explanation with metadata and full-policy links`, async ({ page }) => {
+    await page.goto("/");
+    await page.locator(`footer a[href="/legal/${route}"]`).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Inside914 — ${title}`);
+    await expect(page).toHaveTitle(`${title} | Inside914`);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://inside914.com/legal/${route}`);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Inside914/);
+    await expect(page.locator('main article section')).toHaveCount(count);
+    await expect(page.getByRole("main")).toContainText("Plain-language guide");
+    await expect(page.getByRole("main")).toContainText("Info@inside914.com");
+    await expect(page.getByRole("main")).not.toContainText(/hello@inside914.com|internal production-charge setting|Draft content prepared/);
+    await expect(page.getByRole("link", { name: "reservation, cancellation and refund policy", exact: true })).toBeVisible();
+    await expect(page.getByRole("main")).toContainText("Your accepted agreement and reservation-specific amount remain the governing record.");
+  });
+}
+
 for (const width of [375, 1440]) {
   for (const [route, title, sections] of [
     ["terms", "Advertising Terms and Conditions", 17],

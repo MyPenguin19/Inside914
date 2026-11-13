@@ -85,10 +85,10 @@ export function CategoryZoneSelector({ editions,checkoutOpen,invitation,invitati
       </div>
       {chosen.length > 1 && <nav aria-label="Your selected areas" className="flex flex-wrap gap-2">
         {chosen.map(e => <button key={e.id} type="button" disabled={pending}
-          aria-label={`Choose position for ${e.zoneName}`} aria-pressed={currentArea?.id === e.id}
+          aria-label={`Choose position for ${e.zoneName} ${hasPosition(e) ? `✓ ${e.slots.find(s => s.id === positions[e.id])?.label}` : "Choose a position"}`} aria-pressed={currentArea?.id === e.id}
           onClick={() => setActiveArea(e.id)}
           className={`min-h-11 rounded-xl border px-4 py-2 text-left text-sm ${currentArea?.id === e.id ? "border-accent bg-accent-soft" : "border-line bg-surface"}`}>
-          <span className="block font-medium">{e.zoneName}</span>
+          <span className="block font-medium">{e.zoneName}{" "}</span>
           <span className="text-muted">{hasPosition(e) ? `✓ ${e.slots.find(s => s.id === positions[e.id])?.label}` : "Choose a position"}</span>
         </button>)}
       </nav>}
@@ -103,7 +103,7 @@ export function CategoryZoneSelector({ editions,checkoutOpen,invitation,invitati
     <details className="text-sm text-muted"><summary className="cursor-pointer">Mailing details</summary><p className="mt-2">{homes > 0 ? `Potential combined reach: approximately ${homes.toLocaleString()} households, provisional.` : "Household reach awaits confirmation."} Mailing dates and final delivery routes are confirmed before production.</p></details>
     {checkoutOpen && <p className="text-sm"><Link href="/book/cart" className="underline">Return to held areas</Link></p>}
     {!checkoutOpen && <p role="status">{CHECKOUT_CLOSED_MESSAGE}</p>}
-    <section aria-label="Selection and next step" className="sticky bottom-0 z-20 rounded-2xl border border-line bg-surface p-4 shadow-lg sm:bottom-3">
+    <section aria-label="Selection and next step" className="relative z-20 rounded-2xl border border-line bg-surface p-5 lg:sticky lg:bottom-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0" aria-live="polite">
         <p className="font-semibold">{chosen.length ? `${chosen.length} ${chosen.length === 1 ? "area" : "areas"}` : "Choose an area to get started"} · <span>Due today: $0</span></p>

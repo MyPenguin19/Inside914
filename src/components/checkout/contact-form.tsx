@@ -61,6 +61,7 @@ export function ContactForm({ action, initial, onDone, lockedCategory, hideCateg
           )}
         </Notice>
       )}
+      <p className="text-sm text-muted">Fields marked with * are required.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <ContactFields values={values} errors={errors} lockedCategory={lockedCategory} hideCategory={hideCategory} />
       </div>

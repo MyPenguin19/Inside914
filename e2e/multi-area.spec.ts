@@ -3,7 +3,8 @@ import { randomUUID, randomBytes, createHash } from "node:crypto";
 import sharp from "sharp";
 import type { Database } from "../src/lib/supabase/database.types";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { openLocalSquareFixtures } from "../tests/integration/local-layout-fixture";
 process.loadEnvFile(".env.local");
 if (!/^http:\/\/(127\.0\.0\.1|localhost):54321$/.test(process.env.NEXT_PUBLIC_SUPABASE_URL!)) throw new Error("Local stack required");
@@ -13,6 +14,10 @@ const ids:string[]=[]; let user:string; let admin:SupabaseClient<Database>;
 const names=["Central Westchester","Southern Westchester","Northern Westchester","Eastern Westchester"];
 // Every hold and artwork object in these tests belongs to a local fixture campaign.
 function ok<T>(result:{data:T;error:unknown}) {expect(result.error).toBeNull();return result.data;}
+async function checkAccessibility(page: Page, stage: string) {
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]).analyze();
+  expect.soft(results.violations.map(v => ({ rule: v.id, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary })) })), stage).toEqual([]);
+}
 test.beforeAll(async()=>{
   const email=`square-flow-${randomUUID()}@example.com`,password=randomBytes(24).toString("base64url");
   credentials.email=email;credentials.password=password;
@@ -201,6 +206,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   for (const name of selected) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
   await expect(page.getByText("Total if all selected campaigns fill: $1,197", { exact: true })).toBeVisible();
   await expect(page.getByText("Due today: $0", { exact: true })).toBeVisible();
+  await checkAccessibility(page, "Selected areas");
   await page.getByRole("button", { name: "Continue with selected areas" }).click();
   for (const [i, name] of selected.entries()) {
     await page.getByRole("button", {name:`Choose position for ${name}`}).click();
@@ -217,6 +223,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   for (const width of [320,375,390,768,1440]) { await page.setViewportSize({ width, height: 1000 }); expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width); }
   await page.setViewportSize({width:375,height:900});
   await page.screenshot({path:"test-results/postcard-v2/customer-mobile.png",fullPage:true});
+  await checkAccessibility(page, "Choose positions on mobile");
   await page.context().setOffline(true);
   await page.getByRole("button", { name: "Continue to artwork" }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Connection interrupted");
@@ -251,12 +258,33 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await expect(second.getByRole("button", { name: /position F1:/ })).toBeEnabled();
   await other.close();
   const images: Buffer[] = [];
+  await checkAccessibility(page, "Held areas and timer");
   for (const [i, name] of selected.entries()) {
     await page.getByRole("button", { name: new RegExp(`(?:Add|Edit) artwork for ${name}$`) }).click();
     await expect(page.getByTestId("artwork-area")).toHaveText(name);
     const buffer = await sharp({ create: { width: 1200, height: 1200, channels: 3, background: { r: 30+i*70, g: 100, b: 160 } } }).png().toBuffer();
     images.push(buffer);
     await page.getByLabel("Ad image file").setInputFiles({ name: `area-${i}.png`, mimeType: "image/png", buffer });
+    await expect(page.getByRole("button", { name: "Save artwork and continue" })).toBeEnabled();
+    if (i === 0) {
+      const zoom = page.getByRole("slider", { name: "Zoom" });
+      await zoom.focus();
+      for (let step = 0; step < 10; step++) await page.keyboard.press("ArrowRight");
+      await expect(zoom).toHaveValue("1.1");
+      const crop = page.getByRole("group", { name: "Your ad. Drag to move it, or use the arrow keys." });
+      const image = page.locator(".reactEasyCrop_Image");
+      const before = await image.getAttribute("style");
+      await crop.focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(image).not.toHaveAttribute("style", before!);
+      const afterKeyboard = await image.getAttribute("style");
+      await page.getByRole("button", { name: "Move image left" }).click();
+      await expect(image).not.toHaveAttribute("style", afterKeyboard!);
+      await page.getByRole("button", { name: "Reset", exact: true }).click();
+      await expect(zoom).toHaveValue("1");
+      await expect(page.getByRole("button", { name: "Save artwork and continue" })).toBeEnabled();
+    }
+    if (i < 2) await checkAccessibility(page, i === 0 ? "Artwork crop editor" : "Artwork fitted image");
     await page.getByRole("button", { name: "Save artwork and continue" }).click();
     await expect(page).toHaveURL(/\/book\/cart$/);
   }
@@ -265,6 +293,9 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await page.screenshot({path:"test-results/simple-artwork-checklist-mobile.png",fullPage:true});
   await page.getByRole("link", { name: "Continue to business details" }).click();
   await expect(page).toHaveURL(/\/book\/cart\/details$/);
+  await page.getByRole("button", { name: "Continue to save card" }).click();
+  await expect(page.getByLabel("Business name")).toBeFocused();
+  await checkAccessibility(page, "Business details with validation errors");
   await expect(page.getByLabel("Type of business")).toHaveCount(0);
   await page.getByLabel("Business name").fill("Independent Artwork Fixture");
   await page.getByLabel("Your name").fill("Local Tester");
@@ -286,6 +317,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
     await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({path:`test-results/legal-checkout-${width}.png`,fullPage:true});
+    await checkAccessibility(page, `Payment authorization at ${width}px`);
   }
 
   await page.setViewportSize({width:375,height:1000});
@@ -294,6 +326,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /Simulate.*card|Reserve.*TEST|Confirm TEST|Simulate reservation/i }).click();
   await expect(page.getByRole("heading", { name: "Your areas are reserved" })).toBeVisible();
+  await checkAccessibility(page, "Reservation confirmation");
   const bookings = ok(await db.from("bookings").select("id,edition_id,status,price_cents,category_id,stripe_setup_intent_id,stripe_payment_method_id,booking_slots(slots(label))").in("edition_id",ids))!;
   expect(bookings).toHaveLength(3);
   expect(bookings.every(b => b.status === "reserved" && b.price_cents === 39900 && b.category_id === null)).toBe(true);
@@ -314,12 +347,14 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await page.goto(`/reservation/access#${accessToken}`);await page.getByRole("button",{name:"Open reservation",exact:true}).click();
   await expect(page).toHaveURL(/\/reservation$/);await expect(page.getByRole("heading",{name:"Independent Artwork Fixture"})).toBeVisible();
   await expect(page.getByRole("heading",{name:"Your campaign progress"})).toBeVisible();
-  await page.getByLabel("Details",{exact:true}).fill("Please help with a replacement image.");await page.getByRole("button",{name:"Submit request"}).click();
+  await checkAccessibility(page, "Private reservation");
+  await page.getByLabel("Details (required)",{exact:true}).fill("Please help with a replacement image.");await page.getByRole("button",{name:"Submit request"}).click();
   await expect(page.getByText("Request received.",{exact:false})).toBeVisible();
   expect(ok(await db.from("customer_requests").select("kind,status").eq("booking_id",bookings[0].id))).toEqual([{kind:"artwork_change",status:"open"}]);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   await page.goto("/reservation/recover");await page.getByLabel("Email",{exact:false}).fill("nobody@example.com");await page.getByLabel("Reservation reference",{exact:false}).fill("IN914-NOBODY");await page.getByRole("button",{name:"Email a private link"}).click();
   await expect(page.getByText("If those details match a reservation",{exact:false})).toBeVisible();
+  await checkAccessibility(page, "Reservation recovery");
   // Follow the SAME confirmed V2 back placement through admin review and the export API.
   const backBooking=bookings.find(b=>b.edition_id===ids[1])!;
   const adminContext=await browser.newContext();const review=await adminContext.newPage();
@@ -341,7 +376,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await expect(review.getByAltText("Original advertiser artwork")).toBeVisible();
   await expect(review.getByRole("note",{name:"Artwork resolution review"})).toContainText("PASS");
   await expect(review.getByText("Saved crop",{exact:true})).toBeVisible();
-  await expect(review.getByRole("link",{name:`Phase C fixture ${names[1]}`,exact:true})).toHaveAttribute("href",`/admin/campaigns/${backBooking.edition_id}`);
+  await expect(review.getByRole("link",{name:`Phase C fixture ${names[1]}`,exact:true})).toHaveAttribute("href",`/admin/campaigns/${backBooking.edition_id}?view=artwork`);
   const original=review.getByAltText("Original advertiser artwork");
   await expect(original).toHaveJSProperty("naturalWidth",1200);
   for (const width of [375,768,1440]) {

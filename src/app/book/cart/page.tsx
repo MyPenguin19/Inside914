@@ -31,7 +31,7 @@ export default function Page() {
   return (
     <>
       <SiteHeader />
-      <main className="page-width flex-1 py-8">
+      <main id="main-content" tabIndex={-1} className="page-width flex-1 py-8">
         <Suspense fallback={<BookingLoading step={2} title="Add your artwork" message="Loading your selected areas…" />}>
           <Cart />
         </Suspense>
@@ -87,7 +87,7 @@ async function Cart() {
       <div className="grid gap-6 md:grid-cols-2">
         {cart.members.map((b, i) => (
           <section aria-label={views[i]?.zoneName} className="min-w-0 space-y-4 rounded-2xl border border-line bg-surface p-5" key={b.id}>
-            {views[i] && (confirmed ? <ReservationSummary provisional view={views[i]!} /> : <AreaOrderSummary view={views[i]!} />)}
+            {views[i] && (confirmed ? <ReservationSummary provisional view={views[i]!} label={`Reservation summary for ${views[i]!.zoneName}`} /> : <AreaOrderSummary view={views[i]!} />)}
             {confirmed && <p>{views[i]?.campaign.taken ?? 0} of {views[i]?.campaign.total ?? 10} advertisers reserved · {formatPrice(b.priceCents)} authorized · Not charged today</p>}
             {b.reference && (
               <p className="font-semibold">Reference: {b.reference}</p>
