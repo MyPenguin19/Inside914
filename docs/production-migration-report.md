@@ -68,3 +68,9 @@ Applied only `20261020045228_campaign_operations_house_artwork.sql` after a fres
 Verified the private PNG bucket, house-artwork RLS/admin-only read policy, restricted RPC execution and fixed search paths, and enabled mailing-readiness trigger. Campaign and booking row digests remained identical before/after application. Central and Eastern remain open with one confirmed reservation each; Northern and Southern still have no campaigns. No blind database push or history repair was performed.
 
 Backup verification read the complete custom archive and restored campaign/booking data into temporary local tables with exact matching digests. Database backups do not include Storage file bytes. The backup remains private and outside Git. This release preserves `LIVE_COLLECTION_RELEASED=false` and production `INSIDE914_COLLECTION_MODE=disabled`. No Stripe operations are part of release verification.
+
+## Admin campaign area correction — November 12, 2026
+
+The owner approved “Apply migration and release fixes.” Applied the exact local `20261113043000_admin_campaign_area_correction.sql` through the Supabase migration connector. Production records it as `20261113045055_admin_campaign_area_correction` (November 13 UTC). Source SHA-256: `72c0d9b286624143026d9aa208590b7de6bff124271c64f3399a3006dded2666`. Historical files and remote migration records were not rewritten.
+
+Post-application read-only checks confirmed area-change eligibility for the reported unused draft, unchanged campaign values, restricted private helper execution, and retained administrator guards and empty search paths. No customer or campaign rows were changed. See `docs/admin-debug-audit-2026-11-12.md` for regression coverage and remaining provider-test limits.

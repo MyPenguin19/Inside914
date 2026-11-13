@@ -2,7 +2,7 @@
 
 ## Scope and result
 
-Investigated campaign area editing and audited the admin workflows without changing the visual design. Local fixes are implemented and verified. Production activation requires the new database migration; it is not applied automatically because CLAUDE.md requires explicit approval for remote migrations.
+Investigated campaign area editing and audited the admin workflows without changing the visual design. Local fixes are implemented and verified. The owner explicitly approved applying the migration and releasing the fixes. The exact migration was applied to production on November 13, 2026 at 04:50:55 UTC (November 12 in New York); the application release is being verified separately.
 
 The reported campaign `a97812fd-a594-425e-b874-63228a8d5658` was inspected read-only. Its name is Southern Westchester, but its stored area is Central Westchester. It is a draft with no bookings or invitations. This audit does not move or rename that production campaign.
 
@@ -38,7 +38,7 @@ All writes, synthetic users, campaign fixtures and workflow exercises were confi
 - Retains administrator checks, empty function search paths, row locking, immutable layout rules, audit events, unique area/month constraints and accepted reservation prices.
 - Changes no existing campaign or customer data.
 
-Apply this exact migration after approval, then deploy the application changes. Do not run a blind remote `db push` or rewrite historical migration records. Older application code remains compatible with the added database response field. Reverting the application release disables area editing again without needing to alter data.
+Applied after explicit owner approval as production migration `20261113045055_admin_campaign_area_correction`, corresponding to local file `20261113043000_admin_campaign_area_correction.sql`. Post-application read-only checks confirm the reported campaign is eligible for an area correction, its stored values are unchanged, private helper execution is revoked from API roles, and the public RPC administrator guards remain intact. Security advisor counts are unchanged (10 informational private-table findings, 30 guarded admin-RPC warnings, and the existing password-protection warning). Do not run a blind remote `db push` or rewrite historical migration records. Older application code remains compatible with the added database response field. Reverting the application release disables area editing again without needing to alter data.
 
 ## Production read-only checks and limits
 
@@ -48,4 +48,4 @@ Apply this exact migration after approval, then deploy the application changes. 
 - Live payment collection remains disabled. Real Stripe test-mode and production payment execution were not exercised.
 - This is regression coverage of the available workflows, not a guarantee about every possible input or external-provider outage.
 
-The remote migration approval requirement is in `CLAUDE.md`, under “Requires my explicit approval in chat”: “running migrations against a remote Supabase project.”
+The satisfied remote migration approval requirement is in `CLAUDE.md`, under “Requires my explicit approval in chat”: “running migrations against a remote Supabase project.”
