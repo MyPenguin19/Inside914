@@ -8,13 +8,15 @@ import { RESERVATION_POLICY } from "@/lib/legal/release";
 import { MarketingBreadcrumb } from "@/components/marketing/page-seo";
 import Link from "next/link";
 import { POLICY_LINKS, POLICY_SUMMARIES } from "@/lib/legal/public-policies";
+import { marketingMetadata } from "@/lib/seo";
+import { pageStructuredData } from "@/lib/structured-data";
 
-// Keep policy pages accessible without changing the existing marketing SEO scope.
+// Current public policies inherit the root's production/preview indexing policy.
 export async function generateMetadata({ params }: PageProps<"/legal/[doc]">): Promise<Metadata> {
   const { doc } = await params;
   const policy = POLICY_LINKS.find(item => item.slug === doc);
   if (!policy) return { robots: { index: false, follow: false } };
-  return { title: policy.title, description: policy.description, robots: { index: false, follow: true }, alternates: { canonical: `/legal/${doc}` } };
+  return marketingMetadata(`/legal/${policy.slug}`, policy.title, policy.description);
 }
 export function generateStaticParams() {
   return POLICY_LINKS.map(({ slug: doc }) => ({ doc }));
@@ -37,9 +39,11 @@ export default function LegalPage({ params }: PageProps<"/legal/[doc]">) {
 
 async function LegalDoc({ params }: { params: PageProps<"/legal/[doc]">["params"] }) {
   const { doc } = await params;
+  const policy = POLICY_LINKS.find(item => item.slug === doc);
   const isSummary = Object.hasOwn(POLICY_SUMMARIES, doc);
-  if (!isSummary && !Object.hasOwn(legalDocuments, doc)) notFound();
+  if (!policy || (!isSummary && !Object.hasOwn(legalDocuments, doc))) notFound();
   return <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageStructuredData(`/legal/${policy.slug}`, policy.title, policy.description)).replace(/</g, "\\u003c") }} />
     <p className="rounded-xl border border-line bg-background-soft px-5 py-4 text-sm text-muted">
       {isSummary ? <>Updated <time dateTime="2026-11-12">November 12, 2026</time> · Plain-language guide</> : <><strong className="text-foreground">Effective date: <time dateTime={RESERVATION_POLICY.effectiveDate}>November 2, 2026</time>.</strong>{" "}Version {LEGAL_VERSION}.</>}
     </p>

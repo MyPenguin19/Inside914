@@ -2,19 +2,19 @@ import { expect, test } from "@playwright/test";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { MARKETING_NAV } from "../src/lib/marketing-content";
-import { PUBLIC_MARKETING_PATHS, SITE_URL } from "../src/lib/seo";
+import { PUBLIC_MARKETING_PATHS, PUBLIC_INDEXABLE_PATHS, SITE_URL } from "../src/lib/seo";
 
 test("server HTML, schema, sitemap and public links pass the crawler audit", async ({ baseURL }, testInfo) => {
   test.setTimeout(90_000);
   const { stdout } = await promisify(execFile)(process.execPath, ["scripts/audit-public-seo.mjs", baseURL!], { timeout: 80_000 });
   const audit = JSON.parse(stdout);
   expect(audit.passed).toBe(true);
-  expect(audit.pages).toHaveLength(PUBLIC_MARKETING_PATHS.length);
+  expect(audit.pages).toHaveLength(PUBLIC_INDEXABLE_PATHS.length);
   await testInfo.attach("seo-crawl.json", { body: stdout, contentType: "application/json" });
 });
 
 test("legacy hosting alias redirects public pages and preserves campaign tracking parameters", async ({ request }) => {
-  for (const path of PUBLIC_MARKETING_PATHS) {
+  for (const path of PUBLIC_INDEXABLE_PATHS) {
     const response = await request.get(`${path}?utm_source=seo-audit`, { headers: { host: "inside914.vercel.app" }, maxRedirects: 0 });
     expect(response.status()).toBe(308);
     expect(new URL(response.headers().location).href).toBe(`${SITE_URL}${path}?utm_source=seo-audit`);
@@ -92,7 +92,8 @@ test("private pages remain noindex and admin content requires authentication", a
   for (const path of ["terms", "privacy", "reservation-policy", "payment-authorization", "cancellation-policy"]) {
     const legal = await request.get(`/legal/${path}`);
     const html = await legal.text();
-    expect(html).toMatch(/name="robots" content="noindex/);
+    expect(html).toMatch(/name="robots" content="index, follow/);
+    expect(legal.headers()["x-robots-tag"] ?? "").not.toContain("noindex");
     if (path === "privacy") expect(html).toContain("Website analytics notice");
   }
 });

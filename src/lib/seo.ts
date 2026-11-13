@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { POLICY_LINKS } from "./legal/public-policies";
 
 // Public SEO URLs only. Never add private tokens, checkout sessions, or admin routes.
 export const SITE_URL = "https://inside914.com";
 export const SITE_NAME = "Inside914";
 export const SEO_CONTACT_EMAIL = "Info@inside914.com";
 export const PUBLIC_MARKETING_PATHS = ["/", "/how-it-works", "/areas", "/areas/central-westchester", "/areas/southern-westchester", "/areas/northern-westchester", "/areas/eastern-westchester", "/pricing", "/our-postcard", "/faq", "/contact"] as const;
+export const PUBLIC_POLICY_PATHS = POLICY_LINKS.map(({ slug }) => `/legal/${slug}` as const);
+export const PUBLIC_INDEXABLE_PATHS = [...PUBLIC_MARKETING_PATHS, ...PUBLIC_POLICY_PATHS] as const;
 export const PRIVATE_ROBOTS = { index: false, follow: false, noarchive: true } as const;
 export const SOCIAL_IMAGE_ALT = "Inside914 — Westchester County shared postcard advertising";
 export const PRIVATE_ROUTE_PREFIXES = ["admin", "account", "dashboard", "book", "reservation", "pay", "r", "api", "editions"] as const;
@@ -16,7 +19,7 @@ export function absoluteUrl(path = "/") {
   return new URL(path, SITE_URL).toString();
 }
 
-export function marketingMetadata(path: (typeof PUBLIC_MARKETING_PATHS)[number], title: string, description: string): Metadata {
+export function marketingMetadata(path: (typeof PUBLIC_INDEXABLE_PATHS)[number], title: string, description: string): Metadata {
   const brandedTitle = `${title} | ${SITE_NAME}`;
   const image = { url: absoluteUrl("/opengraph-image"), width: 1200, height: 630, alt: SOCIAL_IMAGE_ALT };
   return {

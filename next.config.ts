@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { securityHeaders } from "./src/lib/security/headers";
-import { PRIVATE_ROUTE_PREFIXES, PUBLIC_MARKETING_PATHS, absoluteUrl } from "./src/lib/seo";
+import { PRIVATE_ROUTE_PREFIXES, PUBLIC_INDEXABLE_PATHS, absoluteUrl } from "./src/lib/seo";
 
 const nextConfig: NextConfig = {
   // Project instructions live in CLAUDE.md; stop `next dev` from writing AGENTS.md.
@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     // Consolidate public copies on the old hosting alias. Preview deployment URLs
     // and private reservation/authentication routes keep their existing behavior.
-    return PUBLIC_MARKETING_PATHS.map(path => ({
+    return PUBLIC_INDEXABLE_PATHS.map(path => ({
       source: path,
       has: [{ type: "host" as const, value: "inside914.vercel.app" }],
       destination: absoluteUrl(path),

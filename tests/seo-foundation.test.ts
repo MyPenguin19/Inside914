@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PUBLIC_MARKETING_PATHS, PRIVATE_ROUTE_PREFIXES, SITE_URL, absoluteUrl, marketingMetadata } from "../src/lib/seo";
+import { PUBLIC_MARKETING_PATHS, PUBLIC_INDEXABLE_PATHS, PUBLIC_POLICY_PATHS, PRIVATE_ROUTE_PREFIXES, SITE_URL, absoluteUrl, marketingMetadata } from "../src/lib/seo";
 import { pageStructuredData, regionStructuredData, postcardService, faqQuestions } from "../src/lib/structured-data";
 import { MARKETING_NAV, MARKETING_PAGES, ADVERTISING_FAQ, ADVERTISED_PRICE } from "../src/lib/marketing-content";
 import { REGION_CONTENT } from "../src/lib/seo-regions";
@@ -19,20 +19,21 @@ describe("public SEO and indexing boundaries", () => {
     expect(absoluteUrl("/areas")).toBe(`${SITE_URL}/areas`);
   });
   it("permanently redirects public legacy-host pages to the canonical host", async () => {
-    expect(await config.redirects!()).toEqual(PUBLIC_MARKETING_PATHS.map(path => ({
+    expect(await config.redirects!()).toEqual(PUBLIC_INDEXABLE_PATHS.map(path => ({
       source: path, has: [{ type: "host", value: "inside914.vercel.app" }], destination: absoluteUrl(path), permanent: true,
     })));
   });
   it.each(["//outside.example/path", "https://outside.example", "/areas?token=secret", "/areas#private", "/\\outside.example"])("rejects noncanonical or parameterized SEO input %s", path => {
     expect(() => absoluteUrl(path)).toThrow();
   });
-  it("includes exactly eleven unique public pages without invented timestamps", () => {
+  it("includes sixteen unique public pages and published policies without invented timestamps", () => {
     vi.stubEnv("VERCEL_ENV", "production");
-    expect(sitemap()).toEqual(PUBLIC_MARKETING_PATHS.map(path => ({ url: absoluteUrl(path) })));
-    expect(new Set(sitemap().map(item => item.url)).size).toBe(11);
+    expect(sitemap()).toEqual(PUBLIC_INDEXABLE_PATHS.map(path => ({ url: absoluteUrl(path) })));
+    expect(new Set(sitemap().map(item => item.url)).size).toBe(16);
+    expect(PUBLIC_POLICY_PATHS).toHaveLength(5);
     expect(sitemap().map(item => item.url)).toContain("https://inside914.com/contact");
     for (const { slug } of REGIONS) expect(sitemap().map(item => item.url)).toContain(absoluteUrl(`/areas/${slug}`));
-    expect(sitemap().every(({ url }) => !/\/(admin|api|book|pay|reservation|r|account|legal)(\/|$)/.test(url))).toBe(true);
+    expect(sitemap().every(({ url }) => !/\/(admin|api|book|pay|reservation|r|account|dashboard|editions)(\/|$)/.test(url))).toBe(true);
   });
   it("allows public marketing and HTML noindex inspection; blocks API/token crawling", () => {
     vi.stubEnv("VERCEL_ENV", "production");
