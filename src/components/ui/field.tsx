@@ -3,8 +3,8 @@ import type { ComponentProps, ReactNode } from "react";
 // Form controls: one label/hint/error pattern and one input style for every form on the site.
 
 export function controlClass(invalid = false) {
-  return `w-full rounded-xl border bg-surface px-3.5 py-3 text-base transition-colors placeholder:text-muted/70 hover:border-line-strong focus-visible:border-accent ${
-    invalid ? "border-danger" : "border-line"
+  return `w-full min-w-0 rounded-xl border bg-surface px-3.5 py-3 text-base transition-colors placeholder:text-muted hover:border-muted focus-visible:border-accent ${
+    invalid ? "border-danger" : "border-control-line"
   }`;
 }
 
@@ -19,11 +19,11 @@ function FieldShell({ id, label, required, optional, hint, error, children }: Sh
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium">
         {label}
-        {required && <span className="text-muted"> *</span>}
+        {required && <span aria-hidden="true" className="text-muted"> *</span>}
         {optional && <span className="font-normal text-muted"> (optional)</span>}
       </label>
       {children}
-      {hint && !error && (
+      {hint && (
         <p id={`${id}-hint`} className="text-xs text-muted">
           {hint}
         </p>

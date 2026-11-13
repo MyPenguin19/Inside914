@@ -16,7 +16,7 @@ export const metadata = { title: "Change ad space · Inside914" };
 type Params = { searchParams: Promise<{ booking?: string }> };
 
 export default function Page({ searchParams }: Params) {
-  return <><SiteHeader /><main className="page-width flex-1 py-8">
+  return <><SiteHeader /><main id="main-content" tabIndex={-1} className="page-width flex-1 py-8">
     <Suspense fallback={<BookingLoading step={2} title="Change ad space" message="Loading available spaces…" />}>
       <Position searchParams={searchParams} />
     </Suspense>

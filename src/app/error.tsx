@@ -16,7 +16,7 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
   return (
     <>
       <SiteHeader />
-      <main className="page-width flex-1">
+      <main id="main-content" tabIndex={-1} className="page-width flex-1">
         <ErrorState
           title="Something went wrong"
           reference={reference}

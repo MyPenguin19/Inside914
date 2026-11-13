@@ -7,7 +7,7 @@ import { bookingSizeLabel, positionLabel } from "@/lib/booking/products";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition, type DragEvent } from "react";
-import Cropper, { type Area, type Point } from "react-easy-crop";
+import Cropper, { type Area, type Point, type Size } from "react-easy-crop";
 import type { ExtendResult, FinalizeResult, SimpleResult, UploadTicket } from "@/app/(public)/actions/artwork";
 import { CroppedImage } from "@/components/artwork/cropped-image";
 import { PostcardPreview } from "@/components/artwork/postcard-preview";
@@ -101,6 +101,8 @@ export function ArtworkStudio({
   const [approvedCropKey, setApprovedCropKey] = useState<string | null>(null);
   const [editorKey, setEditorKey] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
+  const cropSize = useRef<Size | null>(null);
+  const mediaSize = useRef<Size | null>(null);
   const [image, setImage] = useState<StudioImage | null>(
     initialArtwork
       ? { id: initialArtwork.id, src: initialArtwork.viewUrl, width: initialArtwork.width, height: initialArtwork.height }
@@ -130,6 +132,17 @@ export function ArtworkStudio({
   const safeY = `${(PRINT_SPEC.safeMarginInches / ad.area.height) * 100}%`;
   const ppi = area ? containedPpi(area, ad.area) : null;
   const quality = ppi === null ? null : resolutionLevel(ppi);
+
+  function moveImage(dx: number, dy: number) {
+    if (busy || !cropSize.current || !mediaSize.current) return;
+    // Match the cropper's limits so buttons cannot move the image beyond its edges.
+    const limitX = Math.max(0, (mediaSize.current.width * zoom - cropSize.current.width) / 2);
+    const limitY = Math.max(0, (mediaSize.current.height * zoom - cropSize.current.height) / 2);
+    setCrop(current => ({
+      x: Math.max(-limitX, Math.min(limitX, current.x + dx)),
+      y: Math.max(-limitY, Math.min(limitY, current.y + dy)),
+    }));
+  }
 
   function fail(reason: ArtworkFailure | "interrupted") {
     if (reason === "no_hold" || reason === "hold_expired") setHoldLost(true);
@@ -270,7 +283,7 @@ export function ArtworkStudio({
               <CroppedImage src={image.src} imageWidth={image.width} imageHeight={image.height} crop={area} target={ad.area} alt="Full artwork fitted without stretching" />
             </div> : <>
             <div
-              className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-xl ring-1 ring-inset ring-line bg-[#f4f2ec]"
+              className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-xl ring-1 ring-inset ring-line bg-background-soft"
               style={{ aspectRatio: aspect }}
             >
               <Cropper
@@ -286,8 +299,10 @@ export function ArtworkStudio({
                 onZoomChange={value => { if (!busy) setZoom(value); }}
                 onCropAreaChange={onAreaChange}
                 onCropComplete={onAreaChange}
+                setMediaSize={size => { mediaSize.current = size; }}
+                onCropSizeChange={size => { cropSize.current = size; }}
                 initialCroppedAreaPixels={fillArea ?? undefined}
-                cropperProps={{ "aria-label": "Your ad. Drag to move it, or use the arrow keys." }}
+                cropperProps={{ role: "group", "aria-label": "Your ad. Drag to move it, or use the arrow keys." }}
                 // Dashed inner line = the safe area: keep words and logos inside it.
                 classes={{
                   cropAreaClassName:
@@ -303,7 +318,13 @@ export function ArtworkStudio({
               <Button variant={cropping ? "primary" : "secondary"} aria-pressed={cropping} disabled={busy} onClick={() => setCropping(true)}>Fill space</Button>
             </div>}
             {cropping ? <>
-              <p className="text-xs text-muted">Drag to reposition. Keep words and logos inside the dashed line.</p>
+              <p className="text-sm text-muted">Move the image with these buttons, drag it, or focus it and use the arrow keys. Keep words and logos inside the dashed line.</p>
+              <div role="group" aria-label="Image position" className="flex flex-wrap gap-2">
+                <Button variant="secondary" aria-label="Move image left" disabled={busy} onClick={() => moveImage(-10, 0)}>←</Button>
+                <Button variant="secondary" aria-label="Move image right" disabled={busy} onClick={() => moveImage(10, 0)}>→</Button>
+                <Button variant="secondary" aria-label="Move image up" disabled={busy} onClick={() => moveImage(0, -10)}>↑</Button>
+                <Button variant="secondary" aria-label="Move image down" disabled={busy} onClick={() => moveImage(0, 10)}>↓</Button>
+              </div>
               <label className="flex min-w-0 items-center gap-3 text-sm">Zoom
                 <input type="range" min={1} max={MAX_ZOOM} step={0.01} value={zoom} disabled={busy}
                   onChange={e => setZoom(Number(e.target.value))} className="h-11 min-w-0 flex-1 accent-[var(--accent)]"

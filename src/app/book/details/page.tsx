@@ -18,7 +18,7 @@ export default function DetailsPage() {
   return (
     <>
       <SiteHeader />
-      <main className="page-width flex-1 py-6 sm:py-8">
+      <main id="main-content" tabIndex={-1} className="page-width flex-1 py-6 sm:py-8">
         <BookingSteps current={3} />
         <Suspense fallback={<div className="mt-8 h-96 animate-pulse rounded-2xl border border-line bg-surface" />}>
           <Details />

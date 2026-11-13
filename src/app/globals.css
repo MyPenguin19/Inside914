@@ -18,6 +18,7 @@
   --info: #2b4a6b;
   --info-soft: #eaf0f7;
   --line-strong: #cfc9bc;
+  --control-line: #858074;
   --reserved: #ece8df; /* spaces other businesses hold */
   --ink: #2b2a27; /* dark editing canvas */
   --paper: #fffdf8; /* the printed card */
@@ -40,6 +41,7 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-line-strong: var(--line-strong);
+  --color-control-line: var(--control-line);
   --color-reserved: var(--reserved);
   --color-ink: var(--ink);
   --color-paper: var(--paper);
@@ -74,10 +76,87 @@ body {
   color: var(--foreground);
 }
 
-/* One visible focus style everywhere (components with their own ring opt out with outline-none). */
+html {
+  scroll-padding-block: 7rem 12rem;
+}
+
+main {
+  min-width: 0;
+}
+
+main:focus {
+  outline: none;
+}
+
+/* Two contrasting edges keep keyboard focus visible on light and dark surfaces. */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--foreground);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--surface);
+}
+
+.skip-link {
+  position: fixed;
+  inset: 0.75rem auto auto 1rem;
+  z-index: 100;
+  max-width: calc(100vw - 2rem);
+  clip-path: inset(50%);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--foreground);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  clip-path: none;
+}
+
+.site-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--muted);
+}
+
+.site-nav-link:hover,
+.site-nav-link[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.site-nav-link[aria-current="page"] {
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+  font-weight: 600;
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-underline-offset: 0.25em;
+}
+
+.footer-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+@media (max-height: 40rem) {
+  header {
+    position: relative !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 /* Restrained motion; none for people who ask for less. */
@@ -87,5 +166,7 @@ body {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }

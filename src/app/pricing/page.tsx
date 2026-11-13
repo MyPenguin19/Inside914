@@ -14,9 +14,9 @@ export default function PricingPage() {
   return <MarketingPage path="/pricing" title="Postcard advertising pricing." intro="One advertising space. One selected Westchester area. Share the postcard with other local businesses and reserve with nothing charged today.">
     <MarketingPageSeo path="/pricing" mainEntity={{ "@id": postcardService["@id"] }} entities={[postcardService]} />
     <div className="mt-10 grid items-start gap-8 md:grid-cols-2">
-      <Card className="flex flex-wrap items-start gap-6 bg-background-soft">
+      <Card className="flex flex-col items-start gap-6 sm:flex-row">
         <SizeDiagram />
-        <div className="min-w-0 flex-[1_1_10rem]">
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg font-medium">Postcard Advertisement</h2>
           <p className="mt-3 font-display text-5xl font-medium">{ADVERTISED_PRICE_LABEL}</p>
           <p className="mt-2 font-medium">Per area</p>

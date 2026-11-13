@@ -7,10 +7,10 @@ type Variant = "primary" | "secondary" | "quiet" | "inverse";
 type Size = "md" | "lg";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed";
+  "inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-full text-center font-medium disabled:cursor-not-allowed";
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-foreground text-background hover:bg-accent disabled:bg-line disabled:text-muted",
-  secondary: "border border-foreground/80 bg-transparent text-foreground hover:bg-foreground hover:text-background disabled:border-line disabled:text-muted",
+  secondary: "border border-foreground/80 bg-transparent text-foreground hover:bg-accent-soft disabled:border-line disabled:text-muted",
   quiet: "text-foreground underline-offset-4 hover:underline disabled:text-muted",
   inverse: "bg-background text-foreground hover:bg-accent-soft disabled:opacity-60",
 };

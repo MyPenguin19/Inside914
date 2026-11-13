@@ -22,7 +22,7 @@ export default function AreasPage() {
         "@type": "ItemList", name: "Westchester advertising area guides",
         itemListElement: REGIONS.map((region, index) => ({ "@type": "ListItem", position: index + 1, name: region.name, url: absoluteUrl(`/areas/${region.slug}`) })),
       }} />
-      <main className="page-width min-w-0 flex-1 break-words py-6 sm:py-8">
+      <main id="main-content" tabIndex={-1} className="page-width min-w-0 flex-1 break-words py-10 sm:py-14">
         <MarketingBreadcrumb label="Advertising Areas" />
         <div className="mt-6">
           <h1 className="font-display text-4xl font-medium tracking-tight">Choose your areas.</h1>
@@ -32,8 +32,7 @@ export default function AreasPage() {
           {!PUBLIC_CHECKOUT_RELEASED && <p className="mt-3 max-w-2xl text-sm text-muted">{CHECKOUT_CLOSED_MESSAGE}</p>}
         </div>
         <Suspense fallback={<AreasLoading />}>
-          <MarketingBreadcrumb label="Advertising Areas" />
-        <div className="mt-6"><CategoryCheckout /></div>
+          <div className="mt-8"><CategoryCheckout /></div>
         </Suspense>
         <section className="mt-12" aria-labelledby="area-guide-title">
           <h2 id="area-guide-title" className="font-display text-3xl font-medium">Explore the Westchester area guides</h2>

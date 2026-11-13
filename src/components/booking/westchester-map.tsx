@@ -33,14 +33,14 @@ export function WestchesterMap({ areas, onToggle, loading = false }: { areas: Ma
       {areas.map(area => {
         const guide = AREA_GUIDE[area.slug];
         const name = REGIONS.find(r => r.slug === area.slug)!.name;
-        return <g key={area.slug} role={loading ? undefined : "button"} tabIndex={loading ? undefined : 0} aria-label={loading ? undefined : `${name} on map — ${area.status}`}
+        return <g key={area.slug} role={loading ? undefined : "button"} tabIndex={loading ? undefined : 0} aria-label={loading ? undefined : `${name.split(" ")[0]} ${area.selected ? "Selected" : area.status} — ${name} on map`}
           aria-pressed={loading ? undefined : area.selected} aria-disabled={loading ? undefined : !area.available}
           className={`group ${area.available ? "cursor-pointer" : "cursor-not-allowed"}`}
           onClick={() => { if (area.available) onToggle?.(area.slug); }}
           onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); if (area.available) onToggle?.(area.slug); } }}>
           <g transform={`translate(${guide.label[0]} ${guide.label[1]})`}>
-            <rect x="-49" y="-15" width="98" height="42" rx="10" className={area.selected ? "fill-accent stroke-surface" : "fill-surface stroke-line"} />
-            <text textAnchor="middle" className={`text-[13px] font-semibold ${area.selected ? "fill-surface" : "fill-foreground"}`}>{name.split(" ")[0]}{area.selected ? " ✓" : ""}</text>
+            <rect x="-49" y="-15" width="98" height="42" rx="10" className={`group-focus-visible:stroke-foreground group-focus-visible:[stroke-width:3px] ${area.selected ? "fill-accent stroke-surface" : "fill-surface stroke-control-line"}`} />
+            <text textAnchor="middle" className={`text-[13px] font-semibold ${area.selected ? "fill-surface" : "fill-foreground"}`}>{name.split(" ")[0]}{" "}</text>
             <text textAnchor="middle" y="16" className={`text-[10px] ${area.selected ? "fill-surface" : "fill-muted"}`}>{area.selected ? "Selected" : area.status}</text>
           </g>
         </g>;

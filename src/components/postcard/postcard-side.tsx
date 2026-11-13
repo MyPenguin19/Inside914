@@ -87,9 +87,9 @@ export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceC
             aria-pressed={selected}
             disabled={!selectable && !selected}
             onClick={() => onSelect(slot.id)}
-            aria-label={`${title} position ${slot.label}: ${note}${
-              selectable && priceCents !== null && !selected ? `, ${formatPrice(priceCents)}` : ""
-            }`}
+            aria-label={`${layout ? (slot.side === "front" ? Number(slot.label.slice(1)) : 6 + Number(slot.label.slice(1))) : slot.label} · ${slot.label} ${selected ? "✓ Your ad" : note}${
+              selectable && priceCents !== null && !selected ? ` ${formatPrice(priceCents)}` : ""
+            } — ${title} position ${slot.label}: ${selected ? "selected" : note}`}
             className={`group absolute ${layout ? "" : "p-[2.5%]"} focus-visible:outline-none`}
             style={boxStyle(slot, dimensions)}
           >
@@ -104,9 +104,9 @@ export function PostcardSide({ dimensions = POSTCARD_INCHES, side, views, priceC
                       : "cursor-not-allowed border-transparent bg-[repeating-linear-gradient(135deg,var(--reserved),var(--reserved)_6px,var(--line)_6px,var(--line)_7px)] text-muted"
               }`}
             >
-              <span className="absolute left-2 top-1.5 text-[10px] font-semibold tracking-wide opacity-70">{layout ? (slot.side === "front" ? Number(slot.label.slice(1)) : 6 + Number(slot.label.slice(1))) : slot.label} · {slot.label}</span>
+              <span className="absolute left-2 top-1.5 text-[10px] font-semibold tracking-wide opacity-70">{layout ? (slot.side === "front" ? Number(slot.label.slice(1)) : 6 + Number(slot.label.slice(1))) : slot.label} · {slot.label}{" "}</span>
               <span aria-hidden="true" className="text-xs font-medium sm:text-[13px]">
-                {selected ? "✓ Your ad" : note}
+                {selected ? "✓ Your ad" : note}{" "}
               </span>
               {selectable && !selected && priceCents !== null && (
                 <span aria-hidden="true" className="mt-0.5 text-[11px] text-muted group-hover:text-accent">

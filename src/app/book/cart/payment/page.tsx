@@ -30,7 +30,7 @@ export default function Page() {
   return (
     <>
       <SiteHeader />
-      <main className="page-width flex-1 py-8">
+      <main id="main-content" tabIndex={-1} className="page-width flex-1 py-8">
         <Suspense fallback={<BookingLoading step={4} title="Save your card. Pay $0 today." message="Preparing your reservation summary…" form />}>
           <Payment />
         </Suspense>

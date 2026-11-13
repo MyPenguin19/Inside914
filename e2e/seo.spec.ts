@@ -89,7 +89,7 @@ test("private pages remain noindex and admin content requires authentication", a
   const response = await request.get("/admin/campaigns", { maxRedirects: 0 });
   expect(response.status()).toBe(307);
   expect(response.headers().location).toContain("/admin/login");
-  for (const path of ["terms", "privacy", "reservation-policy"]) {
+  for (const path of ["terms", "privacy", "reservation-policy", "payment-authorization", "cancellation-policy"]) {
     const legal = await request.get(`/legal/${path}`);
     const html = await legal.text();
     expect(html).toMatch(/name="robots" content="noindex/);

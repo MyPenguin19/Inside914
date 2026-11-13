@@ -19,7 +19,7 @@ export default function OurPostcardPage() {
         <p className="text-sm leading-relaxed text-muted">The sample explains the layout. Live position availability appears on the <Link href="/areas" className="underline underline-offset-4">advertising areas page</Link>, and the final layout and print requirements are confirmed for each campaign.</p>
       </div>
     </div>
-    <section className="mt-12 max-w-3xl">
+    <section className="mt-12 max-w-3xl border-t border-line pt-8">
       <h2 className="font-display text-3xl font-medium">Prepare an ad people can read quickly</h2>
       <ul className="mt-4 list-disc space-y-3 pl-5 leading-relaxed text-muted">
         <li>Lead with your business name and one service or offer.</li>

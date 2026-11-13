@@ -26,7 +26,7 @@ export default function ArtworkPage({ searchParams }: { searchParams: Promise<{ 
   return (
     <>
       <SiteHeader />
-      <main className="page-width flex-1 py-6 sm:py-8">
+      <main id="main-content" tabIndex={-1} className="page-width flex-1 py-6 sm:py-8">
         <BookingSteps current={2} />
         <Suspense fallback={<BookingLoading step={2} title="Add your artwork" message="Preparing your artwork editor…" showSteps={false} />}>
           <Studio searchParams={searchParams} />
