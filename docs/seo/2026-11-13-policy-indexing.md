@@ -14,3 +14,16 @@ Validation before release:
 - All 11 targeted browser checks passed against the local production build: policy pages and footer links, mobile/desktop content, 16-page server HTML/schema/sitemap crawl, canonical-host redirects, and private-page indexing boundaries.
 
 Google determines whether and when eligible pages are indexed. This change allows discovery and indexing; it does not assert that Google has already indexed the pages.
+
+## Live release
+
+- Production URL: https://inside914.com
+- Status: Ready; promoted tested production deployment `dpl_9ELdUnJR49uqrcbipaxhvxzbsCD3`.
+- Deployed commit: `c4ebd78`.
+- Framework: Next.js 16.4.2.
+- Before promotion, all five staged policy pages returned 200, allowed indexing, used the correct canonical/social metadata, and contained valid page and breadcrumb schema. Visible policy text fingerprints matched the previous production pages exactly.
+- After promotion, the live GET-only SEO audit passed for all 16 pages and 704 link/asset references. Sitemap, robots, metadata, structured data, redirects and private indexing boundaries passed.
+- Vercel inspection confirms the canonical domain serves the tested deployment. Runtime error scan returned zero records during the release check window. External monitoring/drains were not changed or assessed for this update.
+- Rollback target: `dpl_7C18bPZMkpg2zbXfwU9bQCkZaAfn`.
+
+The prior reports describing policy noindex apply to earlier releases; this release intentionally supersedes that setting for the five current published policies.
