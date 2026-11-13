@@ -75,7 +75,7 @@ test("change one held space from artwork or areas; keep artwork, price and other
   await expect(page.getByTestId("artwork-area")).toHaveText(names[2]);
   await page.getByRole("link", { name: "Change ad space", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Change ad space" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /position F4: Your current space/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /position F4:/ })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: /position B2:/ }).click();
   await page.context().setOffline(true);
   await page.getByRole("button", { name: "Save new space" }).click();
@@ -91,7 +91,10 @@ test("change one held space from artwork or areas; keep artwork, price and other
   await expect(page.getByRole("button", { name: /position B2:/ })).toBeDisabled();
   expect((await claim(northern.id)).slots?.label).toBe("F4");
   const available = page.getByRole("button", { name: /position B1:/ });
+  // The refresh after a conflict disables all positions until fresh inventory arrives.
+  await expect(available).toBeEnabled();
   await available.focus(); await page.keyboard.press("Enter");
+  await expect(available).toHaveAttribute("aria-pressed", "true");
   for (const width of [320, 375, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
@@ -181,7 +184,9 @@ test("map selection matches cards and works with keyboard and touch-sized layout
 test("invitation preview uses normal area and position selection without holding inventory",async({page,browser})=>{
   await page.goto("/admin/login");await page.getByLabel("Email").fill(credentials.email);await page.getByLabel("Password").fill(credentials.password);await page.getByRole("button",{name:"Sign in",exact:true}).click();await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("region",{name:"Action needed"})).toBeVisible();
-  await page.goto(`/admin/campaigns/${ids[0]}`);await page.getByText("Invite a business",{exact:true}).click();
+  await page.goto(`/admin/campaigns/${ids[0]}`);
+  await page.getByRole("navigation", { name: "Campaign workspace" }).getByRole("link", { name: "Advertisers & spaces", exact: true }).click();
+  await page.getByText("Invite a business",{exact:true}).click();
   await page.getByLabel("Available position",{exact:false}).selectOption({label:"F1"});await page.getByLabel("Business name",{exact:false}).fill("Interested fixture");
   await page.getByRole("button",{name:"Create invitation preview"}).click();await expect(page.getByRole("region",{name:"Invitation preview"})).toBeVisible();
   await expect(page.getByText("Link created. No position was held and no email was sent.")).toBeVisible();

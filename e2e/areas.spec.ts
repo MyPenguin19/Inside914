@@ -19,7 +19,8 @@ test("area selection fits mobile through desktop", async ({ page }) => {
     await page.goto("/areas");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("group", { name: "Choose areas on the Westchester map" })).toBeVisible();
-    await page.screenshot({ path: `test-results/area-map-${width}.png`, fullPage: true });
+    // Avoid mutating input styles while the streamed controls are hydrating.
+    await page.screenshot({ path: `test-results/area-map-${width}.png`, fullPage: true, caret: "initial" });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
 });

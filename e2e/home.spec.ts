@@ -91,6 +91,6 @@ test("homepage: no sideways scrolling on a phone, and the menu opens", async ({ 
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await page.getByText("Menu", { exact: true }).click();
+  await page.getByRole("banner").getByText("Menu", { exact: true }).click();
   await expect(page.locator("header").getByRole("link", { name: "How It Works" }).last()).toBeVisible();
 });

@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRef } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { MARKETING_NAV } from "@/lib/marketing-content";
 
-export function ActiveSiteNavigation() {
-  return <SiteNavigation pathname={usePathname()} />;
+function CurrentPath({ onChange }: { onChange: (pathname: string) => void }) {
+  const pathname = usePathname();
+  useEffect(() => onChange(pathname), [pathname, onChange]);
+  return null;
 }
 
-// The same HTML is used as the streaming fallback, so every route remains crawlable.
-export function SiteNavigation({ pathname = "" }: { pathname?: string }) {
+// Only the route observer may suspend. Keep the native disclosure and links
+// mounted so a streamed update cannot close an open menu or discard its focus.
+export function SiteNavigation() {
+  const [pathname, setPathname] = useState("");
   const menu = useRef<HTMLDetailsElement>(null);
   const current = (href: string) => pathname === href || (href === "/areas" && pathname.startsWith("/areas/"));
   const links = MARKETING_NAV.map(item => <Link key={item.href} href={item.href}
@@ -20,6 +24,7 @@ export function SiteNavigation({ pathname = "" }: { pathname?: string }) {
   </Link>);
 
   return <>
+    <Suspense fallback={null}><CurrentPath onChange={setPathname} /></Suspense>
     <nav aria-label="Main" className="hidden flex-wrap items-center gap-1 text-sm lg:flex">{links}</nav>
     <details ref={menu} className="relative lg:hidden"
       onKeyDown={event => {

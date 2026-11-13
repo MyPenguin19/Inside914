@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HeaderCta } from "@/components/header-cta";
 import { BrandMark } from "@/components/brand-mark";
-import { ActiveSiteNavigation, SiteNavigation } from "@/components/site-navigation";
+import { SiteNavigation } from "@/components/site-navigation";
 
 export function Logo() {
   return (
@@ -20,7 +20,7 @@ export function SiteHeader() {
       <div className="page-width flex flex-wrap items-center justify-between gap-4 py-3">
         <Logo />
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-4">
-          <Suspense fallback={<SiteNavigation />}><ActiveSiteNavigation /></Suspense>
+          <SiteNavigation />
           {/* Reads the URL, so it streams in on dynamic routes instead of blocking prerendering. */}
           <Suspense fallback={null}>
             <HeaderCta />

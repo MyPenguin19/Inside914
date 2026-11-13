@@ -1,8 +1,22 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 const { reservationCancelledEmail } = await import("@/lib/email/reservation-cancelled");
 const { removeSavedCard } = await import("@/lib/checkout/card-removal");
+
+// Provider calls below are mocks. Make their local-only release gate explicit so
+// `npm test` works without inheriting settings from the integration-test runner.
+beforeEach(() => {
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("INSIDE914_DEV_TEST_RESERVATIONS", "true");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
+  for (const key of ["VERCEL", "VERCEL_ENV", "VERCEL_URL"]) vi.stubEnv(key, undefined);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 describe("cancellation email", () => {
   const base = {
