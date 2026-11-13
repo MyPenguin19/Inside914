@@ -13,7 +13,9 @@ export async function resolveCustomerRequest(_previous:ActionResult,form:FormDat
 }
 export async function acknowledgeAlert(form:FormData) {
  const {supabase}=await requireAdmin();const id=z.uuid().safeParse(form.get("id"));if(!id.success)return;
- await supabase.rpc("admin_acknowledge_alert",{p_id:id.data});revalidatePath("/admin","layout");
+ const {error}=await supabase.rpc("admin_acknowledge_alert",{p_id:id.data});
+ if(error)throw new Error("Could not acknowledge this alert. Please try again.");
+ revalidatePath("/admin","layout");
 }
 
 export async function recordPrinterStage(_previous:ActionResult,form:FormData):Promise<ActionResult> {

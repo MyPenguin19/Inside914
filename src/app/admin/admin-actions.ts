@@ -6,6 +6,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin/auth";
+import { hasBookings } from "@/lib/admin/data";
 import { adminErrorMessage, dollars, parseCampaignForm, parseExtendDeadlineForm, type CampaignFieldErrors } from "@/lib/admin/campaign-form";
 import { zoneSchema } from "@/lib/admin/zone-form";
 import { findTemplate } from "@/lib/admin/layouts";
@@ -55,20 +56,24 @@ export async function updateCampaign(_prev: ActionResult, form: FormData): Promi
   const id = uuid.safeParse(form.get("id"));
   if (!id.success) return { message: "That campaign doesn't exist." };
 
-  // Once anyone has booked, only the name, target quantity and future price may change (the database enforces
-  // this too); the form only sends those then.
-  const { count, error: countError } = await supabase.from("bookings").select("id", { count: "exact", head: true }).eq("edition_id", id.data).neq("status", "released");
-  if (countError) return { message: "Could not verify existing reservations. Nothing was changed." };
-  const locked = form.get("locked") === "true" || (count ?? 0) > 0;
+  // Active holds and confirmed history lock dates. Send the area as well so a stale
+  // edit attempting to move a now-booked campaign gets an explicit database error.
+  let booked: boolean;
+  try {
+    booked = await hasBookings(supabase, id.data);
+  } catch {
+    return { message: "Could not verify existing reservations. Nothing was changed." };
+  }
+  const locked = form.get("locked") === "true" || booked;
   const parsed = parseCampaignForm(form);
   if (!parsed.ok) {
-    const relevant = locked ? { name: parsed.errors.name, target_quantity: parsed.errors.target_quantity, unit_price_cents: parsed.errors.unit_price_cents } : parsed.errors;
+    const relevant = locked ? { name: parsed.errors.name, zone_id: parsed.errors.zone_id, target_quantity: parsed.errors.target_quantity, unit_price_cents: parsed.errors.unit_price_cents } : parsed.errors;
     if (Object.values(relevant).some(Boolean)) return { errors: relevant, values: parsed.raw };
   }
   const v = parsed.ok ? parsed.value : null;
   const p = locked
-    ? { name: String(form.get("name")).trim(), target_quantity: Number(form.get("target_quantity")), unit_price_cents: dollars.parse(form.get("unit_price_cents")) }
-    : { ...v, zone_id: undefined, layout_template: undefined, double_price_cents: undefined };
+    ? { name: String(form.get("name")).trim(), zone_id: String(form.get("zone_id")), target_quantity: Number(form.get("target_quantity")), unit_price_cents: dollars.parse(form.get("unit_price_cents")) }
+    : { ...v, layout_template: undefined, double_price_cents: undefined };
   const { error } = await supabase.rpc("admin_update_campaign", { p_id: id.data, p: JSON.parse(JSON.stringify(p)) });
   if (error) return { message: adminErrorMessage(error), values: parsed.raw };
   redirect(`/admin/campaigns/${id.data}`);

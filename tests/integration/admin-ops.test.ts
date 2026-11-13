@@ -10,6 +10,7 @@ import type { Database } from "@/lib/supabase/database.types";
 vi.mock("server-only", () => ({}));
 const { placeHold } = await import("@/lib/booking/place-hold");
 const { LAYOUT_TEMPLATES } = await import("@/lib/admin/layouts");
+const { hasBookings } = await import("@/lib/admin/data");
 
 const url = process.env.SUPABASE_URL!;
 const anonKey = process.env.SUPABASE_ANON_KEY!;
@@ -263,6 +264,7 @@ describe.skipIf(!secretKey)("admin operations (real database functions)", () => 
       expect(await claims(hold.bookingId)).toEqual([]); // both units free, in one step
       const { data: row } = await service.from("bookings").select("status, cancellation_reason, cancelled_by, reference").eq("id", hold.bookingId).single();
       expect(row).toMatchObject({ status: "cancelled", cancellation_reason: "Advertiser asked to cancel", reference: "IN914-CNCLTS" }); // kept, not deleted
+      expect(await hasBookings(admin, OPEN_EDITION)).toBe(true); // confirmed history still locks schedule changes
       const cancelled = (await events(hold.bookingId)).filter((e) => e.event_type === "booking.cancelled");
       expect(cancelled).toHaveLength(1);
       expect(cancelled[0].details).toMatchObject({ slots_released: 2, size: "double", customer_notified: true });

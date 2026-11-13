@@ -8,7 +8,7 @@ const url=process.env.NEXT_PUBLIC_SUPABASE_URL!;
 if (!/^http:\/\/(127\.0\.0\.1|localhost):54321$/.test(url)) throw new Error("Local Supabase required");
 const db=createClient(url,process.env.SUPABASE_SECRET_KEY!,{auth:{persistSession:false}});
 const admin=createClient(url,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,{auth:{persistSession:false}});
-const zone=randomUUID(),email=`management-${randomUUID()}@example.com`,password=randomBytes(24).toString("hex");
+const zone=randomUUID(),otherZone=randomUUID(),email=`management-${randomUUID()}@example.com`,password=randomBytes(24).toString("hex");
 let user:string;const campaigns:string[]=[];
 const ok=<T>(r:{data:T;error:unknown})=>{expect(r.error).toBeNull();return r.data;};
 test.use({trace:"retain-on-failure",screenshot:"only-on-failure"});
@@ -16,11 +16,12 @@ test.beforeAll(async()=>{
  const created=await db.auth.admin.createUser({email,password,email_confirm:true});expect(created.error).toBeNull();user=created.data.user!.id;
  ok(await db.from("admins").insert({user_id:user}));
  ok(await db.from("zones").insert({id:zone,name:`Campaign management ${zone}`,slug:`management-${zone}`,household_count:5000}));
+ ok(await db.from("zones").insert({id:otherZone,name:`Area correction ${otherZone}`,slug:`area-correction-${otherZone}`,household_count:5000}));
  expect((await admin.auth.signInWithPassword({email,password})).error).toBeNull();
 });
 test.afterAll(async()=>{
  deleteLocalCampaignFixtures(campaigns);
- ok(await db.from("zones").delete().eq("id",zone));
+ ok(await db.from("zones").delete().in("id",[zone,otherZone]));
  ok(await db.from("admin_events").delete().eq("admin_user_id",user));
  await admin.auth.signOut();expect((await db.auth.admin.deleteUser(user)).error).toBeNull();
 });
@@ -28,6 +29,24 @@ async function signIn(page:Page){
  await page.goto("/admin/login", {waitUntil:"networkidle"});await page.getByLabel("Email").fill(email);await page.getByLabel("Password").fill(password);
  await page.getByRole("button",{name:"Sign in",exact:true}).click();await expect(page).toHaveURL(/\/admin$/);
 }
+
+test("an area conflict preserves the edit and can be corrected without losing form values",async({page})=>{
+ const payload={name:"Area conflict fixture",issue_month:"2098-03-01",target_quantity:5000,reservation_deadline:"2097-12-15T23:59:00Z",artwork_due_at:"2097-12-20T23:59:00Z",mailing_window_start:"2098-03-11",mailing_window_end:"2098-03-15",layout_template:"amazingmail-9x6-v2",unit_price_cents:39900,double_price_cents:null};
+ const first=ok(await admin.rpc("admin_create_square_campaign",{p:{...payload,zone_id:zone}}))! as string;campaigns.push(first);
+ const second=ok(await admin.rpc("admin_create_square_campaign",{p:{...payload,zone_id:otherZone}}))! as string;campaigns.push(second);
+ await signIn(page);await page.goto(`/admin/campaigns/${first}/edit`);
+ await page.getByRole("combobox",{name:/^Area/}).selectOption(otherZone);
+ await page.getByLabel("Campaign name").fill("Retained name after conflict");
+ await page.getByRole("button",{name:"Save changes"}).click();
+ await expect(page.getByRole("main").getByRole("alert")).toContainText("already has a campaign for that month");
+ await expect(page.getByRole("combobox",{name:/^Area/})).toHaveValue(otherZone);
+ await expect(page.getByLabel("Campaign name")).toHaveValue("Retained name after conflict");
+ expect(ok(await db.from("editions").select("zone_id,name").eq("id",first).single())).toMatchObject({zone_id:zone,name:payload.name});
+ await page.getByLabel("Mailing month").fill("2098-04");
+ await page.getByRole("button",{name:"Save changes"}).click();
+ await expect(page).toHaveURL(new RegExp(`/admin/campaigns/${first}$`));
+ expect(ok(await db.from("editions").select("zone_id,name,issue_month").eq("id",first).single())).toMatchObject({zone_id:otherZone,name:"Retained name after conflict",issue_month:"2098-04-01"});
+});
 
 test("custom pricing, explicit upgrade, consistent export, archive and guarded deletion",async({page})=>{
  test.setTimeout(120000);
@@ -50,10 +69,21 @@ test("custom pricing, explicit upgrade, consistent export, archive and guarded d
  await page.getByRole("link",{name:"Edit",exact:true}).click();
  await expect(page).toHaveURL(new RegExp(`/admin/campaigns/${created}/edit$`));
  await expect(page.getByRole("heading",{name:"Edit campaign",level:1})).toBeVisible();
+ await expect(page.getByRole("combobox",{name:/^Area/})).toBeEnabled();
+ await expect(page.getByRole("combobox",{name:/^Area/})).toHaveValue(zone);
+ await page.getByRole("combobox",{name:/^Area/}).selectOption(otherZone);
  await page.getByRole("textbox",{name:"Price per advertising position ($)"}).fill("299.50");
  await page.getByRole("button",{name:"Save changes"}).click();
  await expect(page).toHaveURL(new RegExp(`/admin/campaigns/${created}$`));
  expect(ok(await db.from("editions").select("unit_price_cents").eq("id",created).single())!.unit_price_cents).toBe(29950);
+ expect(ok(await db.from("editions").select("zone_id").eq("id",created).single())!.zone_id).toBe(otherZone);
+ await page.goto(`/admin/campaigns/${created}/edit`);
+ await expect(page.getByRole("combobox",{name:/^Area/})).toHaveValue(otherZone);
+ // A subsequent save can move it back without duplicate hidden form values.
+ await page.getByRole("combobox",{name:/^Area/}).selectOption(zone);
+ await page.getByRole("button",{name:"Save changes"}).click();
+ await expect(page).toHaveURL(new RegExp(`/admin/campaigns/${created}$`));
+ expect(ok(await db.from("editions").select("zone_id").eq("id",created).single())!.zone_id).toBe(zone);
  await page.getByRole("navigation",{name:"Campaign workspace"}).getByRole("link",{name:"Campaign settings",exact:true}).click();
  await page.getByText("Archive, delete or change layout",{exact:true}).click();
  await page.getByRole("button",{name:"Delete campaign",exact:true}).click();

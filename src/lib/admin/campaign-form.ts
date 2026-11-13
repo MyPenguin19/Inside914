@@ -24,7 +24,9 @@ export function nyLocalToIso(local: string): string | null {
   };
   let t = asUtc - offset(asUtc);
   t = asUtc - offset(t);
-  return new Date(t).toISOString();
+  const iso = new Date(t).toISOString();
+  // Reject normalized calendar dates and the missing hour at the spring DST change.
+  return isoToNyLocal(iso) === local ? iso : null;
 }
 
 // UTC ISO -> "YYYY-MM-DDTHH:mm" in New York (for datetime-local inputs).
@@ -55,13 +57,13 @@ const nyTime = (label: string) =>
     if (!iso) ctx.addIssue({ code: "custom", message: `Enter the ${label}` });
     return iso ?? "";
   });
-const day = (label: string) => z.string().regex(/^\d{4}-\d{2}-\d{2}$/, `Enter the ${label}`);
+const day = (label: string) => z.iso.date(`Enter a valid ${label}`);
 
 export const CampaignForm = z
   .object({
     name: z.string().trim().min(1, "Enter a campaign name").max(120),
     zone_id: z.uuid("Choose an area"),
-    issue_month: z.string().regex(/^\d{4}-\d{2}$/, "Choose the mailing month").transform((m) => `${m}-01`),
+    issue_month: z.string().regex(/^\d{4}-\d{2}$/, "Choose the mailing month").transform((m) => `${m}-01`).pipe(z.iso.date("Choose a valid mailing month")),
     target_quantity: z.coerce.number().int("Whole homes only").positive("Must be more than 0").max(1_000_000),
     reservations_open_at: z.string().transform((v, ctx) => {
       if (v === "") return null;
@@ -138,6 +140,7 @@ export function adminErrorMessage(error: { code?: string; message?: string } | n
     zone_not_found: "That area doesn't exist.",
     dates_out_of_order: "The dates are out of order: opening → reservation deadline → artwork due → mailing window.",
     campaign_exists_for_month: "This area already has a campaign for that month.",
+    campaign_area_locked: "The area can only change on an unused draft without reservation or production history. Create a new campaign for a different area.",
     locked_by_reservations: "Customers have already booked this campaign, so only its name, target quantity and price for new reservations can change.",
     campaign_finished: "This campaign is finished and can't be changed.",
     deadline_passed: "The reservation deadline has passed. Move it later (while no one has booked) before opening.",

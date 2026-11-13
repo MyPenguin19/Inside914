@@ -177,7 +177,7 @@ export async function listZones(db: Db) {
 }
 
 export async function hasBookings(db: Db, editionId: string) {
-  const { count, error } = await db.from("bookings").select("id", { count: "exact", head: true }).eq("edition_id", editionId).neq("status", "released");
+  const { count, error } = await db.from("bookings").select("id", { count: "exact", head: true }).eq("edition_id", editionId).or("status.not.in.(released,cancelled),confirmed_at.not.is.null");
   if (error) fail("bookings", error);
   return (count ?? 0) > 0;
 }

@@ -13,3 +13,12 @@ test("cached create and edit forms have distinct labels and a writable future pr
  expect(price.name).toBe("unit_price_cents");expect(price.value).toBe("449");expect(price.disabled).toBe(false);expect(price.readOnly).toBe(false);
  expect((current.getByLabelText("Postcard layout",{exact:false}) as HTMLSelectElement).disabled).toBe(true);
 });
+test("unused drafts allow one submitted area value while layout stays fixed",()=>{
+ const {container}=render(<CampaignForm action={vi.fn(async()=>({}))} zones={[{id:"central",name:"Central"},{id:"southern",name:"Southern"}]} templates={[V2_TEMPLATE]} defaults={{...FIRST_CAMPAIGN_DEFAULTS,zone_id:"southern",layout_template:V2_TEMPLATE.key}} mode="edit" areaEditable id="campaign"/>);
+ const area=screen.getByLabelText("Area",{exact:false}) as HTMLSelectElement;
+ expect(area.disabled).toBe(false);expect(area.value).toBe("southern");
+ area.value="central";
+ container.querySelector("form")!.reset();
+ expect(new FormData(container.querySelector("form")!).getAll("zone_id")).toEqual(["central"]);
+ expect((screen.getByLabelText("Postcard layout",{exact:false}) as HTMLSelectElement).disabled).toBe(true);
+});

@@ -18,6 +18,7 @@ export function CampaignForm({
   defaults,
   mode,
   locked = false,
+  areaEditable = false,
   id,
 }: {
   action: (prev: ActionResult, form: FormData) => Promise<ActionResult>;
@@ -26,6 +27,7 @@ export function CampaignForm({
   defaults: CampaignFormDefaults;
   mode: "create" | "edit";
   locked?: boolean;
+  areaEditable?: boolean;
   id?: string;
 }) {
   const fieldPrefix = useId();
@@ -34,10 +36,13 @@ export function CampaignForm({
   const v = (k: string) => state.values?.[k] ?? defaults[k] ?? "";
   const e = state.errors ?? {};
   const square = !!findPostcardLayout(defaults.layout_template);
-  const fixed = mode === "edit"; // area and layout can't change after creation
+  const fixed = mode === "edit"; // Layout changes use the separate upgrade workflow.
+  const areaFixed = fixed && !areaEditable;
 
   return (
-    <form action={formAction} noValidate className="flex flex-col gap-6">
+    // Successful saves redirect. Keep the user's entries when an action returns
+    // validation errors instead of letting React's native form reset discard them.
+    <form action={formAction} onReset={(event) => event.preventDefault()} noValidate className="flex flex-col gap-6">
       {id && <input type="hidden" name="id" value={id} />}
       {locked && <input type="hidden" name="locked" value="true" />}
       {state.message && (
@@ -55,14 +60,14 @@ export function CampaignForm({
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-lg font-semibold">{mode === "create" ? "1. Choose the area" : "Campaign details"}</legend>
         <TextField id={fieldId("name")} name="name" label="Campaign name" required defaultValue={v("name")} error={e.name} maxLength={120} hint="A name you will recognize, such as Northern Westchester — January 2027." />
-        <SelectField id={fieldId("zone_id")} name="zone_id" label="Area" required defaultValue={v("zone_id")} error={e.zone_id} disabled={fixed}>
+        <SelectField id={fieldId("zone_id")} name="zone_id" label="Area" required defaultValue={v("zone_id")} error={e.zone_id} disabled={areaFixed} hint={areaFixed ? "The area can only change on an unused draft without reservation or production history." : undefined}>
           {zones.map((z) => (
             <option key={z.id} value={z.id}>
               {z.name}
             </option>
           ))}
         </SelectField>
-        {fixed && <input type="hidden" name="zone_id" value={v("zone_id")} />}
+        {areaFixed && <input type="hidden" name="zone_id" value={v("zone_id")} />}
         <TextField id={fieldId("issue_month")} name="issue_month" label="Mailing month" type="month" required defaultValue={v("issue_month")} error={e.issue_month} disabled={locked} />
         <TextField id={fieldId("target_quantity")} name="target_quantity" label="Target mailing quantity (homes)" hint="How many homes you plan to reach. This is an estimate." type="number" inputMode="numeric" min={1} required defaultValue={v("target_quantity")} error={e.target_quantity} />
       </fieldset>

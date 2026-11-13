@@ -27,13 +27,15 @@ async function EditCampaign({ params }: { params: PageProps<"/admin/campaigns/[i
   try {
     const edition = await getEdition(supabase, id);
     if (!edition) notFound();
-    const [zones, booked] = await Promise.all([listZones(supabase), hasBookings(supabase, id)]);
-    data = { edition, zones, booked };
+    const [zones, booked, management] = await Promise.all([listZones(supabase), hasBookings(supabase, id), supabase.rpc("admin_campaign_management", { p_id: id })]);
+    if (management.error) throw management.error;
+    const areaEditable = !!management.data && typeof management.data === "object" && !Array.isArray(management.data) && management.data.can_change_area === true;
+    data = { edition, zones, booked, areaEditable };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) throw error;
     return <LoadError what="this campaign" />;
   }
-  const { edition: e, zones, booked } = data;
+  const { edition: e, zones, booked, areaEditable } = data;
   const finished = e.status === "cancelled" || e.status === "completed";
   const templates = LAYOUT_TEMPLATES.some((t) => t.key === e.layoutTemplate)
     ? LAYOUT_TEMPLATES
@@ -59,6 +61,7 @@ async function EditCampaign({ params }: { params: PageProps<"/admin/campaigns/[i
             mode="edit"
             id={e.id}
             locked={booked}
+            areaEditable={areaEditable}
             action={updateCampaign}
             zones={zones}
             templates={templates}
