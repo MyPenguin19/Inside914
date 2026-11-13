@@ -119,7 +119,7 @@ See [the V2 audit, exact coordinates, preservation strategy and migration/rollba
 
 Canonical marketing pages and published policies are registered in `src/lib/seo.ts`. Their sitemap `lastmod` values come from `src/lib/content-dates.ts`: update only the entries whose main content, links or structured data materially changed. Never replace these editorial dates with a request or deployment timestamp. The November 13, 2026 dates reflect the shared Organization address update on every public page.
 
-The owner-supplied business address lives in `src/lib/support.ts` and is shared by Contact, About and Organization schema. No external profile URLs have been verified; the homepage belongs in `url`, not `sameAs`. Add `sameAs` only when the owner supplies actual official external profiles.
+The owner-supplied business address lives in `src/lib/support.ts` and is retained in Organization schema and llms.txt. At the owner's request, it is not displayed in the Contact or About page content. No external profile URLs have been verified; the homepage belongs in `url`, not `sameAs`. Add `sameAs` only when the owner supplies actual official external profiles.
 
 `/robots.txt` declares `Content-Signal: search=yes, ai-train=no`. `/llms.txt` provides a public site guide; `/index.md` is the Markdown homepage. The homepage also returns Markdown for explicit, preferred `Accept: text/markdown` GET/HEAD requests. Browser requests retain HTML; negotiated Markdown uses `private, no-store` and `Vary: Accept`. The public branch in `src/proxy.ts` runs before administrator authentication. Do not broaden it to private routes. Public summaries share steps, FAQs, prices and release messaging with the HTML source in `src/lib/marketing-content.ts`.
 

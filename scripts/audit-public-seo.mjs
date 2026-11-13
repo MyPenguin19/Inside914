@@ -92,7 +92,11 @@ for (const path of paths) {
   assert.equal(organization.telephone, "+19148795022");
   assert.equal(organization.logo.url, `${canonical}/brand-logo`);
   assert.deepEqual(organization.address, { "@type": "PostalAddress", streetAddress: "N State RD", addressLocality: "Briarcliff Manor", addressRegion: "NY", postalCode: "10510", addressCountry: "US" });
-  if (["/about", "/contact"].includes(path)) assert(doc.querySelector("main address")?.textContent.includes("N State RD, Briarcliff Manor, NY 10510"));
+  if (["/about", "/contact"].includes(path)) {
+    const visibleContent = doc.querySelector("main").cloneNode(true);
+    visibleContent.querySelectorAll("script").forEach(node => node.remove());
+    assert(!visibleContent.textContent.includes("N State RD"), `${path}: address should appear only in structured data`);
+  }
   const ids = schema.map(item => item["@id"]);
   assert.equal(new Set(ids).size, ids.length, `${path}: duplicate schema IDs`);
   const checkReferences = value => {

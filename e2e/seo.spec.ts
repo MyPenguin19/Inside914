@@ -32,7 +32,7 @@ test("agent requests preserve HEAD, browser navigation and private-route authent
   await page.goto("/");
   await page.getByRole("link", { name: "About Inside914", exact: true }).click();
   await expect(page).toHaveURL(/\/about$/);
-  await expect(page.locator("main address")).toHaveText("N State RD, Briarcliff Manor, NY 10510");
+  await expect(page.locator("main address")).toHaveCount(0);
   await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Home", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Westchester Mailboxes.");
