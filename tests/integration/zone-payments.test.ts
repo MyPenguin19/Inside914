@@ -103,7 +103,9 @@ test("payment notices use the existing outbox but never send test email external
   const sender=vi.fn(async()=>({id:"should-not-send"}));
   expect(await processOutboxRow(db,outbox,sender)).toBe("sent");expect(sender).not.toHaveBeenCalled();
   path=`.dev-emails/${outbox}.html`;
-  const html=readFileSync(path,"utf8");expect(html).toContain("$399 for this zone only");expect(html).toContain("http://localhost:3000/pay/");
+  const amount=Number(command(`select amount_cents from zone_charges where id='${id}';`).trim());
+  expect([39900,34900]).toContain(amount);
+  const html=readFileSync(path,"utf8");expect(html).toContain(`$${amount/100} for this zone only`);expect(html).toContain("http://localhost:3000/pay/");
   expect(command(`select provider_message_id from email_outbox where id='${outbox}';`).trim()).toBe("not-delivered:test-reservation");
  } finally {if(path)unlinkSync(path);vi.unstubAllEnvs();}
 });

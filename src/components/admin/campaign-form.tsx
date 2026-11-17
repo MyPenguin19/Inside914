@@ -94,7 +94,8 @@ export function CampaignForm({
           ))}
         </SelectField>
         <div className="hidden sm:block" />
-        <TextField id={fieldId("unit_price_cents")} name="unit_price_cents" label="Price per advertising position ($)" inputMode="decimal" required defaultValue={v("unit_price_cents")} error={e.unit_price_cents} />
+        <TextField id={fieldId("unit_price_cents")} name="unit_price_cents" label={square ? "Front position price ($)" : "Price per advertising position ($)"} inputMode="decimal" required defaultValue={v("unit_price_cents")} error={e.unit_price_cents} />
+        {square && <TextField id={fieldId("back_unit_price_cents")} name="back_unit_price_cents" label="Back position price ($)" inputMode="decimal" required defaultValue={v("back_unit_price_cents")} error={e.back_unit_price_cents} />}
         {square ? <input type="hidden" name="double_price_cents" value="" /> : <TextField id={fieldId("double_price_cents")} name="double_price_cents" label="Double price ($)" readOnly={fixed} inputMode="decimal" optional defaultValue={v("double_price_cents")} error={e.double_price_cents} hint="Leave empty if this campaign has no double-size ads." />}
       </fieldset>
       {fixed && <input type="hidden" name="layout_template" value={v("layout_template")} />}

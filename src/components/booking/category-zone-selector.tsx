@@ -7,6 +7,7 @@ import { BookingSteps } from "./booking-steps";
 import { PostcardSide } from "@/components/postcard/postcard-side";
 import { REGIONS } from "@/lib/catalog/regions";
 import type { EditionCatalog } from "@/lib/catalog/queries";
+import { placementPrice } from "@/lib/booking/placement-price";
 import { formatPrice } from "@/lib/format";
 import { WestchesterMap } from "./westchester-map";
 import { AREA_GUIDE } from "./westchester-map-data";
@@ -23,7 +24,11 @@ export function CategoryZoneSelector({ editions,checkoutOpen,invitation,invitati
   const [pending, start] = useTransition();
   const router = useRouter();
   const chosen = editions.filter(e => selected.includes(e.id));
-  const total = chosen.reduce((n, e) => n + e.unitPriceCents, 0);
+  const priceRange = chosen.reduce(([low, high], e) => {
+    const selectedSlot = e.slots.find(s => s.id === positions[e.id] && s.available);
+    const prices = selectedSlot ? [placementPrice(e, selectedSlot.side)] : e.slots.filter(s => s.available).map(s => placementPrice(e, s.side));
+    return [low + (prices.length ? Math.min(...prices) : 0), high + Math.max(...prices, 0)];
+  }, [0, 0]);
   const homes = chosen.reduce((n, e) => n + e.households, 0);
   const positionsReady = chosen.length > 0 && chosen.every(e => e.bookable && e.slots.some(s => s.id === positions[e.id] && s.available));
   const hasPosition = (e: EditionCatalog) => e.bookable && e.slots.some(s => s.id === positions[e.id] && s.available);
@@ -64,7 +69,7 @@ export function CategoryZoneSelector({ editions,checkoutOpen,invitation,invitati
             <label className={`flex items-start gap-3 ${area.available ? "cursor-pointer" : "cursor-not-allowed"}`}>
               <input type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-accent" disabled={!area.available} checked={area.selected} onChange={() => toggleArea(region.slug)} />
               <span className="min-w-0"><span className="block text-lg font-semibold">{region.name}</span>
-                <span className="block text-sm text-muted">{area.status}{e ? ` · ${formatPrice(e.unitPriceCents)} per ad` : ""}</span>
+                <span className="block text-sm text-muted">{area.status}{e ? ` · ${formatPrice(e.unitPriceCents)} front / ${formatPrice(placementPrice(e, "back"))} back` : ""}</span>
                 <span className="mt-2 block text-sm">{guide.municipalities.slice(0, 6).map(town => town.name).join(" · ")}</span>
               </span>
             </label>
@@ -93,8 +98,8 @@ export function CategoryZoneSelector({ editions,checkoutOpen,invitation,invitati
         </button>)}
       </nav>}
       {currentArea && [currentArea].map(e => <section key={e.id} data-campaign-id={e.id} data-layout-key={e.layoutTemplate} aria-label={e.zoneName} className="space-y-3">
-        <h3 className="text-xl font-semibold">{e.zoneName} <span className="text-base font-normal text-muted">· {formatPrice(e.unitPriceCents)}</span></h3>
-        <div className="grid gap-4 lg:grid-cols-2">{(["front", "back"] as const).map(side => <PostcardSide layoutKey={e.layoutTemplate} key={side} side={side} dimensions={{ width: 9, height: 6 }} priceCents={e.unitPriceCents}
+        <h3 className="text-xl font-semibold">{e.zoneName} <span className="text-base font-normal text-muted">· {formatPrice(e.unitPriceCents)} front / {formatPrice(placementPrice(e, "back"))} back</span></h3>
+        <div className="grid gap-4 lg:grid-cols-2">{(["front", "back"] as const).map(side => <PostcardSide layoutKey={e.layoutTemplate} key={side} side={side} dimensions={{ width: 9, height: 6 }} priceCents={placementPrice(e, side)}
           views={e.slots.filter(s => s.side === side).map(slot => ({ slot, selected: positions[e.id] === slot.id, selectable: slot.available && !pending, note: slot.available ? "Available" : "Unavailable" }))}
           onSelect={slotId => { if (!pending) setPositions(previous => ({ ...previous, [e.id]: slotId })); }} />)}</div>
         <p aria-live="polite" className="text-sm text-muted">{hasPosition(e) ? `Selected: ${e.slots.find(s => s.id === positions[e.id])?.label}. You can change it before continuing.` : "Choose an available position above."}</p>
@@ -107,7 +112,7 @@ export function CategoryZoneSelector({ editions,checkoutOpen,invitation,invitati
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0" aria-live="polite">
         <p className="font-semibold">{chosen.length ? `${chosen.length} ${chosen.length === 1 ? "area" : "areas"}` : "Choose an area to get started"} · <span>Due today: $0</span></p>
-        {chosen.length > 0 && <p className="text-sm">{chosen.length === 1 ? "Total if this campaign fills" : chosen.length === 2 ? "Total if both campaigns fill" : "Total if all selected campaigns fill"}: {formatPrice(total)}</p>}
+        {chosen.length > 0 && <p className="text-sm">{chosen.length === 1 ? "Total if this campaign fills" : chosen.length === 2 ? "Total if both campaigns fill" : "Total if all selected campaigns fill"}: {formatPrice(priceRange[0])}{priceRange[0] !== priceRange[1] ? `–${formatPrice(priceRange[1])} (choose positions)` : ""}</p>}
         <p className="mt-1 text-xs text-muted">{step === 2 && !positionsReady ? `${selectedCount} of ${chosen.length} positions chosen. ` : ""}Charged only after each campaign fills and is approved.</p>
       </div>
       {step === 1 ? <Button disabled={!chosen.length} onClick={() => { setStep(2); setMessage(""); focusStep(); }}>{checkoutOpen ? "Continue with selected areas" : "Preview selected areas"}</Button> :

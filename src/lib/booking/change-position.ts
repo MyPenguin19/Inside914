@@ -25,7 +25,9 @@ export async function changePosition(admin: SupabaseClient<Database>, token: str
     p_expected_slot: input.data.currentSlotId, p_slot_id: input.data.slotId,
   });
   if (error) {
-    const message = error.message === "position_changed"
+    const message = error.message === "price_change_requires_new_hold"
+      ? "Payment authorization has already started. Keep this side, or release your held areas and choose new positions to change the price."
+      : error.message === "position_changed"
       ? "Your space changed in another tab. Review your current space and try again."
       : error.message === "hold_unavailable"
         ? "Your hold is no longer available. Return to your areas to review it."

@@ -43,6 +43,7 @@ async function Position({ searchParams }: Params) {
   if (!catalog || claim.error || !catalog.slots.some(s => s.id === claim.data.slot_id)) return <Unavailable />;
   return <ChangeAdSpace key={`${member.id}:${claim.data.slot_id}`} bookingId={member.id}
     currentSlotId={claim.data.slot_id} slots={catalog.slots} layoutKey={catalog.layoutTemplate}
-    zoneName={catalog.zoneName} priceCents={member.priceCents} expiresAt={member.holdExpiresAt!}
+    zoneName={catalog.zoneName} priceCents={member.priceCents}
+    frontPriceCents={member.frontPriceCents ?? member.priceCents} backPriceCents={member.backPriceCents ?? member.priceCents} expiresAt={member.holdExpiresAt!}
     extensionUsed={member.holdExtensions > 0} changesOpen={catalog.bookable && checkoutReleased()} />;
 }

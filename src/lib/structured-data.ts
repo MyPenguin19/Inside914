@@ -1,6 +1,6 @@
 import { SITE_URL, SITE_NAME, absoluteUrl } from "./seo";
 import { BUSINESS_ADDRESS, SUPPORT_EMAIL, SUPPORT_PHONE_HREF } from "./support";
-import { ADVERTISED_PRICE, ADVERTISING_FAQ } from "./marketing-content";
+import { ADVERTISED_BACK_PRICE, ADVERTISED_PRICE, ADVERTISING_FAQ } from "./marketing-content";
 
 export function regionStructuredData(slug: string, name: string, description: string) {
   return pageStructuredData(`/areas/${slug}`, name, description, { parent: { name: "Advertising areas", path: "/areas" } });
@@ -25,8 +25,12 @@ export const postcardService = {
   name: "Shared postcard advertising", serviceType: "Postcard advertising", url: absoluteUrl("/pricing"),
   description: "One advertising space on a shared postcard mailed within your selected Westchester area.",
   provider: { "@id": organization["@id"] }, areaServed: organization.areaServed,
-  offers: { "@type": "Offer", url: absoluteUrl("/pricing"), price: ADVERTISED_PRICE, priceCurrency: "USD",
-    description: "Advertised price per area. Review the selected campaign’s agreed price before reserving. Nothing is charged at reservation." },
+  offers: [
+    { "@type": "Offer", name: "Front advertising space", url: absoluteUrl("/pricing"), price: ADVERTISED_PRICE, priceCurrency: "USD",
+      description: "One of six front advertising spaces per area. Review the campaign’s agreed price before reserving. Nothing is charged at reservation." },
+    { "@type": "Offer", name: "Back advertising space", url: absoluteUrl("/pricing"), price: ADVERTISED_BACK_PRICE, priceCurrency: "USD",
+      description: "One of four smaller back advertising spaces per area. Review the campaign’s agreed price before reserving. Nothing is charged at reservation." },
+  ],
 };
 
 export const faqQuestions = ADVERTISING_FAQ.map(({ q, a }) => ({

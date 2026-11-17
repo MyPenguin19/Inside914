@@ -114,9 +114,10 @@ for (const path of paths) {
   }
   if (path === "/pricing") {
     const service = schema.find(item => item["@type"] === "Service");
-    assert.equal(service.offers.price, 399);
-    assert.equal(service.offers.priceCurrency, "USD");
-    assert(doc.querySelector("main").textContent.includes(`$${service.offers.price}`));
+    assert.deepEqual(service.offers.map(offer => [offer.name, offer.price, offer.priceCurrency]), [
+      ["Front advertising space", 399, "USD"], ["Back advertising space", 349, "USD"],
+    ]);
+    for (const offer of service.offers) assert(doc.querySelector("main").textContent.includes(`$${offer.price}`));
     assert.equal(webPage.mainEntity["@id"], service["@id"]);
   }
   if (path === "/faq") {

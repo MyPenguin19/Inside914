@@ -56,7 +56,7 @@ test("V2 back accepts portrait and contained square crops, keeps source bytes an
 
   expect((await artwork.saveLayout(db,hold.token,{artworkId:ticket.artworkId,crop:{x:0,y:0,width:w,height:h},zoom:1})).ok).toBe(true);
   const row=ok(await db.from("booking_artwork").select("storage_path").eq("id",ticket.artworkId).single())!;storage.push(row.storage_path);
-  expect(await getBookingByHoldToken(db,hold.token)).toMatchObject({artworkReady:true,priceCents:39900,stripeSetupIntentId:null,stripeCustomerId:null});
+  expect(await getBookingByHoldToken(db,hold.token)).toMatchObject({artworkReady:true,priceCents:label.startsWith("B")?34900:39900,stripeSetupIntentId:null,stripeCustomerId:null});
   const view=await getReservationView(db,hold.bookingId);expect(view?.layoutTemplate).toBe(V2_TEMPLATE.key);
   expect(view?.area).toMatchObject(label.startsWith("B")?{width:2.2925,height:2.815}:{width:2.78,height:2.78});
   const downloaded=ok(await db.storage.from("artwork").download(row.storage_path))!;expect(Buffer.from(await downloaded.arrayBuffer()).equals(original)).toBe(true);

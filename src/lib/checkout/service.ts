@@ -28,6 +28,8 @@ export type CheckoutBooking = {
   status: string;
   size: import("@/lib/booking/products").BookingSize;
   priceCents: number;
+  frontPriceCents?: number | null;
+  backPriceCents?: number | null;
   pricingMode: "launch" | "test";
   holdExpiresAt: string | null;
   holdExtensions: number;
@@ -55,6 +57,8 @@ function toCheckoutBooking(row: Row): CheckoutBooking {
     status: row.status,
     size: row.size as import("@/lib/booking/products").BookingSize,
     priceCents: row.price_cents,
+    frontPriceCents: row.front_price_cents,
+    backPriceCents: row.back_price_cents,
     pricingMode: row.pricing_mode === "test" ? "test" : "launch",
     holdExpiresAt: row.hold_expires_at,
     holdExtensions:row.hold_extensions,

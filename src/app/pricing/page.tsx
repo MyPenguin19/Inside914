@@ -3,7 +3,7 @@ import { MarketingPage } from "@/components/marketing/marketing-page";
 import { MarketingPageSeo } from "@/components/marketing/page-seo";
 import { SizeDiagram } from "@/components/marketing/postcard-illustration";
 import { Card } from "@/components/ui/primitives";
-import { ADVERTISED_PRICE_LABEL, MARKETING_PAGES } from "@/lib/marketing-content";
+import { ADVERTISED_BACK_PRICE_LABEL, ADVERTISED_PRICE_LABEL, MARKETING_PAGES } from "@/lib/marketing-content";
 import { marketingMetadata } from "@/lib/seo";
 import { postcardService } from "@/lib/structured-data";
 
@@ -18,7 +18,10 @@ export default function PricingPage() {
         <SizeDiagram />
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-medium">Postcard Advertisement</h2>
-          <p className="mt-3 font-display text-5xl font-medium">{ADVERTISED_PRICE_LABEL}</p>
+          <dl className="mt-3 space-y-4">
+            <div><dt className="text-sm text-muted">Front space · 6 positions</dt><dd className="font-display text-5xl font-medium">{ADVERTISED_PRICE_LABEL}</dd></div>
+            <div><dt className="text-sm text-muted">Smaller back space · 4 positions</dt><dd className="font-display text-5xl font-medium">{ADVERTISED_BACK_PRICE_LABEL}</dd></div>
+          </dl>
           <p className="mt-2 font-medium">Per area</p>
           <p className="mt-4 leading-relaxed text-muted">One advertising space on a shared postcard mailed within your selected Westchester area.</p>
           <p className="mt-4 text-sm leading-relaxed text-muted">Review the selected campaign’s agreed price before reserving. Each area has its own campaign and 10 advertising spaces.</p>

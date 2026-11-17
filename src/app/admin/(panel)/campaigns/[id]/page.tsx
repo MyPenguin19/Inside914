@@ -101,7 +101,7 @@ async function CampaignDetail({ params, searchParams }: Pick<PageProps<"/admin/c
           ← All campaigns
         </Link>
         <div className="mt-2">
-          <PageHeader title={edition.name ?? edition.zoneName} description={`${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)} · ${layoutVersion(edition.layoutTemplate)} · ${formatPrice(edition.unitPriceCents ?? 0)} per position`}>
+          <PageHeader title={edition.name ?? edition.zoneName} description={`${edition.zoneName} · ${formatIssueMonth(edition.issueMonth)} · ${layoutVersion(edition.layoutTemplate)} · ${edition.productModel === "square_v1" ? `${formatPrice(edition.unitPriceCents ?? 0)} front · ${formatPrice(edition.backUnitPriceCents ?? 0)} back` : `${formatPrice(edition.unitPriceCents ?? 0)} per position`}`}>
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge tone={edition.status === "open" && !edition.pausedAt ? "success" : edition.pausedAt ? "warning" : "neutral"}>
                 {edition.productModel === "square_v1" && view === "mailing" && !edition.archivedAt ? operationStatus : campaignStatusLabel(edition)}
@@ -275,7 +275,7 @@ async function CampaignDetail({ params, searchParams }: Pick<PageProps<"/admin/c
               ["Mailing window", edition.mailingWindowStart ? `${formatDay(edition.mailingWindowStart)} – ${formatDay(edition.mailingWindowEnd ?? edition.mailingWindowStart)}` : edition.mailDate ? formatDay(edition.mailDate) : "Not set"],
               ["Target mailing quantity", `≈ ${formatHouseholds(edition.households)} homes`],
               ["Layout", findTemplate(edition.layoutTemplate ?? "")?.label ?? (edition.layoutTemplate ? edition.layoutTemplate : "Created before templates (provisional grid)")],
-              ["Prices (new bookings)", edition.productModel === "square_v1" ? `${formatPrice(edition.unitPriceCents ?? 0)} per position · 10 paid positions` : `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
+              ["Prices (new bookings)", edition.productModel === "square_v1" ? `${formatPrice(edition.unitPriceCents ?? 0)} front · ${formatPrice(edition.backUnitPriceCents ?? 0)} back · 10 paid positions` : `${formatPrice(edition.unitPriceCents ?? 0)} standard${edition.doublePriceCents ? ` · ${formatPrice(edition.doublePriceCents)} double` : ""} · ${formatPrice(POSTCARD_PRICES.fullSidePriceCents)} full side · ${formatPrice(POSTCARD_PRICES.bothSidesPriceCents)} both sides (per area)`],
               ["Artwork approval", `${stats.artworkAwaitingReview} awaiting review of ${stats.reservations} reservations`],
               ["Payment methods ready", `${stats.paymentMethodsReady} of ${stats.reservations}`],
               ["Advertisers", String(stats.advertisers)],

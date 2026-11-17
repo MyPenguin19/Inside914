@@ -1,7 +1,7 @@
 import { REGIONS } from "./catalog/regions";
 import { PUBLIC_CHECKOUT_RELEASED, CHECKOUT_CLOSED_MESSAGE } from "./checkout/release";
 import { POLICY_LINKS } from "./legal/public-policies";
-import { ADVERTISED_PRICE_LABEL, ADVERTISING_FAQ, CAMPAIGN_STEPS, HOME_INTRO, MARKETING_PAGES } from "./marketing-content";
+import { ADVERTISED_BACK_PRICE_LABEL, ADVERTISED_PRICE_LABEL, ADVERTISING_FAQ, CAMPAIGN_STEPS, HOME_INTRO, MARKETING_PAGES } from "./marketing-content";
 import { absoluteUrl } from "./seo";
 import { BUSINESS_ADDRESS_LABEL, SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "./support";
 
@@ -27,7 +27,7 @@ ${CAMPAIGN_STEPS.map((step, index) => `${index + 1}. **${step.title}.** ${step.b
 
 ## Pricing
 
-${ADVERTISED_PRICE_LABEL} per area for one advertising space on a shared postcard mailed within your selected Westchester area. Choose as many available areas as you want. Nothing is charged today.
+${ADVERTISED_PRICE_LABEL} per area for one front advertising space or ${ADVERTISED_BACK_PRICE_LABEL} per area for one smaller back space on a shared postcard mailed within your selected Westchester area. Choose as many available areas as you want. Nothing is charged today.
 
 Each area is its own campaign with ten advertising spaces. Review the selected campaign's price and details before reserving.
 

@@ -8,14 +8,14 @@ This guide describes the current source, not a verification of deployed producti
 
 - Four geographic areas: Central, Southern, Northern, and Eastern Westchester.
 - The public selector includes a clickable county map and six largest municipalities per proposed area. Population rankings use the 2020 Census, not mailing reach. See `docs/frontend-area-guide.txt` for grouping definitions and sources.
-- Each new campaign uses `square_v1`: ten paid positions, F1–F6 on the front and B1–B4 on the back, at $399 per position.
+- Each new campaign uses `square_v1`: ten paid positions, F1–F6 on the front and B1–B4 on the back, at $399 per front position and $349 per smaller back position.
 - A customer selects up to four areas, chooses one position per area, and supplies artwork for each. Images can be copied between areas and then cropped independently.
 - Business/contact information is required. A business category is not mandatory and does not reserve exclusive access to an area.
 - Checkout saves a card using a SetupIntent. The amount due today is $0; three areas authorize a maximum of $1,197 for later collection.
 - Campaigns fill independently. Collection requires an explicit administrator action and all readiness checks; a full campaign never charges automatically.
 - Advertiser accounts, dashboards, recurring plans, and new double/full-side products are retired. Old account/dashboard URLs redirect to `/areas`. Historical database records and product readers remain for compatibility.
 - Live collection remains disabled in source: `LIVE_COLLECTION_RELEASED = false`. The collection mode defaults to `disabled`.
-- Current source enables new reservations under owner-approved policy `2026-11-02-reservations-1`, effective November 2, 2026. This approval is separate from collection and deployment; see `docs/legal/2026-11-02-reservation-approval.txt`. Existing accepted consent and intentional $1 campaign prices remain unchanged.
+- Current source enables new reservations under owner-approved policy `2026-11-02-reservations-1`, effective November 2, 2026. This approval is separate from collection and deployment; see `docs/legal/2026-11-02-reservation-approval.txt`. Accepted reservation amounts and consents remain unchanged. New reservations use each campaign’s separate front/back prices; the November 16 pricing release updates all active campaigns to $399 front / $349 back.
 
 ## How a reservation moves through the system
 
@@ -81,7 +81,7 @@ A historical naming trap: `editions.artwork_deadline` is used for the reservatio
 `lib/print/layout-v2.json` defines the new geometry; `lib/print/layouts.ts` resolves immutable campaign layout keys. Historical V1 geometry stays in `amazingmail-layout.ts`. Browser previews and Sharp exports share contained-image fitting, preserving original uploads.
 
 - File: 9.125 × 6.125 inches; trim: 9 × 6; live: 8.75 × 5.75.
-- V2 paid inventory: six 2.78″ front squares and four 2.2925″ × 2.815″ back rectangles. Ten positions at $399, under the unchanged `square_v1` business model.
+- V2 paid inventory: six 2.78″ front squares and four 2.2925″ × 2.815″ back rectangles. Six front positions at $399 and four smaller back positions at $349, under the unchanged `square_v1` business model.
 - House: 3.7375″ × 2.4825″, above the unchanged 3.925″ × 3.33″ postal exclusion with a 0.125″ gap.
 - Output: 7300 × 4900 pixels at 800 DPI. Minimum source resolution for readiness: 300 effective DPI at its actual contained size.
 - Existing V1 campaigns retain their 2.5″ square positions and original house geometry. Their reservations and layout keys are never migrated automatically.
@@ -152,3 +152,7 @@ Vercel Git deployment is currently disabled in the checked-in configuration for 
 - Email retries use a new provider key and access link per attempt. A timeout after provider acceptance can produce duplicate mail or revoke a link already delivered. Reliable reconciliation/persisted delivery payloads remain follow-up work; do not describe email delivery as exactly-once.
 - Old schema objects, product types, and legacy reservation readers intentionally remain for data compatibility. Removing them requires a separate migration/data-retention decision.
 - Collection remains disabled. Production rollout, printer approval, and live collection approval are separate owner decisions.
+
+### Front and back placement pricing
+
+`editions.unit_price_cents` is the front price; `back_unit_price_cents` is the back price. Admin create/edit validates both. The server and `hold_slots` choose the tier from the stored slot side, never browser amounts. `hold_cart` calculates each area separately. New holds freeze both tier prices; changing sides before payment authorization updates the amount atomically with the slot claim. Once payment authorization starts, a different tier requires a new hold. Existing reservations and pre-release holds retain their agreed amounts. Collection continues to use the booking amount and matching consent; no live collection gate changes.

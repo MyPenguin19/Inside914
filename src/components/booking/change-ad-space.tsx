@@ -10,10 +10,10 @@ import { formatPrice } from "@/lib/format";
 
 type Props = {
   bookingId: string; currentSlotId: string; slots: CatalogSlot[];
-  layoutKey?: string | null; zoneName: string; priceCents: number;
+  layoutKey?: string | null; zoneName: string; priceCents: number; frontPriceCents: number; backPriceCents: number;
   expiresAt: string; extensionUsed: boolean; changesOpen: boolean;
 };
-export function ChangeAdSpace({ bookingId, currentSlotId, slots, layoutKey, zoneName, priceCents, expiresAt, extensionUsed, changesOpen }: Props) {
+export function ChangeAdSpace({ bookingId, currentSlotId, slots, layoutKey, zoneName, priceCents, frontPriceCents, backPriceCents, expiresAt, extensionUsed, changesOpen }: Props) {
   const [selected, setSelected] = useState(currentSlotId);
   const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
@@ -44,21 +44,21 @@ export function ChangeAdSpace({ bookingId, currentSlotId, slots, layoutKey, zone
       <h1 className="text-3xl font-semibold">Change ad space</h1>
       <p className="text-lg font-medium">{zoneName}</p>
       <p className="text-muted">Choose another available space, then save. Your current space stays held until the change is complete.</p>
-      <p className="text-sm text-muted">Your saved artwork, price, and other areas stay the same.</p>
+      <p className="text-sm text-muted">Front and back spaces have different prices. Review the new price before saving. Your artwork and other areas are kept.</p>
     </header>
     <CartHoldTimer expiresAt={expiresAt} extensionUsed={extensionUsed} />
     <p className="font-medium">Current space: {current.side === "front" ? "Front" : "Back"} · {current.label} · {formatPrice(priceCents)}</p>
     {!changesOpen && <p role="status">This campaign is not accepting space changes right now.</p>}
     <div className="grid gap-4 lg:grid-cols-2">
       {(["front", "back"] as const).map(side => <PostcardSide key={side} side={side} layoutKey={layoutKey}
-        dimensions={{ width: 9, height: 6 }} priceCents={priceCents}
+        dimensions={{ width: 9, height: 6 }} priceCents={side === "back" ? backPriceCents : frontPriceCents}
         views={slots.filter(s => s.side === side).map(slot => ({ slot, selected: selected === slot.id,
           selectable: changesOpen && !pending && (slot.available || slot.id === currentSlotId),
           note: slot.id === currentSlotId ? "Your current space" : slot.available ? "Available" : "Unavailable" }))}
         onSelect={id => { if (!pending && changesOpen && slots.some(s => s.id === id && (s.available || id === currentSlotId))) { setSelected(id); setMessage(""); } }} />)}
     </div>
     <section aria-label="Save ad space" aria-busy={pending} className="sticky bottom-0 z-20 space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-lg sm:bottom-3">
-      <p aria-live="polite">{selected === currentSlotId ? "Select a new space above." : `New space: ${next?.side === "front" ? "Front" : "Back"} · ${next?.label}`}</p>
+      <p aria-live="polite">{selected === currentSlotId ? "Select a new space above." : `New space: ${next?.side === "front" ? "Front" : "Back"} · ${next?.label} · ${formatPrice(next?.side === "back" ? backPriceCents : frontPriceCents)}`}</p>
       <div className="flex flex-wrap gap-3">
         <Button disabled={!canSave} onClick={save}>{pending ? "Changing your space…" : "Save new space"}</Button>
         {!pending && <ButtonLink href="/book/cart" variant="secondary">Keep current space</ButtonLink>}

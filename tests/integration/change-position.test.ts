@@ -27,7 +27,7 @@ beforeAll(async () => {
       reservation_deadline: "2097-12-15T23:59:00Z", artwork_due_at: "2097-12-20T23:59:00Z",
       mailing_window_start: "2098-01-11", mailing_window_end: "2098-01-15",
       layout_template: i === 0 ? "amazingmail-9x6-ten-square-draft" : "amazingmail-9x6-v2",
-      unit_price_cents: i === 0 ? 100 : 39900, double_price_cents: null,
+      unit_price_cents: i === 0 ? 100 : 39900, back_unit_price_cents: i === 0 ? 75 : 34900, double_price_cents: null,
     } }));
     editions.push(edition);
     ok(await admin.rpc("admin_set_campaign_status", { p_id: edition, p_action: "open" }));
@@ -57,7 +57,7 @@ async function claim(bookingId: string) {
 function args(c: Awaited<ReturnType<typeof held>>, target = "B2", i = 0, current = "F1") {
   return { p_cart_hash: hashHoldToken(c.token), p_booking_id: c.members.find(b => b.editionId === editions[i])!.id, p_expected_slot: slots[i][current], p_slot_id: slots[i][target] };
 }
-test("moves either layout front/back in place; retains price, timer, artwork, contact and other areas", async () => {
+test("moves either layout front/back in place; updates tier price and retains timer, artwork, contact and other areas", async () => {
   const c = await held();
   ok(await db.from("booking_artwork").insert(c.members.map(b => ({ booking_id: b.id, storage_path: `${b.id}/fixture.png`, status: "ready", content_type: "image/png", width_px: 1000, height_px: 1000, byte_size: 10000, crop_x: 0, crop_y: 0, crop_width: 1000, crop_height: 1000, zoom: 1 }))));
   ok(await db.from("booking_contacts").insert(c.members.map(b => ({ booking_id: b.id, business_name: "Fixture", contact_name: "Fixture", email: "fixture@example.com", phone: "+19145551234" }))));
@@ -72,7 +72,7 @@ test("moves either layout front/back in place; retains price, timer, artwork, co
     const other = c.members.find(b => b.editionId !== editions[i])!;
     expect(await claim(other.id)).toBe(i === 0 ? slots[1].F1 : slots[0].B2);
   }
-  expect(ok(await db.from("bookings").select("*").eq("cart_id", c.id).order("id"))).toEqual(before);
+  expect(ok(await db.from("bookings").select("*").eq("cart_id", c.id).order("id"))).toEqual(before.map(b => ({...b, price_side:"back", price_cents:b.back_price_cents})));
   expect(ok(await db.from("booking_artwork").select("*").in("booking_id", c.members.map(b => b.id)).order("booking_id"))).toEqual(art);
   expect(ok(await db.from("booking_contacts").select("*").in("booking_id", c.members.map(b => b.id)).order("booking_id"))).toEqual(contact);
   expect(ok(await db.rpc("change_cart_position", args(c, "F1", 0, "B2")))).toBe("changed");
@@ -139,4 +139,40 @@ test("competing changes have one winner; loser and stale tabs retain a valid sin
   const winner = sameBooking[0].error ? d : c;
   expect(await claim(winner.p_booking_id)).toBe(winner.p_slot_id);
   expect(ok(await db.rpc("change_cart_position", { ...winner, p_expected_slot: winner.p_slot_id }))).toBe("unchanged");
+});
+
+
+test("both tiers are authoritative; existing holds keep their frozen prices after admin changes", async () => {
+ const c=await held("F1",[1]), b=c.members[0];
+ expect(b.priceCents).toBe(39900);
+ const back=await held("B1",[1]); expect(back.members[0].priceCents).toBe(34900);
+ const slotPrice=ok(await db.from("slot_availability").select("unit_price_cents").eq("slot_id",slots[1].B1).single());
+ expect(slotPrice.unit_price_cents).toBe(34900);
+ for(const [slot,price] of [[slots[1].F2,34900],[slots[1].B2,39900]] as const) {
+  expect((await db.rpc("hold_slots",{p_slot_ids:[slot],p_token_hash:randomBytes(32).toString("hex"),p_pricing_mode:"launch",p_unit_price_cents:price,p_double_price_cents:null})).error?.code).toBe("INS05");
+ }
+ expect((await db.from("bookings").update({price_cents:1}).eq("id",b.id)).error?.message).toBe("agreed_price_is_immutable");
+ expect((await db.from("bookings").update({back_price_cents:1}).eq("id",b.id)).error?.message).toBe("agreed_price_is_immutable");
+ try {
+  ok(await admin.rpc("admin_update_campaign",{p_id:editions[1],p:{unit_price_cents:44900,back_unit_price_cents:29900}}));
+  expect((await ownedCart(db,c.token))!.members[0].priceCents).toBe(39900);
+  ok(await db.rpc("change_cart_position",args(c,"B2",1)));
+  expect((await ownedCart(db,c.token))!.members[0].priceCents).toBe(34900);
+  ok(await db.rpc("change_cart_position",args(c,"F1",1,"B2")));
+  expect((await ownedCart(db,c.token))!.members[0].priceCents).toBe(39900);
+  const fresh=await held("B2",[1]); expect(fresh.members[0].priceCents).toBe(29900);
+ } finally {ok(await admin.rpc("admin_update_campaign",{p_id:editions[1],p:{unit_price_cents:39900,back_unit_price_cents:34900}}));}
+});
+
+test("a mixed cart uses each selected side, and payment authorization freezes side changes atomically", async () => {
+ const c=await held("F1",[1]), a=args(c,"B2",1);
+ ok(await db.from("bookings").update({stripe_customer_id:"cus_devtest_pricing"}).eq("id",a.p_booking_id));
+ expect((await db.rpc("change_cart_position",a)).error?.message).toBe("price_change_requires_new_hold");
+ expect(await claim(a.p_booking_id)).toBe(slots[1].F1);
+ expect((await ownedCart(db,c.token))!.members[0].priceCents).toBe(39900);
+ // Moving within the same side keeps its authorized price.
+ expect(ok(await db.rpc("change_cart_position",args(c,"F2",1)))).toBe("changed");
+ const mixed=await createCart(db,[{editionId:editions[0],slotIds:[slots[0].F1],mode:"standard"},{editionId:editions[1],slotIds:[slots[1].B1],mode:"standard"}]);
+ carts.push(mixed.id);
+ expect((await ownedCart(db,mixed.token))!.members.reduce((sum,b)=>sum+b.priceCents,0)).toBe(35000);
 });

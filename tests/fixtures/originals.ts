@@ -20,7 +20,7 @@ export async function createOriginalFixture() {
   const zone = randomUUID();
   checked(await db.from("zones").insert({ id: zone, name: `Originals fixture ${zone}`, slug: `originals-${zone}`, household_count: 0 }));
   const campaign = checked(await admin.rpc("admin_create_square_campaign", { p: { zone_id: zone, name: "Original backup fixture", issue_month: "2098-08-01", target_quantity: 5000,
-    reservation_deadline: "2098-07-15T23:59:00Z", artwork_due_at: "2098-07-20T23:59:00Z", mailing_window_start: "2098-08-11", mailing_window_end: "2098-08-15", layout_template: POSTCARD_LAYOUT_V2.key, unit_price_cents: 100, double_price_cents: null } }))!;
+    reservation_deadline: "2098-07-15T23:59:00Z", artwork_due_at: "2098-07-20T23:59:00Z", mailing_window_start: "2098-08-11", mailing_window_end: "2098-08-15", layout_template: POSTCARD_LAYOUT_V2.key, unit_price_cents: 100, back_unit_price_cents: 100, double_price_cents: null } }))!;
   checked(await admin.rpc("admin_set_campaign_status", { p_id: campaign, p_action: "open" }));
   const slots = checked(await db.from("slots").select("id,label").eq("edition_id", campaign).order("label").limit(3))!;
   const bookings: string[] = [], paths: string[] = [];

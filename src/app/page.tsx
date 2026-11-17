@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { marketingMetadata } from "@/lib/seo";
-import { ADVERTISED_PRICE_LABEL, ADVERTISING_FAQ, CAMPAIGN_STEPS, HOME_INTRO, MARKETING_PAGES } from "@/lib/marketing-content";
+import { ADVERTISED_BACK_PRICE_LABEL, ADVERTISED_PRICE_LABEL, ADVERTISING_FAQ, CAMPAIGN_STEPS, HOME_INTRO, MARKETING_PAGES } from "@/lib/marketing-content";
 import { MarketingPageSeo } from "@/components/marketing/page-seo";
 import { PUBLIC_CHECKOUT_RELEASED, CHECKOUT_CLOSED_MESSAGE } from "@/lib/checkout/release";
 import { REGIONS } from "@/lib/catalog/regions";
@@ -80,7 +80,7 @@ export default function Home() {
               <PriceCard
                 name="Postcard Advertisement"
                 price={ADVERTISED_PRICE_LABEL}
-                detail="One advertising space on a shared postcard mailed within your selected Westchester area."
+                detail="Choose one of six front spaces or four smaller back spaces on a shared postcard mailed within your selected Westchester area."
                 diagram={<SizeDiagram />}
               />
 
@@ -141,7 +141,10 @@ function PriceCard({ name, price, detail, diagram, highlight = false }: { name: 
       {diagram}
       <div className="flex min-w-0 flex-1 flex-col">
         <h3 className="font-medium">{name}</h3>
-        <p className="mt-2 font-display text-5xl font-medium">{price}</p>
+        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1">
+          <div><dt className="text-sm text-muted">Front space</dt><dd className="font-display text-4xl font-medium">{price}</dd></div>
+          <div><dt className="text-sm text-muted">Back space</dt><dd className="font-display text-4xl font-medium">{ADVERTISED_BACK_PRICE_LABEL}</dd></div>
+        </dl>
         <p className="mt-1 text-sm font-medium">Per area</p>
         <p className="mt-3 text-sm leading-relaxed text-muted">{detail}</p>
       </div>

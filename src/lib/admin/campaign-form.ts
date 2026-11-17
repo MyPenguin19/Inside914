@@ -77,9 +77,11 @@ export const CampaignForm = z
     mailing_window_end: day("last mailing day"),
     layout_template: z.string().refine((k) => findTemplate(k) !== null, "Choose a layout"),
     unit_price_cents: dollars,
+    back_unit_price_cents: optionalDollars,
     double_price_cents: optionalDollars,
   })
   .superRefine((v, ctx) => {
+    if (findPostcardLayout(v.layout_template) && v.back_unit_price_cents === null) ctx.addIssue({ code: "custom", path: ["back_unit_price_cents"], message: "Enter the back placement price" });
     if (findPostcardLayout(v.layout_template) && v.double_price_cents !== null) {
       ctx.addIssue({ code: "custom", path: ["unit_price_cents"], message: "Only one advertising position per area is available." });
     }
@@ -105,7 +107,7 @@ export type CampaignFieldErrors = Partial<Record<keyof z.input<typeof CampaignFo
 
 export const CAMPAIGN_FIELDS = [
   "name", "zone_id", "issue_month", "target_quantity", "reservations_open_at", "reservation_deadline", "artwork_due_at",
-  "mailing_window_start", "mailing_window_end", "layout_template", "unit_price_cents", "double_price_cents",
+  "mailing_window_start", "mailing_window_end", "layout_template", "unit_price_cents", "back_unit_price_cents", "double_price_cents",
 ] as const;
 
 export function parseCampaignForm(form: FormData) {
@@ -124,7 +126,7 @@ export function parseCampaignForm(form: FormData) {
 export function adminErrorMessage(error: { code?: string; message?: string } | null): string {
   const m = error?.message ?? "";
   const known: Record<string, string> = {
-    invalid_square_price: "Enter a positive price for one advertising position.",
+    invalid_square_price: "Enter positive prices for the front and back advertising positions.",
     confirmation_required: "Type the confirmation phrase exactly.",
     campaign_not_deletable: "Only an unused draft without reservation, payment, artwork or mailing history can be deleted.",
     finish_campaign_before_archive: "Complete or cancel this campaign through its normal workflow before archiving.",

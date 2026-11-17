@@ -67,13 +67,13 @@ export async function updateCampaign(_prev: ActionResult, form: FormData): Promi
   const locked = form.get("locked") === "true" || booked;
   const parsed = parseCampaignForm(form);
   if (!parsed.ok) {
-    const relevant = locked ? { name: parsed.errors.name, zone_id: parsed.errors.zone_id, target_quantity: parsed.errors.target_quantity, unit_price_cents: parsed.errors.unit_price_cents } : parsed.errors;
+    const relevant = locked ? { name: parsed.errors.name, zone_id: parsed.errors.zone_id, target_quantity: parsed.errors.target_quantity, unit_price_cents: parsed.errors.unit_price_cents, back_unit_price_cents: parsed.errors.back_unit_price_cents } : parsed.errors;
     if (Object.values(relevant).some(Boolean)) return { errors: relevant, values: parsed.raw };
   }
   const v = parsed.ok ? parsed.value : null;
   const p = locked
-    ? { name: String(form.get("name")).trim(), zone_id: String(form.get("zone_id")), target_quantity: Number(form.get("target_quantity")), unit_price_cents: dollars.parse(form.get("unit_price_cents")) }
-    : { ...v, layout_template: undefined, double_price_cents: undefined };
+    ? { name: String(form.get("name")).trim(), zone_id: String(form.get("zone_id")), target_quantity: Number(form.get("target_quantity")), unit_price_cents: dollars.parse(form.get("unit_price_cents")), ...(form.get("back_unit_price_cents") ? { back_unit_price_cents: dollars.parse(form.get("back_unit_price_cents")) } : {}) }
+    : { ...v, back_unit_price_cents: v?.back_unit_price_cents ?? undefined, layout_template: undefined, double_price_cents: undefined };
   const { error } = await supabase.rpc("admin_update_campaign", { p_id: id.data, p: JSON.parse(JSON.stringify(p)) });
   if (error) return { message: adminErrorMessage(error), values: parsed.raw };
   redirect(`/admin/campaigns/${id.data}`);

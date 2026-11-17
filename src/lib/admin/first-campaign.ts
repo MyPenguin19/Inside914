@@ -12,6 +12,7 @@ export const FIRST_CAMPAIGN_DEFAULTS = {
   mailing_window_start: "2027-01-11",
   mailing_window_end: "2027-01-15",
   layout_template: SQUARE_PRODUCT.layoutKey,
-  unit_price_cents: "399",
+  unit_price_cents: String(SQUARE_PRODUCT.priceCents / 100),
+  back_unit_price_cents: String(SQUARE_PRODUCT.backPriceCents / 100),
   double_price_cents: "",
 } as const;

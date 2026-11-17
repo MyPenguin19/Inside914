@@ -1,4 +1,5 @@
 import "server-only";
+import { placementPrice } from "@/lib/booking/placement-price";
 import { INVITATION_EMAIL_RELEASED, INVITATION_EMAIL_BLOCKER } from "./release";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -19,7 +20,7 @@ export async function invitationOffer(db:Db,id:string):Promise<InvitationOffer|n
  const row=result.data;if(!row||Date.parse(row.expires_at)<=Date.now())return null;
  const edition=await getEditionCatalog(row.edition_id),slot=edition?.slots.find(s=>s.id===row.slot_id);
  if(!edition?.bookable||!slot?.available)return null;
- return {id,editionId:edition.id,slotId:slot.id,zoneName:edition.zoneName,label:slot.label,priceCents:edition.unitPriceCents,deadline:edition.artworkDeadline,expiresAt:row.expires_at};
+ return {id,editionId:edition.id,slotId:slot.id,zoneName:edition.zoneName,label:slot.label,priceCents:placementPrice(edition,slot.side),deadline:edition.artworkDeadline,expiresAt:row.expires_at};
 }
 export function invitationMessage(offer:InvitationOffer,name:string|null) {
  const link=`${getAppUrl()}/book/multi?invite=${offer.id}`;
