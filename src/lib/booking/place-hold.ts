@@ -1,4 +1,5 @@
 import "server-only";
+import { placementPrice } from "./placement-price";
 import { assertCheckoutReleased } from "@/lib/checkout/release";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -46,7 +47,7 @@ export async function placeHold(admin: SupabaseClient<Database>, raw: unknown): 
 
   const { data: slot, error: slotError } = await admin
     .from("slots")
-    .select("editions(product_model, unit_price_cents, double_unit_price_cents)")
+    .select("side, editions(product_model, unit_price_cents, back_unit_price_cents, double_unit_price_cents)")
     .eq("id", input.data.slotIds[0])
     .maybeSingle();
   if (slotError) {
@@ -57,7 +58,7 @@ export async function placeHold(admin: SupabaseClient<Database>, raw: unknown): 
 
   let prices;
   try {
-    prices = pricesFor({ productModel: slot.editions.product_model, unitPriceCents: slot.editions.unit_price_cents, doublePriceCents: slot.editions.double_unit_price_cents });
+    prices = pricesFor({ productModel: slot.editions.product_model, unitPriceCents: slot.editions.unit_price_cents, backUnitPriceCents: slot.editions.back_unit_price_cents, doublePriceCents: slot.editions.double_unit_price_cents });
   } catch (error) {
     console.error(error instanceof Error ? error.message : "pricing configuration error");
     return { ok: false, reason: "error" };
@@ -71,7 +72,7 @@ export async function placeHold(admin: SupabaseClient<Database>, raw: unknown): 
       p_slot_ids: input.data.slotIds,
       p_token_hash: hash,
       p_pricing_mode: prices.mode,
-      p_unit_price_cents: prices.unitPriceCents,
+      p_unit_price_cents: placementPrice(prices, slot.side as "front" | "back"),
       p_double_price_cents: prices.doublePriceCents,
     });
   const { data, error } = await request.single();

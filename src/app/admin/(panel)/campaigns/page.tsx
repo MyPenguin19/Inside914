@@ -68,7 +68,7 @@ async function Campaigns({ searchParams }: { searchParams: PageProps<"/admin/cam
           columns={["Campaign / area", "Progress", "Reserved", "Artwork", "Next"]}
           rows={rows.map(({ edition: e, stats, approved }) => [
             <Link key="n" href={`/admin/campaigns/${e.id}`} className="font-medium underline-offset-4 hover:underline">
-              {e.name ?? e.zoneName}<span className="block text-xs text-muted">{e.zoneName} · {formatIssueMonth(e.issueMonth)} · {formatPrice(e.unitPriceCents ?? 0)} per space</span>
+              {e.name ?? e.zoneName}<span className="block text-xs text-muted">{e.zoneName} · {formatIssueMonth(e.issueMonth)} · {e.productModel === "square_v1" ? `${formatPrice(e.unitPriceCents ?? 0)} front · ${formatPrice(e.backUnitPriceCents ?? 0)} back` : `${formatPrice(e.unitPriceCents ?? 0)} per space`}</span>
             </Link>,
             <StatusBadge key="s" tone={e.status === "open" && !e.pausedAt ? "success" : e.pausedAt ? "warning" : "neutral"}>
               {e.archivedAt ? "Archived" : e.status.replaceAll("_", " ")}

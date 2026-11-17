@@ -101,6 +101,7 @@ type EditionRow = {
   mailing_window_start: string | null;
   mailing_window_end: string | null;
   unit_price_cents: number;
+  back_unit_price_cents: number;
   double_unit_price_cents: number | null;
   issue_month: string;
   artwork_deadline: string;
@@ -123,6 +124,7 @@ const toEdition = (e: EditionRow): AdminEdition => ({
   mailingWindowStart: e.mailing_window_start,
   mailingWindowEnd: e.mailing_window_end,
   unitPriceCents: e.unit_price_cents,
+  backUnitPriceCents: e.back_unit_price_cents,
   doublePriceCents: e.double_unit_price_cents,
   zoneName: e.zones?.name ?? "Unknown area",
   households: e.target_quantity ?? e.zones?.household_count ?? 0, // the campaign's own target when set
@@ -132,7 +134,7 @@ const toEdition = (e: EditionRow): AdminEdition => ({
   status: e.status,
 });
 
-const EDITION_COLUMNS = "id, archived_at, zone_id, name, target_quantity, product_model, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)";
+const EDITION_COLUMNS = "id, archived_at, zone_id, name, target_quantity, product_model, layout_template, reservations_open_at, reservations_paused_at, artwork_due_at, mailing_window_start, mailing_window_end, unit_price_cents, back_unit_price_cents, double_unit_price_cents, issue_month, artwork_deadline, mail_date, status, zones(name, household_count)";
 const SLOT_COLUMNS = "id, edition_id, side, label, x_in, y_in, width_in, height_in, blocked_at, blocked_reason";
 type SlotRow = Pick<Database["public"]["Tables"]["slots"]["Row"], "id" | "edition_id" | "side" | "label" | "x_in" | "y_in" | "width_in" | "height_in" | "blocked_at" | "blocked_reason">;
 const toSlot = (s: SlotRow): AdminSlot => ({

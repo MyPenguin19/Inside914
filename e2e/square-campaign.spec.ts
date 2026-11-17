@@ -66,7 +66,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   housePaths.push(savedHouse.storage_path);
   await expect(page.getByAltText("Current permanent house advertisement")).toBeVisible();
   await page.goto(`/admin/campaigns/new?area=square-e2e-${zone}`);
-  const price = page.getByLabel("Price per advertising position ($)", { exact: false });
+  const price = page.getByLabel("Front position price ($)", { exact: false });
   await expect(price).toHaveValue("399");
   await expect(price).toBeEditable();
   await expect(page.getByLabel("Double price", { exact: false })).toHaveCount(0);
@@ -85,7 +85,7 @@ test("admin creates a $399 ten-square draft; form and inventory fit mobile throu
   await page.getByRole("button", { name: "Create draft campaign" }).click();
   await expect(page).toHaveURL(/\/admin\/campaigns\/[a-f0-9-]{36}$/);
   await page.getByRole("navigation", {name:"Campaign workspace"}).getByRole("link", {name:"Campaign settings",exact:true}).click();
-  await expect(page.getByText("$399 per position · 10 paid positions", { exact: true })).toBeVisible();
+  await expect(page.getByText("$399 front · $349 back · 10 paid positions", { exact: true })).toBeVisible();
   await page.getByRole("navigation", {name:"Campaign workspace"}).getByRole("link", {name:"Overview",exact:true}).click();
   await expect(page.getByRole("group", { name: "Front of the postcard" }).locator("button")).toHaveCount(6);
   await expect(page.getByRole("group", { name: "Back of the postcard" }).locator("button")).toHaveCount(4);

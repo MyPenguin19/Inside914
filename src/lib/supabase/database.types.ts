@@ -471,6 +471,10 @@ export type Database = {
       }
       bookings: {
         Row: {
+          front_price_cents: number | null
+          back_price_cents: number | null
+          price_side: string | null
+
           category_id: string | null
           cart_id: string | null
           cancellation_reason: string | null
@@ -501,6 +505,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          front_price_cents?: number | null
+          back_price_cents?: number | null
+          price_side?: string | null
+
           cart_id?: string | null
           category_id?: string | null
           cancellation_reason?: string | null
@@ -531,6 +539,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          front_price_cents?: number | null
+          back_price_cents?: number | null
+          price_side?: string | null
+
           cart_id?: string | null
           category_id?: string | null
           cancellation_reason?: string | null
@@ -586,6 +598,8 @@ export type Database = {
       }
       editions: {
         Row: {
+          back_unit_price_cents: number
+
           archived_at: string | null
           product_model: string
           category_exclusivity: boolean
@@ -609,6 +623,8 @@ export type Database = {
           zone_id: string
         }
         Insert: {
+          back_unit_price_cents?: number
+
           archived_at?: string | null
           artwork_deadline: string
           product_model?: string
@@ -632,6 +648,8 @@ export type Database = {
           zone_id: string
         }
         Update: {
+          back_unit_price_cents?: number
+
           archived_at?: string | null
           artwork_deadline?: string
           product_model?: string

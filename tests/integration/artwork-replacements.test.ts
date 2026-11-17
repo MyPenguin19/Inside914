@@ -124,7 +124,7 @@ test("expiry during a replacement prevents commit and retains the previous sourc
   expect(await save(h.token,next)).toEqual({ok:false,reason:"hold_expired"});
   expect((await db.rpc("save_staged_artwork",{p_token_hash:hashHoldToken(h.token),p_upload_id:next.id,p_crop:{x:0,y:0,width:1200,height:900},p_zoom:1})).error?.code).toBe("INS06");
   expect(await active(h.bookingId)).toEqual(before);
-  expect(ok(await db.from("bookings").select("price_cents,stripe_setup_intent_id,stripe_customer_id").eq("id",h.bookingId).single())).toMatchObject({price_cents:100,stripe_setup_intent_id:null,stripe_customer_id:null});
+  expect(ok(await db.from("bookings").select("price_cents,stripe_setup_intent_id,stripe_customer_id").eq("id",h.bookingId).single())).toMatchObject({price_cents:h.priceCents,stripe_setup_intent_id:null,stripe_customer_id:null});
 });
 
 test("cleanup removes only old never-saved stages, keeps retained and current originals, and cannot race activation", async () => {

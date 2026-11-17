@@ -9,7 +9,7 @@ test("cached create and edit forms have distinct labels and a writable future pr
  const {container}=render(<><div hidden><CampaignForm {...props} mode="create"/></div><section aria-label="Current edit form"><CampaignForm {...props} mode="edit" id="campaign" locked/></section></>);
  const ids=[...container.querySelectorAll("[id]")].map(el=>el.id);expect(new Set(ids).size).toBe(ids.length);
  const current=within(screen.getByRole("region",{name:"Current edit form"}));
- const price=current.getByLabelText("Price per advertising position ($)",{exact:false}) as HTMLInputElement;
+ const price=current.getByLabelText("Front position price ($)",{exact:false}) as HTMLInputElement;
  expect(price.name).toBe("unit_price_cents");expect(price.value).toBe("449");expect(price.disabled).toBe(false);expect(price.readOnly).toBe(false);
  expect((current.getByLabelText("Postcard layout",{exact:false}) as HTMLSelectElement).disabled).toBe(true);
 });
@@ -21,4 +21,11 @@ test("unused drafts allow one submitted area value while layout stays fixed",()=
  container.querySelector("form")!.reset();
  expect(new FormData(container.querySelector("form")!).getAll("zone_id")).toEqual(["central"]);
  expect((screen.getByLabelText("Postcard layout",{exact:false}) as HTMLSelectElement).disabled).toBe(true);
+});
+
+
+test("new campaigns expose both side prices using the shared defaults",()=>{
+ render(<CampaignForm action={vi.fn(async()=>({}))} zones={[{id:"zone",name:"Central"}]} templates={[V2_TEMPLATE]} defaults={FIRST_CAMPAIGN_DEFAULTS} mode="create"/>);
+ expect(screen.getByLabelText("Front position price ($)",{exact:false})).toHaveProperty("value","399");
+ expect(screen.getByLabelText("Back position price ($)",{exact:false})).toHaveProperty("value","349");
 });

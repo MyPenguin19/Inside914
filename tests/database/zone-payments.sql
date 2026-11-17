@@ -22,7 +22,7 @@ create function pg_temp.payload(zone uuid) returns jsonb language sql as $$
  select jsonb_build_object('zone_id',zone,'name','Isolated square test','issue_month','2098-01-01',
  'target_quantity',5000,'reservation_deadline','2097-12-16T04:59:00Z','artwork_due_at','2097-12-21T04:59:00Z',
  'mailing_window_start','2098-01-11','mailing_window_end','2098-01-15',
- 'layout_template','amazingmail-9x6-ten-square-draft','unit_price_cents',39900,'double_price_cents',null)
+ 'layout_template','amazingmail-9x6-ten-square-draft','unit_price_cents',39900,'back_unit_price_cents',34900,'double_price_cents',null)
 $$;
 insert into fixture select 'zone'||i,gen_random_uuid() from generate_series(1,4) i;
 insert into zones(id,name,slug,household_count) select id,'Square fixture '||id,'square-fixture-'||id,5000 from fixture where k like 'zone%';
@@ -78,7 +78,7 @@ begin
 end $$;
 set constraints all immediate;
 set constraints all deferred;
-select pg_temp.assert((select count(*)=10 and sum(price_cents)=399000 from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending'),'capacity is ten ads totaling $3,990');
+select pg_temp.assert((select count(*)=10 and sum(price_cents)=6*39900+4*34900 and count(*) filter(where price_cents=34900)=4 from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending'),'capacity is six front ads and four lower-priced back ads');
 select pg_temp.reject(format('select public.hold_cart(%L,%L::jsonb,''launch'')',
  encode(extensions.gen_random_bytes(32),'hex'),
  (select jsonb_build_array(jsonb_build_object('edition_id',edition_id,'mode','standard','slot_ids',jsonb_build_array(id),'token_hash',encode(extensions.gen_random_bytes(32),'hex'))) from slots where edition_id=(select id from fixture where k='campaign1') limit 1)),
@@ -99,12 +99,12 @@ select pg_temp.assert((select public.confirm_cart(cart_id,stripe_setup_intent_id
  from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending' limit 1),'wrong consent amount cannot confirm a $399 booking');
 rollback to wrong_amount_fixture;
 insert into payment_consents(booking_id,edition_id,stripe_setup_intent_id,amount_cents,pricing_mode,terms_version)
- select id,edition_id,stripe_setup_intent_id,39900,pricing_mode,'square-zones-v1' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
+ select id,edition_id,stripe_setup_intent_id,price_cents,pricing_mode,'square-zones-v1' from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending';
 do $$ declare b record; result text;
 begin
  for b in select * from bookings where edition_id=(select id from fixture where k='campaign1') and status='pending' loop
   result:=public.confirm_cart(b.cart_id,b.stripe_setup_intent_id,'pm_square_fixture',jsonb_build_object(b.id,'IN914-'||translate(upper(substr(md5(b.id::text),1,6)),'01','GH')));
-  perform pg_temp.assert(result='confirmed','square confirmation keeps $399 consent');
+  perform pg_temp.assert(result='confirmed','square confirmation keeps the agreed side price');
  end loop;
 end $$;
 select pg_temp.assert(private.edition_is_full((select id from fixture where k='campaign1')),'ten confirmed square reservations fill the campaign');
@@ -168,7 +168,7 @@ select pg_temp.reject(format('select public.admin_prepare_zone_collection(%L)',(
 select set_config('request.jwt.claim.sub',(select id::text from fixture where k='admin'),true);
 select pg_temp.assert(jsonb_array_length(public.admin_prepare_zone_collection((select id from fixture where k='campaign1')))=10,'activation creates ten durable obligations');
 select pg_temp.assert(jsonb_array_length(public.admin_prepare_zone_collection((select id from fixture where k='campaign1')))=10,'activation retry reuses the same obligations');
-select pg_temp.assert((select count(*)=10 and sum(amount_cents)=399000 from zone_charges where edition_id=(select id from fixture where k='campaign1')),'one 399 charge per reservation, never combined');
+select pg_temp.assert((select count(*)=10 and sum(amount_cents)=6*39900+4*34900 and count(*) filter(where amount_cents=34900)=4 from zone_charges where edition_id=(select id from fixture where k='campaign1')),'one agreed front or back charge per reservation, never combined');
 select pg_temp.assert((select count(*)=0 from zone_charges where edition_id in(select id from fixture where k in ('campaign2','campaign3','campaign4'))),'other three zones not charged');
 select pg_temp.assert(not has_function_privilege('authenticated','public.record_zone_payment(uuid,text,text,text,bigint,text,text,text)','EXECUTE'),'clients cannot forge payment outcomes');
 select pg_temp.assert(not has_table_privilege('authenticated','public.zone_charges','UPDATE'),'admin cannot directly edit charge ledger');

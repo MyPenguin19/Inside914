@@ -6,7 +6,7 @@ const {hold,push,refresh}=vi.hoisted(()=>({hold:vi.fn(),push:vi.fn(),refresh:vi.
 vi.mock("next/navigation",()=>({useRouter:()=>({push,refresh})}));
 vi.mock("@/app/book/cart/actions",()=>({holdAreas:hold}));
 afterEach(()=>{cleanup();vi.clearAllMocks();});
-const props:CategoryCatalog & {checkoutOpen:boolean}={ checkoutOpen:true, editions: REGIONS.map((r,i)=>({id:`e${i}`,productModel:"square_v1",zoneSlug:r.slug,zoneName:r.name,households:5000,issueMonth:"2027-01-01",artworkDeadline:"2026-12-15",mailDate:null,unitPriceCents:39900,doublePriceCents:null,pricingMode:"test",bookable:true,totalUnits:10,availableUnits:10,pairs:[],slots:[{id:`s${i}`,side:"front",label:"F1",x:0.75,y:0.5,width:2.5,height:2.5,available:true}]})) };
+const props:CategoryCatalog & {checkoutOpen:boolean}={ checkoutOpen:true, editions: REGIONS.map((r,i)=>({id:`e${i}`,productModel:"square_v1",zoneSlug:r.slug,zoneName:r.name,households:5000,issueMonth:"2027-01-01",artworkDeadline:"2026-12-15",mailDate:null,unitPriceCents:39900,backUnitPriceCents:34900,doublePriceCents:null,pricingMode:"test",bookable:true,totalUnits:10,availableUnits:10,pairs:[],slots:[{id:`s${i}`,side:"front",label:"F1",x:0.75,y:0.5,width:2.5,height:2.5,available:true}]})) };
 test("closed checkout allows previews but never offers an active hold action",()=>{
  render(<CategoryZoneSelector {...props} checkoutOpen={false}/>);
  fireEvent.click(screen.getByRole("checkbox",{name:/Central/}));
@@ -137,4 +137,22 @@ test("one position picker at a time keeps previous choices when going back", () 
  expect(screen.getByRole("button",{name:/position F1:/}).getAttribute("aria-pressed")).toBe("true");
  expect(screen.getByRole("button",{name:"Continue to artwork"})).toHaveProperty("disabled",false);
  expect(hold).not.toHaveBeenCalled();
+});
+
+
+test("front/back choices update a mixed-area total without trusting a browser price", async () => {
+ const editions=props.editions.slice(0,2).map(e=>({...e,slots:[...e.slots,{...e.slots[0],id:`${e.id}-back`,side:"back" as const,label:"B1"}]}));
+ hold.mockResolvedValue({ok:true});
+ render(<CategoryZoneSelector {...props} editions={editions}/>);
+ for(const name of [/Central/,/Southern/])fireEvent.click(screen.getByRole("checkbox",{name}));
+ const summary=within(screen.getByRole("region",{name:"Selection and next step"}));
+ expect(summary.getByText(/Total if both campaigns fill/).textContent).toContain("$698–$798");
+ fireEvent.click(screen.getByRole("button",{name:"Continue with selected areas"}));
+ expect(screen.getByRole("button",{name:/position B1:/}).textContent).toContain("$349");
+ fireEvent.click(screen.getByRole("button",{name:/position B1:/}));
+ fireEvent.click(screen.getByRole("button",{name:"Next: Southern Westchester"}));
+ fireEvent.click(screen.getByRole("button",{name:/position F1:/}));
+ expect(summary.getByText(/Total if both campaigns fill/).textContent).toContain("$748");
+ fireEvent.click(screen.getByRole("button",{name:"Continue to artwork"}));
+ await waitFor(()=>expect(hold).toHaveBeenCalledWith({selections:[{editionId:"e0",slotId:"e0-back"},{editionId:"e1",slotId:"s1"}]}));
 });

@@ -22,7 +22,7 @@ create function pg_temp.payload(zone uuid) returns jsonb language sql as $$
  select jsonb_build_object('zone_id',zone,'name','Isolated square test','issue_month','2098-01-01',
  'target_quantity',5000,'reservation_deadline','2097-12-16T04:59:00Z','artwork_due_at','2097-12-21T04:59:00Z',
  'mailing_window_start','2098-01-11','mailing_window_end','2098-01-15',
- 'layout_template','amazingmail-9x6-ten-square-draft','unit_price_cents',39900,'double_price_cents',null)
+ 'layout_template','amazingmail-9x6-ten-square-draft','unit_price_cents',39900,'back_unit_price_cents',39900,'double_price_cents',null)
 $$;
 insert into fixture select 'zone'||i,gen_random_uuid() from generate_series(1,4) i;
 insert into zones(id,name,slug,household_count) select id,'Square fixture '||id,'square-fixture-'||id,5000 from fixture where k like 'zone%';

@@ -51,7 +51,7 @@ async function Settings() {
         pricing === "test"
           ? `Temporary prices: ${formatPrice(TEST_PRICES.unitPriceCents)} standard, ${formatPrice(TEST_PRICES.doublePriceCents)} double`
           : pricing === "launch"
-            ? "Launch: each edition's own prices"
+            ? "Launch: each campaign’s front and back prices"
             : "INSIDE914_PRICING_MODE is missing or invalid",
       tone: pricing === "launch" ? "success" : pricing === "test" ? "warning" : "danger",
       status: pricing ?? "Not set",

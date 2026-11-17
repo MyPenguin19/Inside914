@@ -7,8 +7,8 @@ vi.mock("server-only", () => ({}));
 const { pricesFor } = await import("@/lib/pricing");
 
 test.each(["test", "launch"])("square pricing uses campaign amounts in %s mode", mode => {
-  expect(pricesFor({ productModel: SQUARE_PRODUCT.model, unitPriceCents: 39900, doublePriceCents: null }, { NODE_ENV: "test", INSIDE914_PRICING_MODE: mode })).toMatchObject({ unitPriceCents: 39900, doublePriceCents: null, mode });
-  expect(pricesFor({ productModel: SQUARE_PRODUCT.model, unitPriceCents: 44900, doublePriceCents: null }, { NODE_ENV: "test", INSIDE914_PRICING_MODE: mode }).unitPriceCents).toBe(44900);
+  expect(pricesFor({ productModel: SQUARE_PRODUCT.model, backUnitPriceCents: 34900, unitPriceCents: 39900, doublePriceCents: null }, { NODE_ENV: "test", INSIDE914_PRICING_MODE: mode })).toMatchObject({ unitPriceCents: 39900, doublePriceCents: null, mode });
+  expect(pricesFor({ productModel: SQUARE_PRODUCT.model, backUnitPriceCents: 34900, unitPriceCents: 44900, doublePriceCents: null }, { NODE_ENV: "test", INSIDE914_PRICING_MODE: mode }).unitPriceCents).toBe(44900);
 });
 test.each([{ unit_price_cents: "0" }, { unit_price_cents: "-1" }, { unit_price_cents: "1.001" }, { double_price_cents: "900" }])("new campaign rejects changed terms %j", changes => {
   expect(CampaignForm.safeParse({ ...FIRST_CAMPAIGN_DEFAULTS, zone_id: "00000000-0000-4000-8000-000000000001", ...changes }).success).toBe(false);
@@ -24,3 +24,7 @@ test("only ten paid squares are copied into inventory, in trim coordinates", () 
     if (s.side === "back") expect(s.x + s.width).toBeLessThan(5.1375);
   }
 });
+
+ test.each([undefined, null, 0, -1, 1.5, 100000000])("rejects invalid back campaign price %s", (backUnitPriceCents) => {
+  expect(() => pricesFor({productModel:SQUARE_PRODUCT.model,unitPriceCents:39900,backUnitPriceCents,doublePriceCents:null},{NODE_ENV:"test",INSIDE914_PRICING_MODE:"launch"})).toThrow();
+ });

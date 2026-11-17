@@ -57,6 +57,7 @@ export type AdminEdition = {
   mailingWindowStart?: string | null;
   mailingWindowEnd?: string | null;
   unitPriceCents?: number;
+  backUnitPriceCents?: number;
   doublePriceCents?: number | null;
   zoneName: string;
   households: number;

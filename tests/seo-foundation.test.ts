@@ -108,7 +108,8 @@ describe("public SEO and indexing boundaries", () => {
     expect(organization).not.toHaveProperty("sameAs");
   });
   it("describes the advertised service price and FAQ from the displayed copy", () => {
-    expect(postcardService.offers).toMatchObject({ "@type": "Offer", price: ADVERTISED_PRICE, priceCurrency: "USD", url: `${SITE_URL}/pricing` });
+    expect(postcardService.offers[0]).toMatchObject({ "@type": "Offer", price: ADVERTISED_PRICE, priceCurrency: "USD", url: `${SITE_URL}/pricing` });
+    expect(postcardService.offers[1]).toMatchObject({ name: "Back advertising space", price: 349, priceCurrency: "USD" });
     expect(postcardService).not.toHaveProperty("aggregateRating");
     expect(postcardService.offers).not.toHaveProperty("availability");
     expect(faqQuestions).toEqual(ADVERTISING_FAQ.map(({ q, a }) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })));

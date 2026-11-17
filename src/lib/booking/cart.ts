@@ -120,6 +120,7 @@ export async function startCartPayment(
     .eq("cart_id", cart.id)
     .eq("status", "pending");
   if (saved.error) throw saved.error;
+  const pricedMembers = await cartById(admin, cart.id);
   let intent = b.stripeSetupIntentId
     ? await stripe.setupIntents.retrieve(b.stripeSetupIntentId)
     : null;
@@ -133,7 +134,7 @@ export async function startCartPayment(
           booking_id: b.id,
           cart_id: cart.id,
           amount_cents: String(
-            cart.members.reduce((n, m) => n + m.priceCents, 0),
+            pricedMembers.reduce((n, m) => n + m.priceCents, 0),
           ),
         },
       },

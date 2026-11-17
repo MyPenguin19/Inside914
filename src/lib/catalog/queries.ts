@@ -14,6 +14,7 @@ export type EditionSummary = {
   artworkDeadline: string;
   mailDate: string | null;
   unitPriceCents: number;
+  backUnitPriceCents?: number | null;
   doublePriceCents: number | null;
   fullSidePriceCents?: number;
   bothSidesPriceCents?: number;
@@ -36,19 +37,20 @@ type EditionRow = {
   reservations_paused_at: string | null;
   reservations_open_at: string | null;
   unit_price_cents: number;
+  back_unit_price_cents: number;
   double_unit_price_cents: number | null;
   zones: { slug: string; name: string; household_count: number } | null;
 };
 
 const EDITION_COLUMNS =
-  "id, issue_month, artwork_deadline, mail_date, status, reservations_paused_at, reservations_open_at, layout_template, product_model, unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
+  "id, issue_month, artwork_deadline, mail_date, status, reservations_paused_at, reservations_open_at, layout_template, product_model, unit_price_cents, back_unit_price_cents, double_unit_price_cents, zones(slug, name, household_count)";
 const SLOT_COLUMNS = "slot_id, side, label, x_in, y_in, width_in, height_in, available, occupancy";
 
 // Prices shown are what a hold would cost under the active pricing configuration (lib/pricing).
 // priced=false is ONLY for views that never show these prices (an existing reservation shows its
 // own stored price), so they keep working whatever the current pricing configuration is.
 function toSummary(row: EditionRow, slots: { available: boolean }[], priced = true): EditionSummary {
-  const edition = { productModel: row.product_model, unitPriceCents: row.unit_price_cents, doublePriceCents: row.double_unit_price_cents };
+  const edition = { productModel: row.product_model, unitPriceCents: row.unit_price_cents, backUnitPriceCents: row.back_unit_price_cents, doublePriceCents: row.double_unit_price_cents };
   const prices = priced ? pricesFor(edition) : { mode: "launch" as const, ...edition };
   return {
     id: row.id,
@@ -61,6 +63,7 @@ function toSummary(row: EditionRow, slots: { available: boolean }[], priced = tr
     artworkDeadline: row.artwork_deadline,
     mailDate: row.mail_date,
     unitPriceCents: prices.unitPriceCents,
+    backUnitPriceCents: prices.backUnitPriceCents,
     doublePriceCents: prices.doublePriceCents,
     pricingMode: prices.mode,
     ...(row.product_model === "square_v1" ? {} : POSTCARD_PRICES),

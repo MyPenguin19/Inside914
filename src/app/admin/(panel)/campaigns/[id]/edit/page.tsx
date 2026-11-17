@@ -77,6 +77,7 @@ async function EditCampaign({ params }: { params: PageProps<"/admin/campaigns/[i
               mailing_window_end: e.mailingWindowEnd ?? e.mailDate ?? "",
               layout_template: e.layoutTemplate ?? templates[0].key,
               unit_price_cents: String((e.unitPriceCents ?? 0) / 100),
+              back_unit_price_cents: String((e.backUnitPriceCents ?? 0) / 100),
               double_price_cents: e.doublePriceCents ? String(e.doublePriceCents / 100) : "",
             }}
           />

@@ -19,7 +19,7 @@ test("saving an unused draft sends the selected area to the database",async()=>{
 test("a reservation arriving during editing cannot silently discard the requested area",async()=>{
  mocks.booked.mockResolvedValue(true);mocks.rpc.mockResolvedValue({error:{message:"campaign_area_locked"}});
  const result=await updateCampaign({},form());
- expect(mocks.rpc).toHaveBeenCalledWith("admin_update_campaign",{p_id:id,p:{name:FIRST_CAMPAIGN_DEFAULTS.name,zone_id:zone,target_quantity:5000,unit_price_cents:39900}});
+ expect(mocks.rpc).toHaveBeenCalledWith("admin_update_campaign",{p_id:id,p:{name:FIRST_CAMPAIGN_DEFAULTS.name,zone_id:zone,target_quantity:5000,unit_price_cents:39900,back_unit_price_cents:34900}});
  expect(result.message).toContain("unused draft");expect(result.values?.zone_id).toBe(zone);expect(mocks.redirect).not.toHaveBeenCalled();
 });
 test("database errors retain the selected area and entered values for correction",async()=>{

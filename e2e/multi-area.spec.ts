@@ -47,7 +47,7 @@ test.afterAll(async()=>{
   }
   if(user){ok(await db.from("admin_events").delete().eq("admin_user_id",user));await admin?.auth.signOut();expect((await db.auth.admin.deleteUser(user)).error).toBeNull();}
 });
-test("change one held space from artwork or areas; keep artwork, price and other areas", async ({ page }) => {
+test("change one held space from artwork or areas; keep artwork and other areas while updating the price", async ({ page }) => {
   test.setTimeout(120000);
   await page.goto("/areas");
   for (const name of [names[2], names[3]]) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
@@ -110,7 +110,7 @@ test("change one held space from artwork or areas; keep artwork, price and other
   await expect(preview.getByText("Inside914 + Inside Diagnostics")).toHaveCount(0);
   expect((await claim(northern.id)).slots?.label).toBe("B1");
   expect(await claim(eastern.id)).toEqual(originalOther);
-  expect(ok(await db.from("bookings").select("*").eq("id", northern.id).single())).toEqual(northern);
+  expect(ok(await db.from("bookings").select("*").eq("id", northern.id).single())).toEqual({...northern,price_side:"back",price_cents:34900});
   expect(ok(await db.from("booking_artwork").select("*").eq("booking_id", northern.id).single())).toEqual(artwork);
   await page.screenshot({ path: "test-results/changed-space-artwork-mobile.png", fullPage: true });
   await page.getByRole("link", { name: "Change ad space", exact: true }).click();
@@ -145,7 +145,7 @@ test("map selection matches cards and works with keyboard and touch-sized layout
   await expect(page.getByRole("checkbox", { name: /Northern Westchester/ })).not.toBeChecked();
   await page.getByRole("button", { name: /Central Westchester on map/ }).click();
   await page.getByRole("button", { name: /Eastern Westchester on map/ }).click();
-  await expect(page.getByText("Total if both campaigns fill: $798", { exact: true })).toBeVisible();
+  await expect(page.getByText("Total if both campaigns fill: $698–$798 (choose positions)", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({ path: "test-results/area-map-selected-desktop.png", fullPage: true, animations: "disabled" });
   await page.setViewportSize({ width: 375, height: 900 });
@@ -209,7 +209,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await page.goto("/areas");
   const selected = [names[0], names[1], names[3]];
   for (const name of selected) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
-  await expect(page.getByText("Total if all selected campaigns fill: $1,197", { exact: true })).toBeVisible();
+  await expect(page.getByText("Total if all selected campaigns fill: $1,047–$1,197 (choose positions)", { exact: true })).toBeVisible();
   await expect(page.getByText("Due today: $0", { exact: true })).toBeVisible();
   await checkAccessibility(page, "Selected areas");
   await page.getByRole("button", { name: "Continue with selected areas" }).click();
@@ -309,7 +309,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await page.screenshot({path:"test-results/simple-business-mobile.png",fullPage:true});
   await page.getByRole("button", { name: "Continue to save card" }).click();
   await expect(page).toHaveURL(/\/book\/cart\/payment$/);
-  await expect(page.getByText("Combined authorized maximum: $1,197", {exact:true})).toBeVisible();
+  await expect(page.getByText("Combined authorized maximum: $1,147", {exact:true})).toBeVisible();
   await expect(page.getByText("Due today: $0.00. No payment is collected today.", {exact:true})).toBeVisible();
   await page.getByText("Review artwork and campaign details",{exact:true}).click();
   for (const summary of await page.getByRole("complementary",{name:"Your order"}).getByText("Campaign details",{exact:true}).all()) await summary.click();
@@ -334,7 +334,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   await checkAccessibility(page, "Reservation confirmation");
   const bookings = ok(await db.from("bookings").select("id,edition_id,status,price_cents,category_id,stripe_setup_intent_id,stripe_payment_method_id,booking_slots(slots(label))").in("edition_id",ids))!;
   expect(bookings).toHaveLength(3);
-  expect(bookings.every(b => b.status === "reserved" && b.price_cents === 39900 && b.category_id === null)).toBe(true);
+  expect(bookings.every(b => b.status === "reserved" && b.price_cents === (b.booking_slots[0].slots?.label.startsWith("B") ? 34900 : 39900) && b.category_id === null)).toBe(true);
   expect(bookings.filter(b => b.stripe_setup_intent_id)).toHaveLength(1);
   expect(new Set(bookings.map(b => b.stripe_payment_method_id)).size).toBe(1);
   expect(bookings.every(b => b.stripe_payment_method_id?.startsWith("pm_devtest_"))).toBe(true);
@@ -406,7 +406,7 @@ test("mixed V1/V2 areas keep selected positions and separate artwork with one sa
   expect(stripeRequests).toEqual([]);
   expect(ok(await db.from("zone_charges").select("id").in("edition_id", ids))).toHaveLength(0);
   const consents = ok(await db.from("payment_consents").select("amount_cents,terms_version,consent_text").in("booking_id", bookings.map(b => b.id)))!;
-  expect(consents).toHaveLength(3); expect(consents.every(c => c.amount_cents === 39900)).toBe(true);
+  expect(consents).toHaveLength(3); expect(consents.map(c => c.amount_cents).sort()).toEqual([34900,39900,39900]);
   for (const consent of consents) {expect(consent.terms_version).toBe("square-zones-2026-11-02-reservations-1");expect(consent.consent_text).toBe(displayedConsent);}
 });
 

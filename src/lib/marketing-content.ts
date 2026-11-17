@@ -1,5 +1,8 @@
 // Public editorial copy only. Actual campaign prices are resolved by lib/pricing.ts.
-export const ADVERTISED_PRICE = 399;
+import { SQUARE_PRODUCT } from "./booking/square-product";
+export const ADVERTISED_PRICE = SQUARE_PRODUCT.priceCents / 100;
+export const ADVERTISED_BACK_PRICE = SQUARE_PRODUCT.backPriceCents / 100;
+export const ADVERTISED_BACK_PRICE_LABEL = `$${ADVERTISED_BACK_PRICE}`;
 export const ADVERTISED_PRICE_LABEL = `$${ADVERTISED_PRICE}`;
 export const HOME_INTRO = "Put your business in Westchester mailboxes. Pick your areas, choose a position, and add your ad. Pay nothing today.";
 
@@ -17,7 +20,7 @@ export const MARKETING_PAGES = {
   "/": { title: "Westchester Postcard Advertising", description: "Explore shared postcard advertising for Westchester County businesses. Compare four local areas, learn how reservations work and plan your next campaign." },
   "/how-it-works": { title: "How Shared Postcard Advertising Works", description: "Learn how Inside914 shared postcard campaigns work in Westchester: choose areas, select an ad position, upload artwork and reserve with nothing charged today." },
   "/areas": { title: "Westchester Advertising Areas", description: "Compare Central, Southern, Northern and Eastern Westchester advertising areas. Explore the map, proposed communities, campaign prices and postcard positions." },
-  "/pricing": { title: "Postcard Advertising Pricing in Westchester", description: `Explore Inside914 postcard advertising at ${ADVERTISED_PRICE_LABEL} per area. Learn what a shared ad space includes, how multi-area reservations work and when payment is collected.` },
+  "/pricing": { title: "Postcard Advertising Pricing in Westchester", description: `Compare Inside914 postcard ads: ${ADVERTISED_PRICE_LABEL} for a front space or ${ADVERTISED_BACK_PRICE_LABEL} for a smaller back space per Westchester area. Reserve with $0 charged today.` },
   "/our-postcard": { title: "Shared Postcard Layout & Sample Ads", description: "Flip through an Inside914 sample postcard. See six front ad spaces, four back spaces and the mailing panel, then plan artwork for your Westchester campaign." },
   "/faq": { title: "Westchester Postcard Advertising FAQ", description: "Get answers about Inside914 postcard advertising: reservations, payment timing, artwork changes, mailing areas and what happens when a campaign does not fill." },
   "/contact": { title: "Contact Us for Westchester Advertising", description: "Contact Inside914 about postcard advertising in Westchester County. Send a message, email Info@inside914.com or call 914-879-5022 to get in touch." },
@@ -31,6 +34,7 @@ export const CAMPAIGN_STEPS = [
 ] as const;
 
 export const ADVERTISING_FAQ = [
+  { q: "How much does a postcard ad cost?", a: `A front advertising space is ${ADVERTISED_PRICE_LABEL} per area. A smaller back space is ${ADVERTISED_BACK_PRICE_LABEL} per area. Choose one position in each selected area and review your combined total before reserving. Nothing is charged today.` },
   { q: "How does shared mail work?", a: "Multiple local businesses share one professionally printed postcard mailed within a selected Westchester area. Each campaign has 10 paid advertising spaces. Choose one or multiple areas, with a separate position and artwork for each." },
   { q: "When am I charged?", a: "Nothing is charged when you reserve. Your card is saved securely. Each selected area is independent: you are charged the agreed price for an area only after that campaign fills and is approved." },
   { q: "What if the postcard doesn't fill?", a: "You are not charged for an area unless its campaign fills and is approved. If it isn't fully reserved by its deadline, new reservations close while Inside914 reviews cancellation or revised dates. Other selected areas are handled independently." },

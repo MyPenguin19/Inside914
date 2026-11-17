@@ -11,7 +11,7 @@ const editions = ["central", "southern", "northern", "eastern"].map((area, i) =>
   id: area, product_model: "square_v1", layout_template: "amazingmail-9x6-v2",
   issue_month: "2098-04-01", artwork_deadline: "2098-03-20T23:59:00Z", mail_date: null,
   status: "open", reservations_paused_at: null, reservations_open_at: null,
-  unit_price_cents: i === 2 ? 100 : 39900, double_unit_price_cents: null,
+  unit_price_cents: i === 2 ? 100 : 39900, back_unit_price_cents: 34900, double_unit_price_cents: null,
   zones: { slug: `${area}-westchester`, name: `${area} Westchester`, household_count: 5000 },
 }));
 const slots = editions.flatMap(e => Array.from({ length: 10 }, (_, i) => ({

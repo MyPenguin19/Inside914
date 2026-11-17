@@ -13,7 +13,7 @@ import { SQUARE_PRODUCT } from "@/lib/booking/square-product";
 // 'test' must be lower than them. Every booking stores its price and pricing_mode.
 
 export type PricingMode = "test" | "launch";
-export type Prices = { productModel?: string; unitPriceCents: number; doublePriceCents: number | null };
+export type Prices = { productModel?: string; unitPriceCents: number; backUnitPriceCents?: number | null; doublePriceCents: number | null };
 
 export const TEST_PRICES = { unitPriceCents: 100, doublePriceCents: 200 } as const; // $1 / $2, temporary
 export const LAUNCH_PRICES = { unitPriceCents: 50000, doublePriceCents: 90000 } as const; // reference; editions are authoritative
@@ -49,8 +49,8 @@ export function getPricingMode(env: NodeJS.ProcessEnv = process.env): PricingMod
 export function pricesFor(edition: Prices, env: NodeJS.ProcessEnv = process.env): Prices & { mode: PricingMode } {
   const mode = getPricingMode(env);
   if (edition.productModel === SQUARE_PRODUCT.model) {
-    if (!Number.isInteger(edition.unitPriceCents) || edition.unitPriceCents <= 0 || edition.unitPriceCents > 99_999_999 || edition.doublePriceCents !== null) {
-      throw new PricingConfigError("campaigns require a positive integer-cent price and no alternate sizes");
+    if (!Number.isInteger(edition.unitPriceCents) || edition.unitPriceCents <= 0 || edition.unitPriceCents > 99_999_999 || edition.doublePriceCents !== null || !Number.isInteger(edition.backUnitPriceCents) || edition.backUnitPriceCents! <= 0 || edition.backUnitPriceCents! > 99_999_999) {
+      throw new PricingConfigError("campaigns require positive integer-cent front and back prices and no alternate sizes");
     }
     return { mode, ...edition };
   }

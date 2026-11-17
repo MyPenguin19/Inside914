@@ -55,7 +55,7 @@ async function NewCampaign({ searchParams }: { searchParams: Promise<{ draft?: s
         defaults={{
           zone_id: selected.id,
           ...(query.area ? regionalDraftDefaults(selected) : {}),
-          unit_price_cents: String(SQUARE_PRODUCT.priceCents / 100),
+          unit_price_cents: String(SQUARE_PRODUCT.priceCents / 100), back_unit_price_cents: String(SQUARE_PRODUCT.backPriceCents / 100),
           double_price_cents: "",
           ...(preset ? FIRST_CAMPAIGN_DEFAULTS : {}),
           layout_template: V2_TEMPLATE.key,

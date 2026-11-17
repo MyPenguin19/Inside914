@@ -70,6 +70,18 @@ test("admin invitations preserve $1 price and do not hold inventory; occupied an
  await confirmed();expect(await invitationOffer(db,id)).toBeNull();expect((await admin.rpc("admin_create_invitation",{p_edition:edition,p_slot:slot})).error?.message).toBe("position_unavailable");
  ok(await db.from("advertiser_invitations").update({expires_at:new Date(0).toISOString()}).eq("id",id));expect(await invitationOffer(db,id)).toBeNull();
 });
+test("back-position invitations quote the back price and invalidate stale previews",async()=>{
+ const back=ok(await db.from("slots").select("id").eq("edition_id",edition).eq("label","B1").single()).id;
+ const id=ok(await admin.rpc("admin_create_invitation",{p_edition:edition,p_slot:back,p_email:"interested@example.com"}));
+ const offer=(await invitationOffer(db,id))!;
+ expect(offer).toMatchObject({priceCents:34900,slotId:back,label:"B1"});
+ expect(invitationMessage(offer,null).text).toContain("$349");
+ ok(await admin.rpc("admin_update_campaign",{p_id:edition,p:{back_unit_price_cents:32900}}));
+ await expect(queueInvitation(db,id,invitationFingerprint(offer))).rejects.toThrow("changed");
+ expect((await invitationOffer(db,id))?.priceCents).toBe(32900);
+ expect(ok(await db.from("bookings").select("id").eq("edition_id",edition))).toEqual([]);
+ ok(await admin.rpc("admin_update_campaign",{p_id:edition,p:{back_unit_price_cents:34900}}));
+});
 test("commercial invitation email stays blocked without a verified address and opt-out; preview does not queue",async()=>{
  const id=ok(await admin.rpc("admin_create_invitation",{p_edition:edition,p_slot:slot,p_email:"interested@example.com",p_name:"<Business>"}));const offer=(await invitationOffer(db,id))!;
  await expect(queueInvitation(db,id,"bad-preview")).rejects.toThrow("changed");
