@@ -74,3 +74,9 @@ Backup verification read the complete custom archive and restored campaign/booki
 The owner approved “Apply migration and release fixes.” Applied the exact local `20261113043000_admin_campaign_area_correction.sql` through the Supabase migration connector. Production records it as `20261113045055_admin_campaign_area_correction` (November 13 UTC). Source SHA-256: `72c0d9b286624143026d9aa208590b7de6bff124271c64f3399a3006dded2666`. Historical files and remote migration records were not rewritten.
 
 Post-application read-only checks confirmed area-change eligibility for the reported unused draft, unchanged campaign values, restricted private helper execution, and retained administrator guards and empty search paths. No customer or campaign rows were changed. See `docs/admin-debug-audit-2026-11-12.md` for regression coverage and remaining provider-test limits.
+
+## Front/back placement pricing — November 16, 2026
+
+Under the owner's request to update frontend, backend and pricing logic, merge, push and deploy, applied only `20261117032918_front_back_placement_pricing.sql`. Production records it as `20261117035408_front_back_placement_pricing` (November 17 UTC). Source SHA-256: `93e52e2edc8d1586497707db3a46bbf552533bc949319b0abb32c896a15bedf3`.
+
+Four active campaigns now offer front positions for 39900 cents and back positions for 34900 cents. Existing booking prices and consent amount/version digests match their pre-migration baselines exactly. RLS, service-only hold/change RPC access and invoker-security availability remain intact. No tests, seed records, real payments or email sends were run in production. See `docs/front-back-pricing-release.md` for pricing snapshots, consent protection, validation and deployment evidence. Historical migration filenames remain unchanged.

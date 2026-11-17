@@ -36,4 +36,12 @@ Next.js and its ESLint configuration were patched from 16.4.2 to 16.4.6 after th
 - Pre-migration baseline at `2026-11-17T03:48:38.396604Z`: 32 bookings, price digest `690e6f7634ac8ad9df4a1832d5b53224`; nine consents, amount/version digest `169284cfff92c8d41fcb060471730dc6`. Compare only rows created before this cutoff if new legitimate reservations arrive during release.
 - Previous production deployment: `dpl_3QPRB41Km7FqezxJ7UR8B21wjpbC`. The schema addition is compatible with the prior app, but rolling back the app alone would restore misleading single-price displays. Prefer a forward fix or pause affected campaigns while recovering; do not delete price snapshots or rewrite accepted amounts.
 
-Production application and deployment evidence will be recorded after release.
+## Production result
+
+- Implementation commit `1825de6` was merged to `main` as `9f81989` and pushed to GitHub before deployment.
+- Supabase applied the exact reviewed SQL as `20261117035408_front_back_placement_pricing`. Source SHA-256: `93e52e2edc8d1586497707db3a46bbf552533bc949319b0abb32c896a15bedf3`.
+- Post-migration checks show four open campaigns at 39900/34900 cents and the public availability view exposes 24 front positions at 39900 and 16 back positions at 34900. Both pre-existing booking and consent digests match the baseline exactly. RLS, invoker-security view settings and service-only hold/position-change privileges remain intact.
+- Production deployment `dpl_crzKzxNrCBtvHKiiYcWb3reGE8uP` is READY and promoted to `https://inside914.com`. Its staged URL is `https://inside914-ddcydr1zi-mypenguin19s-projects.vercel.app`.
+- A live GET-only crawl passed all 17 public pages and 760 link/asset checks, including both pricing offers, metadata, sitemap dates, robots and Markdown delivery.
+- A live browser session verified all four area prices, switching the displayed selection total between $349 back and $399 front, and the responsive pricing page. The session allowed GET/HEAD only and created no holds, card setups or payments. No page errors or mobile horizontal overflow occurred.
+- The deployment's error-log scan returned zero entries during the release window. This is a point-in-time check, not a guarantee against future errors.
