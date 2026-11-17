@@ -1,4 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openFooterPolicy(page: Page, route: string) {
+  const summary = page.getByRole("contentinfo").locator("summary").filter({ hasText: "Policies" });
+  if (await summary.isVisible()) await summary.click();
+  await page.locator(`footer a[href="/legal/${route}"]:visible`).click();
+}
 
 for (const [route, title, count] of [
   ["payment-authorization", "Reservation and Payment Authorization", 7],
@@ -6,7 +12,7 @@ for (const [route, title, count] of [
 ] as const) {
   test(`${route} is a dedicated explanation with metadata and full-policy links`, async ({ page }) => {
     await page.goto("/");
-    await page.locator(`footer a[href="/legal/${route}"]`).click();
+    await openFooterPolicy(page, route);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Inside914 — ${title}`);
     await expect(page).toHaveTitle(`${title} | Inside914`);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://inside914.com/legal/${route}`);
@@ -29,7 +35,7 @@ for (const width of [375, 1440]) {
     test(`${route} owner-approved reservation policy and footer links at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 1000 });
       await page.goto("/");
-      await page.locator(`footer a[href="/legal/${route}"]`).click();
+      await openFooterPolicy(page, route);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Inside914 — ${title}`);
       await expect(page.getByRole("main").locator("article section")).toHaveCount(sections);
       await expect(page.getByRole("main")).toContainText("Effective date: November 2, 2026. Version 2026-11-02-reservations-1.");
